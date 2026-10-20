@@ -1,0 +1,644 @@
+[
+  {
+    "id": "HSC-204DE99B86",
+    "name": "Breken Brezden",
+    "coach": "",
+    "training": true
+  },
+  {
+    "id": "HSC-E12F4DDFAD",
+    "name": "Aaden Ip",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-530FB0EC97",
+    "name": "Abbie Baltzer",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-E7396E3A76",
+    "name": "Adele Wang",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-574CCD4D36",
+    "name": "Adina Munro",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-CEE6132111",
+    "name": "Adriana Ventura",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-647E3D23B2",
+    "name": "Alexa Bramwell",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-5A76D1C1DC",
+    "name": "Alexa Bremwell",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-DA47E54C9C",
+    "name": "Alexandra Fedora",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-EEA572A569",
+    "name": "Alexis Musgrave-Bond",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-0FF13FEDF2",
+    "name": "Alina Nguyen",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-3997442DE5",
+    "name": "Allana Cherwaty",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-9DAB591BC3",
+    "name": "Ally Riegert",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-E00B6B9BC4",
+    "name": "Amelia Szewczyk",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-03EE5D0D0E",
+    "name": "Angela Huang",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-177CC1F1FB",
+    "name": "Angelina Pena Fuerst",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-B903BE450F",
+    "name": "Anika Passi",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-73A1CD51C3",
+    "name": "Annie Dong",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-545A539606",
+    "name": "Ariana Wu",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-2C47241D0C",
+    "name": "Arielle Pochaev",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-01A5607701",
+    "name": "Ava Ebert",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-52E625F1A9",
+    "name": "Ava Medeiros",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-AFB96886E3",
+    "name": "Ava Plummer",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-E8D0E782EE",
+    "name": "Ava Tsai",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-7F5E3CA382",
+    "name": "Ayan Tsai",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-B8AB57EBC7",
+    "name": "Barbara Tkach",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-2FD4055B49",
+    "name": "Bella Xu",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-2A867EC302",
+    "name": "Berenice Zheng",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-AF8FAD2C20",
+    "name": "Brianna Harper",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-27882579CB",
+    "name": "Capri Caiella",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-7C45503BE3",
+    "name": "Carlee Bering",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-D698388340",
+    "name": "Carson Wang",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-BDF71D4261",
+    "name": "Charlotte Bogoslowski-Felian",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-9A4047948B",
+    "name": "Chloe Broadbent",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-F8F13EA23D",
+    "name": "Chloé de Lanessan",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-44A3EE5CBA",
+    "name": "Dakota Simon",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-C3C88D4046",
+    "name": "Danielle Pochaev",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-C94F32A373",
+    "name": "Elodie Gahan",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-EF24A1C21E",
+    "name": "Emily Huang",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-1EFA8828E9",
+    "name": "Emma Flear",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-84BFD31E50",
+    "name": "Emma Young",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-A0E84144F5",
+    "name": "Eva Wang",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-B30136C249",
+    "name": "Evey slump",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-AD4D7FD569",
+    "name": "Felicia Ercole",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-059078CE33",
+    "name": "Fiona Villella",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-84710E9259",
+    "name": "Fiora Dong",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-237319DE54",
+    "name": "Gabbi Marcy",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-8FB99D38C4",
+    "name": "Gabriella Lucia",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-E3F7E26357",
+    "name": "Gabrielle Marcy",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-BD3C121868",
+    "name": "Gigsi Palacios",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-0D963C0E96",
+    "name": "Giulia Fiscaletti",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-7ACA4C5DDC",
+    "name": "Grace Harris",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-0BC5C5F08F",
+    "name": "Hannah Todt",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-D62CCD04FB",
+    "name": "Helen / Atkinson",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-F074424CD0",
+    "name": "Helen Atkinson",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-B822D51379",
+    "name": "Isabella Fiscaletti",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-CB4152DD6D",
+    "name": "Isobel Stooke",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-47231F7AF5",
+    "name": "Jannah Bufalasah",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-901F57CEF3",
+    "name": "Jayla Gu",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-35814CFAFF",
+    "name": "Joycelyn Chang",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-8F564251D3",
+    "name": "Julia Perco",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-C1E3183C26",
+    "name": "Karen Ciprietti",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-611070240C",
+    "name": "Kaylen Brearley",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-17C9BC70A0",
+    "name": "Kori Powell",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-1CFAE5154E",
+    "name": "Kristen Lampman-Wales",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-3315C41F78",
+    "name": "Lana Puric",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-E195C20CD1",
+    "name": "Leanne Cook",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-2173A0544F",
+    "name": "Leia Jin",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-79DE44A0A3",
+    "name": "Luna Ren",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-C1C2A7E231",
+    "name": "Lyla Quang",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-70F8B0ED08",
+    "name": "Mairead McConville",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-155059F8E9",
+    "name": "Maisie Summers",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-F8AEE4668F",
+    "name": "Makayla Wang",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-BBDCDB2B95",
+    "name": "Margaret Renwick",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-7247629DF6",
+    "name": "Maria Gamova",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-0185EE91AF",
+    "name": "Marie Helene Tissier",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-DB3B144A1E",
+    "name": "Max Wang",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-D809484735",
+    "name": "Miania Caiella",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-233CA8D52F",
+    "name": "Michelle Lee",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-07A0E6AE78",
+    "name": "Mike Pochaev",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-FFAEDB190B",
+    "name": "Milada Petrisca",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-6A9CB0770C",
+    "name": "Milania Baldin",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-FD11C268E9",
+    "name": "Milania Caiella",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-9419E64A5C",
+    "name": "Mira Strickland",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-17B2206D2D",
+    "name": "Mya Alzate",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-CE8693A9AA",
+    "name": "Natasha Kogut",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-D1D5FC21E1",
+    "name": "Quinn Startek",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-FD36D9168A",
+    "name": "Rayna Bruno",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-B2BF7672F8",
+    "name": "Rhoswen Bruno",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-5DAA83149D",
+    "name": "Rosalie Kim",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-7F4968E062",
+    "name": "Rose Bacon",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-636E5495F7",
+    "name": "Samantha Holland",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-9F6DFD4BBA",
+    "name": "Sarah Fusaro",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-1183672EF1",
+    "name": "Shirley Dong",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-A270FBC54A",
+    "name": "Shylo Brearley",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-71CF3E35AB",
+    "name": "Sofia Nazarova",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-FFFED009AF",
+    "name": "Sophia D Costa",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-5284467AE9",
+    "name": "Sophia D'Costa",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-8A4405FE20",
+    "name": "Stephanie Checchia",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-837A240774",
+    "name": "Sydney Mitchell",
+    "coach": "Jen Jackson/Bryce Davidson",
+    "training": false
+  },
+  {
+    "id": "HSC-C19F479644",
+    "name": "Sydney Nordoff",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-2B5EA4D41A",
+    "name": "Tabatha Tripp",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-A884683037",
+    "name": "Tessa Turchyn",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-4F6FBD9BA8",
+    "name": "Trisha Gill",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-D09BE8ADEE",
+    "name": "Violet Bacon",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-FEDF4593FF",
+    "name": "Violet Baird",
+    "coach": "",
+    "training": false
+  },
+  {
+    "id": "HSC-C8769EC296",
+    "name": "Wyatt James",
+    "coach": "",
+    "training": false
+  }
+]

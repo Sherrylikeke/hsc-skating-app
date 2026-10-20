@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import { planPaste, parseClipboard } from '../app/paste.ts';
+import { readFileSync } from 'node:fs';
+const roster=JSON.parse(readFileSync(new URL('../data/roster.json',import.meta.url),'utf8').replace(/^\uFEFF/,''));
+assert.equal(roster.length,107);
+assert.equal(roster.find(row=>row.name==='Sydney Mitchell').coach,'Jen Jackson/Bryce Davidson');
+assert.ok(roster.find(row=>row.name==='Breken Brezden'));
+const rows=[{id:'a',name:'A One'},{id:'b',name:'B Two'},{id:'c',name:'C Three'}];
+assert.deepEqual(planPaste('Coach 1\r\nCoach 2\r\n',rows,rows,'a'),[{id:'a',coach:'Coach 1'},{id:'b',coach:'Coach 2'}]);
+assert.deepEqual(planPaste('选手姓名\t负责教练\nB Two\tJen Jackson/Bryce Davidson\nA One\tCoach 2',rows,rows,'a'),[{id:'b',coach:'Jen Jackson/Bryce Davidson'},{id:'a',coach:'Coach 2'}]);
+assert.deepEqual(planPaste('Coach 1\n\nCoach 3',rows,rows,'a'),[{id:'a',coach:'Coach 1'},{id:'b',coach:''},{id:'c',coach:'Coach 3'}]);
+assert.deepEqual(parseClipboard('"A One"\t"Coach ""A"""\n'),[['A One','Coach "A"']]);
+assert.throws(()=>planPaste('Coach 1\nCoach 2',rows,rows,'c'),/超出/);
+assert.throws(()=>planPaste('Unknown\tCoach 1',rows,rows,'a'),/匹配/);
+assert.throws(()=>planPaste('A One\tCoach 1\nA One\tCoach 2',rows,rows,'a'),/重复/);
+assert.throws(()=>planPaste('"Coach 1\nline 2"',rows,rows,'a'),/格式无效/);
+console.log('Paste checks passed; 107 skaters and existing assignments preserved.');
