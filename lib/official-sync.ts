@@ -1,10 +1,10 @@
 import {extractTextItems,getDocumentProxy} from 'unpdf';
-import roster from '../data/roster.json';
-import {db,putLiveEvent,readLiveEvents,readLiveEvent,putSyncStatus,readSyncStatus} from './club-store';
+import {db,putLiveEvent,readLiveEvents,readLiveEvent,putSyncStatus,readSyncStatus,profiles} from './club-store';
 import {calendarEvent,discoverDocuments,parseEntries,parseScheduleItems} from './official-parser';
 import {parseStartingOrderPdf,parseStartingOrderHtml} from './starting-order';
 import {todayToronto} from './club-types';
-import type {LiveEvent,OfficialDocument} from './club-types';
+import type {LiveEvent} from './club-types';
+import {drainOutbox} from './member-messages';
 const allowedHosts=new Set(['skateontario.org','www.skateontario.org','dstools.ca','www.dstools.ca','skatingresults.ca','www.skatingresults.ca']);
 async function source(url:string,maxBytes=3_000_000):Promise<Uint8Array>{
   let target=new URL(url);if(!allowedHosts.has(target.hostname)||target.protocol!=='https:')throw new Error('来源不在已接入的官方名单中');
@@ -35,16 +35,14 @@ async function syncCalendarBody(){
     for(const raw of gathered){const item=calendarEvent(raw,now);if(!item.name||!/^20\d\d-\d\d-\d\d$/.test(item.start)||!allowedHosts.has(new URL(item.url).hostname))continue;const previous=existing.get(item.id);
       if(previous){incoming.push({...previous,...item,documents:previous.documents,participants:previous.participants,blocks:previous.blocks,entryStatus:previous.entryStatus,scheduleStatus:previous.scheduleStatus,detailCheckedAt:previous.detailCheckedAt,detailError:previous.officialModified!==item.officialModified?'官网页面有修订，名单与赛程等待复核':previous.detailError});}else incoming.push(item);
     }
-    const database=db();const statements:D1PreparedStatement[]=[];
-    for(let i=0;i<incoming.length;i+=25){const chunk=incoming.slice(i,i+25);statements.push(database.prepare(`INSERT INTO live_events (id,payload,updated_at) VALUES ${chunk.map(()=>'(?,?,?)').join(',')} ON CONFLICT(id) DO UPDATE SET payload=excluded.payload,updated_at=excluded.updated_at`).bind(...chunk.flatMap(event=>[event.id,JSON.stringify(event),now])));}
-    if(statements.length)await database.batch(statements);
+    for(const event of incoming)await putLiveEvent(event);
     await putSyncStatus({lastSuccess:now,lastCalendarSuccess:now,events:incoming.length,error:null});
     return {events:incoming.length,checkedAt:now,source:'https://skateontario.org/events/',nextEvents:incoming.sort((a,b)=>a.start.localeCompare(b.start)).slice(0,3).map(event=>({id:event.id,name:event.name,start:event.start}))};
   }catch(error){await putSyncStatus({error:message(error)});throw error;}
 }
-async function revision(eventId:string,document:OfficialDocument){if(!document.hash)return;await db().prepare('INSERT INTO source_revisions (id,event_id,kind,url,hash,checked_at) VALUES (?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING').bind(`${eventId}|${document.kind}|${document.hash}`,eventId,document.kind,document.url,document.hash,document.checkedAt||new Date().toISOString()).run();}
 async function syncEventBody(id:string){
   const existing=await readLiveEvent(id);if(!existing)throw new Error('请先同步官网日历');
+  const roster=await profiles();
   const now=new Date().toISOString();let event={...existing,detailCheckedAt:now};const errors:string[]=[];let changed=0;
   try{
     const html=new TextDecoder().decode(await source(event.url));const discovered=discoverDocuments(html,event.url);
@@ -62,7 +60,7 @@ async function syncEventBody(id:string){
           const participants=parseEntries(new TextDecoder().decode(bytes),entries.url,roster);if(!participants.length)throw new Error('名单格式尚未识别，保留上次有效名单');
           event.participants=participants;changed++;
         }
-        entries.hash=hash;entries.checkedAt=now;delete entries.error;event.entryStatus='已读取官方名单';await revision(event.id,entries);
+        entries.hash=hash;entries.checkedAt=now;delete entries.error;event.entryStatus='已读取官方名单';
       }catch(error){entries.error=message(error);errors.push(entries.error);event.entryStatus=existing.participants.length?'名单更新待核对，显示上次有效版本':'名单待核对';}
     }else event.entryStatus=existing.participants.length?'官网当前未列出名单链接，保留已读取版本':'官网尚未公布名单链接';
     if(schedule){
@@ -73,7 +71,7 @@ async function syncEventBody(id:string){
           const {items}=await extractTextItems(pdf);const blocks=parseScheduleItems(items,schedule.url);if(!blocks.length)throw new Error('赛程表格格式待核对，保留上次有效时间');
           event.blocks=blocks;changed++;
         }
-        schedule.hash=hash;schedule.checkedAt=now;delete schedule.error;event.scheduleStatus='已读取官方组别赛程';await revision(event.id,schedule);
+        schedule.hash=hash;schedule.checkedAt=now;delete schedule.error;event.scheduleStatus='已读取官方组别赛程';
       }catch(error){schedule.error=message(error);errors.push(schedule.error);event.scheduleStatus=existing.blocks.length?'赛程更新待核对，显示上次有效版本':'赛程待核对';}
     }else event.scheduleStatus=existing.blocks.length?'官网当前未列出赛程链接，保留已读取版本':'官网尚未公布赛程链接';
     const orderDocs=documents.filter(d=>d.kind==='start-order');
@@ -83,7 +81,7 @@ async function syncEventBody(id:string){
         if(previous?.hash!==hash||!orders.some(o=>o.sourceUrl===doc.url)){
           let parsed;if(/\.pdf(?:$|\?)/i.test(doc.url)){const pdf=await getDocumentProxy(bytes,{maxImageSize:1_000_000,disableFontFace:true});if(pdf.numPages>20)throw new Error('出场顺序页数超出已验证格式');const {items}=await extractTextItems(pdf);parsed=parseStartingOrderPdf(items,doc.url,roster);}else parsed=parseStartingOrderHtml(new TextDecoder().decode(bytes),doc.url,roster);
           if(!parsed.length)throw new Error('出场顺序格式待核对，保留上次有效资料');orders=[...orders.filter(o=>o.sourceUrl!==doc.url),...parsed];changed++;
-        }doc.hash=hash;doc.checkedAt=now;delete doc.error;await revision(event.id,doc);
+        }doc.hash=hash;doc.checkedAt=now;delete doc.error;
       }catch(error){doc.error=message(error);errors.push(doc.error);}}
       event.startingOrders=orders;const pending=orderDocs.filter(d=>!d.checkedAt||d.error).length;event.startingOrderStatus=pending?`已读取 ${orders.length} 条出场信息，${pending} 份文件待核对`:`已读取 ${orders.length} 条官方出场信息`;
     }else event.startingOrderStatus=existing.startingOrders?.length?'官网当前未列出出场链接，保留已读取版本':'官网尚未发现 Starting Order 链接';
@@ -96,7 +94,7 @@ async function withSyncLock<T>(operation:()=>Promise<T>):Promise<T>{
   const lock=JSON.stringify({token:crypto.randomUUID(),expiresAt:Date.now()+300000});
   const acquired=await db().prepare("INSERT INTO app_meta (key,value) VALUES ('official-source-lock',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value WHERE CAST(json_extract(app_meta.value,'$.expiresAt') AS INTEGER) <= ? RETURNING value").bind(lock,Date.now()).first();
   if(!acquired)throw new Error('官网资料正在同步中，请稍后重试');
-  try{return await operation();}finally{await db().prepare("DELETE FROM app_meta WHERE key='official-source-lock' AND value=?").bind(lock).run();}
+  try{return await operation();}finally{try{await drainOutbox(db());}finally{await db().prepare("DELETE FROM app_meta WHERE key='official-source-lock' AND value=?").bind(lock).run();}}
 }
 export const syncCalendar=()=>withSyncLock(syncCalendarBody);
 export const syncEvent=(id:string)=>withSyncLock(()=>syncEventBody(id));

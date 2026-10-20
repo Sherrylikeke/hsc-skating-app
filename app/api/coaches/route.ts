@@ -1,6 +1,7 @@
 import { env } from 'cloudflare:workers';
-import { getChatGPTUser } from '../../chatgpt-auth';
 import roster from '../../../data/roster.json';
+import {requestMember} from '../../../lib/member-runtime';
+import {audit,checkWrite,failure} from '../../../lib/member-access';
 
 export const dynamic = 'force-dynamic';
 const ids = new Set(roster.map(row => row.id));
@@ -23,18 +24,19 @@ async function database() {
   return env.DB;
 }
 
-export async function GET() {
-  if (!await getChatGPTUser()) return response({error:'请先登录'}, 401);
+export async function GET(request: Request) {
   try {
+    await requestMember(request,['admin']);
     const db = await database();
     const {results} = await db.prepare('SELECT skater_id, coach, revision, updated_at FROM coach_assignments').all<{skater_id:string;coach:string;revision:number;updated_at:string}>();
     const saved = new Map(results.map(row => [row.skater_id, row]));
     return response({rows:roster.map(row => ({...row, coach:saved.get(row.id)?.coach ?? row.coach, revision:saved.get(row.id)?.revision ?? 0}))});
-  } catch { return response({error:'暂时无法读取教练信息，请重试'},503); }
+  } catch(error) { return failure(error); }
 }
 
 export async function POST(request: Request) {
-  if (!await getChatGPTUser()) return response({error:'请先登录'},401);
+  let member;
+  try{member=await requestMember(request,['admin']);checkWrite(request);}catch(error){return failure(error);}
   const origin = request.headers.get('origin');
   if (origin && origin !== new URL(request.url).origin) return response({error:'请求来源无效'},403);
   if (!request.headers.get('content-type')?.includes('application/json')) return response({error:'请使用 JSON'},415);
@@ -56,6 +58,7 @@ export async function POST(request: Request) {
       const chunk=changes.slice(i,i+25);
       updates.push(db.prepare(`WITH incoming(id, coach, revision) AS (VALUES ${chunk.map(()=>'(?, ?, ?)').join(',')}) UPDATE coach_assignments SET coach = (SELECT coach FROM incoming WHERE id = skater_id), revision = revision + 1, updated_at = ? WHERE EXISTS (SELECT 1 FROM incoming WHERE id = skater_id AND incoming.revision = coach_assignments.revision) RETURNING skater_id AS id, coach, revision`).bind(...chunk.flatMap(change=>[change.id,change.coach,change.revision]),now));
     }
+    updates.push(audit(db,member.id,'legacy-coaches-update','coach_assignments',changes));
     const results = await db.batch<{id:string;coach:string;revision:number}>(updates);
     const saved = results.flatMap(result => result.results);
     const savedIds = new Set(saved.map(row => row.id));

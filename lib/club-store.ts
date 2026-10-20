@@ -3,6 +3,7 @@ import metadata from '../data/history-meta.json';
 import sourceRecords from '../data/history-records.json';
 import roster from '../data/roster.json';
 import type {HistoryRecord,HistoryEvent,ClubSkater,LiveEvent,CoachPlan,SyncStatus} from './club-types';
+import {eventWriteStatements} from './change-notifications';
 export function db(){if(!env.DB)throw new Error('数据库暂不可用');return env.DB;}
 const SEED_VERSION='history-2026-10-19-v1';
 export async function ensureHistory(){
@@ -16,11 +17,14 @@ export async function ensureHistory(){
 export async function profiles():Promise<ClubSkater[]>{
   const {results}=await db().prepare('SELECT skater_id,coach FROM coach_assignments').all<{skater_id:string;coach:string}>();const coaches=new Map(results.map(row=>[row.skater_id,row.coach]));
   const old=new Map(metadata.skaters.map(row=>[row.skater_id,row]));
-  return roster.map(row=>{const info=old.get(row.id);return {id:row.id,name:row.name,coach:coaches.get(row.id)??row.coach,training:row.training,identityPending:'identityPending' in row&&row.identityPending===true,categories:info?.categories||[],clubs:info?.represented_clubs||[],firstSeen:info?.first_seen,lastSeen:info?.last_seen,recordCount:info?.record_count||0,eventCount:info?.event_count||0,identityStatus:'identityPending' in row&&row.identityPending?'全名待确认':info?.identity_status||'用户添加，尚无已关联记录'};});
+  const {results:admissions}=await db().prepare('SELECT skater_id,payload FROM hsc_admissions').all<{skater_id:string;payload:string}>();
+  const overrides=new Map(admissions.map(row=>[row.skater_id,JSON.parse(row.payload) as {name:string;training:boolean;identityPending:boolean;representedClubs:string}]));
+  const candidates=[...roster,...admissions.filter(row=>!roster.some(candidate=>candidate.id===row.skater_id)).map(row=>({id:row.skater_id,name:overrides.get(row.skater_id)!.name,coach:'',training:false}))];
+  return candidates.map(row=>{const info=old.get(row.id);const update=overrides.get(row.id);return {id:row.id,name:update?.name||row.name,coach:coaches.get(row.id)??row.coach,training:update?.training??row.training,identityPending:update?.identityPending??('identityPending' in row&&row.identityPending===true),categories:info?.categories||[],clubs:update?.representedClubs?update.representedClubs.split(/\s*;\s*/):info?.represented_clubs||[],firstSeen:info?.first_seen,lastSeen:info?.last_seen,recordCount:info?.record_count||0,eventCount:info?.event_count||0,identityStatus:(update?.identityPending??('identityPending' in row&&row.identityPending))?'全名待确认':info?.identity_status||'用户添加，尚无已关联记录'};});
 }
 export async function readLiveEvents():Promise<LiveEvent[]>{const {results}=await db().prepare('SELECT payload FROM live_events').all<{payload:string}>();return results.map(row=>JSON.parse(row.payload) as LiveEvent).sort((a,b)=>a.start.localeCompare(b.start));}
 export async function readLiveEvent(id:string):Promise<LiveEvent|null>{const row=await db().prepare('SELECT payload FROM live_events WHERE id = ?').bind(id).first<{payload:string}>();return row?JSON.parse(row.payload):null;}
-export async function putLiveEvent(event:LiveEvent){await db().prepare('INSERT INTO live_events (id,payload,updated_at) VALUES (?,?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload,updated_at=excluded.updated_at').bind(event.id,JSON.stringify(event),new Date().toISOString()).run();}
+export async function putLiveEvent(event:LiveEvent){await db().batch(eventWriteStatements(db(),event,await readLiveEvent(event.id)));}
 export async function readPlans():Promise<CoachPlan[]>{const {results}=await db().prepare('SELECT id,skater_id AS skaterId,event_id AS eventId,meeting_time AS meetingTime,note,revision FROM coach_plans').all<Omit<CoachPlan,'slotKey'>>();return results.map(row=>({...row,slotKey:row.id.split('|').slice(2).join('|')}));}
 export async function readSyncStatus():Promise<SyncStatus>{const row=await db().prepare('SELECT value FROM app_meta WHERE key = ?').bind('official-sync-status').first<{value:string}>();return row?JSON.parse(row.value):{};}
 export async function putSyncStatus(update:SyncStatus){const old=await readSyncStatus();const defined=Object.fromEntries(Object.entries(update).filter(([,value])=>value!==undefined));await db().prepare('INSERT INTO app_meta (key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').bind('official-sync-status',JSON.stringify({...old,...defined})).run();}
