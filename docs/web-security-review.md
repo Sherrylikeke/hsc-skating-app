@@ -1,0 +1,9 @@
+# Private-test web dependency gate · 2026-10-20
+
+The production-dependency audit reports **9 dependency-tree findings: 1 critical, 2 high, 6 moderate**. Newly added Better Auth, its crypto/session dependencies, the Drizzle runtime and date-fns-tz were not named as vulnerable in this report. This is not a guarantee that they have no vulnerabilities.
+
+The retained Sites starter pins Next 16.3.4. The audit includes [Next ImageResponse/next-og RCE](https://github.com/advisories/GHSA-vcvr-r3jv-pc5j) and additional Next cache/image advisories; other high findings concern `sharp` and `source-map-js`. The application runs through the retained Vinext/Cloudflare integration, not `next start`. No OG/ImageResponse, dynamic image-optimization or user-supplied source-map feature was added. This source observation is not a complete runtime reachability/security assessment.
+
+Unrelated framework packages were not force-upgraded, nor was the supported Sites starter integration replaced. **These audit findings remain unresolved and must be reviewed/remediated with compatible maintained versions before opening registration or production member distribution.** The site stays behind its original owner-only hosting boundary, as explicitly requested. Do not treat passing functional tests or private publication as security certification or permission to expose it publicly.
+
+All member routes enforce server authentication and approved skater relationships. Self-registration cannot bootstrap admin, auto-merge with an existing member by email, or read private data merely because a role was requested. Password-account ownership requires an administrator-issued email-bound invitation or explicit dual-session linking. Real password-library and local Worker tests cover signed tokens, hash storage, cross-origin writes, pending scope and revocation.

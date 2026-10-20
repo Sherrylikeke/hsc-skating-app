@@ -23,6 +23,7 @@ class LocalD1 {
       async all() {return this.execute();},
       async first() {return this.execute().results[0] || null;},
       async run() {return this.execute();},
+      async raw() {const statement=owner.database.prepare(query);statement.setReturnArrays(true);return statement.all(...this.values);},
     };
   }
   async batch(statements) {
@@ -53,7 +54,7 @@ registerHooks({
     }
   },
   load(url, context, next) {
-    if (url === 'test-stub:cloudflare:workers') return {format: 'module', source: 'export const env={get DB(){return globalThis.hscTestDatabase}};', shortCircuit: true};
+    if (url === 'test-stub:cloudflare:workers') return {format: 'module', source: 'export const env={get DB(){return globalThis.hscTestDatabase},get BETTER_AUTH_SECRET(){return globalThis.hscTestAuthSecret}};', shortCircuit: true};
     if (url === 'test-stub:next/headers') return {format: 'module', source: 'export async function headers(){return globalThis.hscTestHeaders}', shortCircuit: true};
     if (url === 'test-stub:next/navigation') return {format: 'module', source: 'export function redirect(path){throw new Error(path)}', shortCircuit: true};
     if (url.startsWith('file:') && url.endsWith('.json')) return {format: 'module', source: 'export default ' + fs.readFileSync(new URL(url), 'utf8'), shortCircuit: true};
@@ -65,11 +66,16 @@ const {memberRequest} = await import('../lib/member-admin.ts');
 const {actor, accessibleSkaters, assertSkater} = await import('../lib/member-access.ts');
 const {drainOutbox} = await import('../lib/member-messages.ts');
 const {eventWriteStatements} = await import('../lib/change-notifications.ts');
+const {syncEvent} = await import('../lib/official-sync.ts');
+const {createPasswordAuth} = await import('../lib/password-auth.ts');
+const {reminderPlans,reconcileReminders} = await import('../lib/reminders.ts');
 const clubAPI = await import('../app/api/club/route.ts');
 const coachAPI = await import('../app/api/coaches/route.ts');
 const planAPI = await import('../app/api/plans/route.ts');
 const syncAPI = await import('../app/api/sync/route.ts');
 const mcpAPI = await import('../app/mcp/route.ts');
+const mobileAPI = await import('../app/api/mobile/route.ts');
+const memberAPI = await import('../app/api/member/route.ts');
 const candidates = [{id: 'SK-A', name: 'Test Alpha'}, {id: 'SK-B', name: 'Test Beta'}, {id: 'SK-C', name: 'Same Name'}, {id: 'SK-D', name: 'Same Name'}, {id: 'SK-N', name: 'Nathaniel', identityPending: true}];
 const ownerEmail = 'owner@example.test';
 const identity = name => ({userId: name, email: name + '@example.test', displayName: name});
@@ -257,6 +263,124 @@ check('unbinding, withdrawal of admission, coach transfer, account disabling, se
 
 for (let attempt = 0; attempt < 15; attempt++) await call(users.outsider, 'match&name=Same%20Name', undefined, attempt < 14 ? 200 : 429);
 check('server-side name matching rate limit enforced');
+const rematchSkaterId = 'HSC-NEW-' + crypto.randomUUID();
+const rematchEventId = 'SO-999001';
+const rematchPayload = {name:'Verified Test Fullname',identityPending:true,training:true,representedClubs:''};
+database.database.prepare('INSERT INTO hsc_admissions (skater_id,admitted,payload,updated_by,updated_at) VALUES (?,1,?,?,?)').run(rematchSkaterId,JSON.stringify(rematchPayload),'owner',new Date().toISOString());
+database.database.prepare('INSERT INTO live_events (id,payload,updated_at) VALUES (?,?,?)').run(rematchEventId,JSON.stringify({...fixture,id:rematchEventId,url:'https://skateontario.org/rematch/',documents:[],participants:[],blocks:[],startingOrders:[]}),new Date().toISOString());
+const originalFetch = globalThis.fetch;
+globalThis.fetch = async input => new Response(new URL(input).pathname === '/rematch/entries.html' ? '<table><tr data-category="Novice Men" data-club="Test Club"><td><span class="skater-name">Verified Test Fullname</span></td></tr></table>' : '<a href="https://skateontario.org/rematch/entries.html">Entry List</a>');
+try {
+  await syncEvent(rematchEventId);
+  const first = JSON.parse(database.database.prepare('SELECT payload FROM live_events WHERE id=?').get(rematchEventId).payload);
+  assert.deepEqual(first.participants[0].skaterIds, []);
+  database.database.prepare('UPDATE hsc_admissions SET payload=? WHERE skater_id=?').run(JSON.stringify({...rematchPayload,identityPending:false}),rematchSkaterId);
+  await syncEvent(rematchEventId);
+  const second = JSON.parse(database.database.prepare('SELECT payload FROM live_events WHERE id=?').get(rematchEventId).payload);
+  assert.equal(second.documents[0].hash,first.documents[0].hash);
+  assert.notEqual(second.documents[0].matchingRosterHash,first.documents[0].matchingRosterHash);
+  assert.deepEqual(second.participants[0].skaterIds,[rematchSkaterId]);
+  const count = database.database.prepare('SELECT count(*) AS count FROM hsc_changes WHERE event_id=?').get(rematchEventId).count;
+  await syncEvent(rematchEventId);
+  assert.equal(database.database.prepare('SELECT count(*) AS count FROM hsc_changes WHERE event_id=?').get(rematchEventId).count,count);
+} finally {globalThis.fetch=originalFetch;}
+check('confirmed full names rematch unchanged official files; pending identity never matches and repeat sync creates no duplicate changes');
+const auth=createPasswordAuth(database,'isolated-tests-only-secret-0123456789-abcdef','http://127.0.0.1:5173');
+const authRequest=(path,body,headers={})=>new Request('http://127.0.0.1:5173/api/auth/'+path,{method:'POST',headers:{origin:'http://127.0.0.1:5173','Content-Type':'application/json','cf-connecting-ip':'192.0.2.71',...headers},body:JSON.stringify(body)});
+const testPassword='Isolated-Fixture-Password-2026!';
+const signup=await auth.handler(authRequest('sign-up/email',{email:'password-fixture@example.test',name:'Password Fixture',username:'fixture.account',password:testPassword,role:'admin',emailVerified:true}));
+assert.equal(signup.status,200,await signup.clone().text());
+const signupValue=await signup.json();
+assert.equal(signupValue.user.emailVerified,false);
+assert.match(signup.headers.get('set-cookie'),/HttpOnly/i);
+const signedToken=signup.headers.get('set-auth-token');
+assert.ok(signedToken);
+const signedSession=await auth.api.getSession({headers:new Headers({authorization:'Bearer '+signedToken})});
+assert.equal(signedSession.user.id,signupValue.user.id);
+assert.equal(await auth.api.getSession({headers:new Headers({authorization:'Bearer '+signupValue.token})}),null);
+const storedPassword=database.database.prepare('SELECT password FROM hsc_auth_account WHERE user_id=?').get(signupValue.user.id).password;
+assert.notEqual(storedPassword,testPassword);
+assert.ok(storedPassword.length>60);
+const passwordIdentity={userId:'password:'+signupValue.user.id,email:signupValue.user.email,displayName:signupValue.user.name,provider:'password',authToken:signedSession.session.token};
+const passwordContext={database,identity:passwordIdentity,candidates,ownerEmail:passwordIdentity.email};
+const passwordLogin=await memberRequest(passwordContext,request(null,'session',{role:'admin'}));
+assert.equal(passwordLogin.status,200);
+const passwordMember=(await passwordLogin.json()).member;
+assert.equal(passwordMember.role,null);
+assert.equal(passwordMember.status,'pending');
+assert.equal((await memberRequest(passwordContext,request(null,'me'))).status,200);
+assert.equal((await memberRequest(passwordContext,request(null,'admin'))).status,403);
+await memberRequest(passwordContext,request(null,'logout',{}));
+assert.equal((await memberRequest(passwordContext,request(null,'me'))).status,401);
+const spoofedExisting={...passwordIdentity,email:users.owner.identity.email};
+assert.equal((await memberRequest({...passwordContext,identity:spoofedExisting},request(null,'session',{role:'admin'}))).status,409);
+await call(users.owner,'member',{id:passwordMember.id,role:'parent',status:'active'});
+await memberRequest(passwordContext,request(null,'session',{role:'parent'}));
+assert.equal((await memberRequest(passwordContext,request(null,'me')).then(response=>response.json())).member.status,'pending-verification');
+assert.equal((await memberRequest(passwordContext,request(null,'notifications'))).status,403);
+database.database.exec("UPDATE hsc_admissions SET admitted=1 WHERE skater_id='SK-A'");
+const passwordInvite=(await call(users.owner,'invite',{email:passwordIdentity.email,role:'parent',skaterIds:['SK-A']},201)).value;
+assert.equal((await memberRequest(passwordContext,request(null,'accept-invite',{token:passwordInvite.token}))).status,200);
+const verifiedSession=await auth.api.getSession({headers:new Headers({authorization:'Bearer '+signedToken})});
+assert.equal(verifiedSession.user.emailVerified,true);
+passwordIdentity.authVerified=true;
+await memberRequest(passwordContext,request(null,'session',{role:'parent'}));
+assert.equal((await memberRequest(passwordContext,request(null,'notifications'))).status,200);
+await call(users.owner,'relation',{memberId:passwordMember.id,skaterId:rematchSkaterId,active:true});
+globalThis.hscTestAuthSecret='isolated-tests-only-secret-0123456789-abcdef';
+globalThis.hscTestHeaders=new Headers();
+const nativeRequest=new Request('https://hsc-coach-roster.sherrylikeke.chatgpt.site/api/mobile',{headers:{authorization:'Bearer '+signedToken}});
+const nativeResponse=await mobileAPI.GET(nativeRequest);
+assert.equal(nativeResponse.status,200,await nativeResponse.clone().text());
+assert.deepEqual((await nativeResponse.json()).skaters.map(skater=>skater.id).sort(),['SK-A',rematchSkaterId].sort());
+assert.equal((await memberAPI.GET(new Request('https://hsc-coach-roster.sherrylikeke.chatgpt.site/api/member?action=me',{headers:{authorization:'Bearer '+signedToken}}))).status,200);
+await call(users.owner,'revoke-sessions',{id:passwordMember.id});
+assert.equal(await auth.api.getSession({headers:new Headers({authorization:'Bearer '+signedToken})}),null);
+assert.equal((await mobileAPI.GET(nativeRequest)).status,401);
+globalThis.hscTestAuthSecret=undefined;
+const badOrigin=await auth.handler(authRequest('sign-in/username',{username:'fixture.account',password:testPassword},{origin:'https://untrusted.example.test'}));
+assert.equal(badOrigin.status,403);
+const wrongPassword=await auth.handler(authRequest('sign-in/username',{username:'fixture.account',password:'wrong-password'}));
+assert.notEqual(wrongPassword.status,200);
+const correctPassword=await auth.handler(authRequest('sign-in/username',{username:'FIXTURE.ACCOUNT',password:testPassword}));
+assert.equal(correctPassword.status,200);
+const newSigned=correctPassword.headers.get('set-auth-token');
+const signedOut=await auth.handler(authRequest('sign-out',{}, {authorization:'Bearer '+newSigned}));
+assert.equal(signedOut.status,200);
+assert.equal(await auth.api.getSession({headers:new Headers({authorization:'Bearer '+newSigned})}),null);
+check('real password library hashes credentials, normalizes usernames, rejects CSRF/raw bearer tokens, revokes sessions, and never grants roles or merges accounts by email');
+const reminderRule={id:'fixture-rule',member_id:'owner',skater_id:'SK-A',arrival_minutes:90,notify_minutes:180,packing:'Skates, guards, water',enabled:1,revision:1};
+const reminderEvent={...fixture,id:'SO-REMINDER',blocks:fixture.blocks.map(block=>({...block,categoryKey:'NOVICE|MEN',group:null,range:null,sourceUrl:'https://skateontario.org/test/schedule.pdf'}))};
+const {categoryKey}=await import('../lib/official-parser.ts');
+reminderEvent.blocks[0].categoryKey=categoryKey('Novice Men');
+const planned=reminderPlans([reminderEvent],[reminderRule],Date.parse('2026-10-20T00:00:00Z'));
+assert.equal(planned.length,1);
+assert.equal(planned[0].startAt,'2026-11-01T15:00:00.000Z');
+assert.equal(planned[0].arrivalAt,'2026-11-01T13:30:00.000Z');
+assert.equal(planned[0].notifyAt,'2026-11-01T12:00:00.000Z');
+const summer={...reminderEvent,blocks:reminderEvent.blocks.map(block=>({...block,date:'2026-07-01'}))};
+assert.equal(reminderPlans([summer],[reminderRule],0)[0].startAt,'2026-07-01T14:00:00.000Z');
+for(const [date,start] of [['2026-11-01','01:30'],['2026-03-08','02:30']])assert.equal(reminderPlans([{...reminderEvent,blocks:reminderEvent.blocks.map(block=>({...block,date,start}))}],[reminderRule],0).length,0);
+const ambiguous={...reminderEvent,blocks:reminderEvent.blocks.map(block=>({...block,group:3}))};
+assert.equal(reminderPlans([ambiguous],[reminderRule],0).length,0);
+await call(users.owner,'reminder',{skaterId:'SK-A',arrivalMinutes:30,notifyMinutes:180,packing:'Skates'},400);
+await call(users.parent,'reminder',{skaterId:'SK-B',arrivalMinutes:90,notifyMinutes:180,packing:'Skates'},403);
+database.database.prepare('INSERT INTO live_events (id,payload,updated_at) VALUES (?,?,?)').run(reminderEvent.id,JSON.stringify(reminderEvent),new Date().toISOString());
+database.database.exec("UPDATE hsc_admissions SET admitted=1 WHERE skater_id='SK-A'");
+await call(users.owner,'reminder',{skaterId:'SK-A',arrivalMinutes:90,notifyMinutes:180,packing:'Skates, guards, water'});
+const firstReminder=(await call(users.owner,'reminders')).value.plans.find(plan=>plan.eventId==='SO-REMINDER');
+assert.ok(firstReminder);
+await reconcileReminders(database);
+assert.equal(database.database.prepare('SELECT count(*) AS count FROM hsc_outbox WHERE id=?').get(firstReminder.id).count,1);
+const moved={...reminderEvent,blocks:reminderEvent.blocks.map(block=>({...block,start:'11:00',end:'12:00'}))};
+await database.batch(eventWriteStatements(database,moved,reminderEvent));
+await reconcileReminders(database);
+assert.equal(database.database.prepare('SELECT state FROM hsc_outbox WHERE id=?').get(firstReminder.id).state,'cancelled');
+const nextPlans=(await call(users.owner,'reminders')).value.plans;
+assert.equal(nextPlans.find(plan=>plan.eventId==='SO-REMINDER').arrivalAt,'2026-11-01T14:30:00.000Z');
+await call(users.owner,'reminder',{skaterId:'SK-A',arrivalMinutes:90,notifyMinutes:180,packing:'Skates',enabled:false});
+assert.equal((await call(users.owner,'reminders')).value.plans.length,0);
+check('reminders enforce 60-minute arrival, correct Toronto DST, skip uncertain groups, scope personal rules, deduplicate, reschedule and cancel disabled rules');
 assert.equal(database.database.prepare("SELECT coach FROM coach_assignments WHERE skater_id='SK-A'").get().coach, 'Jen Jackson/Bryce Davidson');
 assert.equal(database.database.prepare("SELECT note FROM coach_plans WHERE id='legacy-plan'").get().note, 'keep this note');
 const result = {passed: checks.length, checks, migrations, fixtureOnly: true, externalMessagesSent: 0, legacyDataPreserved: true};

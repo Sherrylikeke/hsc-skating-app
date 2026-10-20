@@ -1,0 +1,13 @@
+{
+  "expo":{
+    "name":"HSC Skating",
+    "slug":"hsc-skating",
+    "version":"0.1.0",
+    "scheme":"hscskating",
+    "orientation":"portrait",
+    "userInterfaceStyle":"light",
+    "ios":{"supportsTablet":true,"bundleIdentifier":"com.hscskating.clubapp","infoPlist":{"ITSAppUsesNonExemptEncryption":false}},
+    "android":{"package":"com.hscskating.clubapp"},
+    "plugins":["expo-secure-store","expo-notifications"]
+  }
+}

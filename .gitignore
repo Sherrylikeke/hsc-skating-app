@@ -30,6 +30,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+.dev.vars*
 
 # vercel
 .vercel
@@ -55,3 +56,7 @@ next-env.d.ts
 /.codex/
 /outputs/
 /work/
+/mobile/node_modules/
+/mobile/.expo/
+/mobile/dist/
+/mobile/build/

@@ -1,10 +1,14 @@
 import {AccessError, accessibleSkaters, actor, admittedIDs, audit, bodyJSON, digest, failure, idsField, json, nowISO, parseIDs, randomToken, rateLimit, relationStatement, requireRole, roleField, sessionCookie, sessionHash, startSession, stringField} from './member-access.ts';
 import type {Candidate, Identity, Member, Role} from './member-access.ts';
 import {drainOutbox, listNotifications, markNotification, listRequirements, writeRequirement, receiptRequirement} from './member-messages.ts';
+import {listReminders,saveReminder} from './reminders.ts';
 
 type Context = {database: D1Database; identity: Identity | null; candidates: Candidate[]; ownerEmail: string};
 type Invite = {id: string; email: string; role: Role; hash: string; skater_ids: string; expires_at: string; status: string; created_by: string};
 type Claim = {id: string; member_id: string; kind: string; payload: string; status: string};
+function revokePasswordSessions(database:D1Database,memberId:string) {
+  return database.prepare("DELETE FROM hsc_auth_session WHERE 'password:'||user_id=? OR user_id IN (SELECT auth_user_id FROM hsc_auth_links WHERE member_id=?)").bind(memberId,memberId);
+}
 
 export async function memberRequest(context: Context, request: Request): Promise<Response> {
   try {
@@ -14,7 +18,7 @@ export async function memberRequest(context: Context, request: Request): Promise
       const body = await bodyJSON(request);
       return await startSession(database, identity, request, roleField(body.role), ownerEmail);
     }
-    if (operation === 'identity' && request.method === 'GET') return json({identity: identity ? {name: identity.displayName, email: identity.email} : null});
+    if (operation === 'identity' && request.method === 'GET') return json({identity: identity ? {name: identity.displayName, email: identity.email, provider:identity.provider || 'chatgpt'} : null});
     const member = await actor(database, identity, request, false);
     if (request.method === 'GET') {
       if (operation === 'me') {
@@ -33,17 +37,18 @@ export async function memberRequest(context: Context, request: Request): Promise
       requireRole(member, 'admin', 'coach', 'parent', 'skater');
       if (operation === 'notifications') return json({notifications: await listNotifications(database, member)});
       if (operation === 'requirements') return json({requirements: await listRequirements(database, member)});
+      if (operation === 'reminders') return json(await listReminders(database,member));
       throw new AccessError(404, '操作不存在');
     }
     if (request.method !== 'POST') throw new AccessError(405, '请求方法无效');
     const body = await bodyJSON(request);
     await rateLimit(database, `write:${member.id}`, 80);
     if (operation === 'logout') {
-      await database.prepare('UPDATE hsc_sessions SET revoked_at=? WHERE hash=? AND member_id=?').bind(nowISO(), await sessionHash(request), member.id).run();
+      await database.prepare('UPDATE hsc_sessions SET revoked_at=? WHERE hash=? AND member_id=?').bind(nowISO(), await sessionHash(request, identity), member.id).run();
       return json({ok: true}, 200, {'Set-Cookie': sessionCookie(request, '', 0)});
     }
     if (operation === 'revoke-own-sessions') {
-      await database.prepare('UPDATE hsc_members SET auth_version=auth_version+1 WHERE id=?').bind(member.id).run();
+      await database.batch([database.prepare('UPDATE hsc_members SET auth_version=auth_version+1 WHERE id=?').bind(member.id),revokePasswordSessions(database,member.id)]);
       return json({ok: true}, 200, {'Set-Cookie': sessionCookie(request, '', 0)});
     }
     if (operation === 'accept-invite') return await acceptInvite(database, member, stringField(body.token, 100));
@@ -52,6 +57,7 @@ export async function memberRequest(context: Context, request: Request): Promise
     if (operation === 'notification-read') {await markNotification(database, member, stringField(body.id, 500)); return json({ok: true});}
     if (operation === 'requirement') return json({requirement: await writeRequirement(database, member, body)});
     if (operation === 'receipt') {await receiptRequirement(database, member, body); return json({ok: true});}
+    if (operation === 'reminder') return json(await saveReminder(database,member,body));
     if (operation === 'unlink-own') {
       requireRole(member, 'coach');
       const skaterId = stringField(body.skaterId, 100);
@@ -115,6 +121,7 @@ async function acceptInvite(database: D1Database, member: Member, token: string)
     database.prepare("INSERT INTO hsc_audit (id,actor_id,action,subject_id,payload,created_at) SELECT ?,?,'invite-accept',?,'{}',? WHERE EXISTS (SELECT 1 FROM hsc_invites WHERE id=? AND status='pending' AND expires_at>?) AND EXISTS (SELECT 1 FROM hsc_members WHERE id=? AND status<>'disabled' AND auth_version=? AND (role IS NULL OR role<>'admin' OR ?='admin' OR (SELECT count(*) FROM hsc_members WHERE role='admin' AND status='active')>1))").bind(operationId, member.id, invite.id, nowISO(), invite.id, nowISO(), member.id, member.auth_version, invite.role),
     database.prepare(`UPDATE hsc_invites SET status='accepted',used_by=? WHERE id=? AND ${gate}`).bind(member.id, invite.id, operationId),
     database.prepare(`UPDATE hsc_members SET role=?,status='active',auth_version=auth_version+1 WHERE id=? AND ${gate}`).bind(invite.role, member.id, operationId),
+    database.prepare(`UPDATE hsc_auth_user SET email_verified=1 WHERE email=? AND (id IN (SELECT auth_user_id FROM hsc_auth_links WHERE member_id=?) OR 'password:'||id=?) AND ${gate}`).bind(member.email,member.id,member.id,operationId),
     database.prepare(`UPDATE hsc_relations SET active=0 WHERE member_id=? AND (kind<>? OR ?='skater') AND ${gate}`).bind(member.id, invite.role, invite.role, operationId),
     ...skaterIds.map(id => database.prepare(`INSERT INTO hsc_relations (id,member_id,skater_id,kind,active,approved_by,updated_at) SELECT ?,?,?,?,1,?,? WHERE ${gate} ON CONFLICT(id) DO UPDATE SET active=1,approved_by=excluded.approved_by,updated_at=excluded.updated_at`).bind(`${member.id}|${invite.role}|${id}`, member.id, id, invite.role, invite.created_by, nowISO(), operationId)),
   ];
@@ -205,7 +212,7 @@ async function adminWrite(database: D1Database, member: Member, operation: strin
   }
   if (operation === 'revoke-sessions') {
     const id = stringField(body.id, 100);
-    await database.batch([database.prepare('UPDATE hsc_members SET auth_version=auth_version+1 WHERE id=?').bind(id), audit(database, member.id, 'sessions-revoke', id, {})]);
+    await database.batch([database.prepare('UPDATE hsc_members SET auth_version=auth_version+1 WHERE id=?').bind(id),revokePasswordSessions(database,id),audit(database, member.id, 'sessions-revoke', id, {})]);
     return json({ok: true});
   }
   if (operation === 'relation') {

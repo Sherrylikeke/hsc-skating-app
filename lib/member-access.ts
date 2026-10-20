@@ -1,5 +1,5 @@
 export type Role = 'admin' | 'parent' | 'skater' | 'coach';
-export type Identity = {userId: string; email: string; displayName: string};
+export type Identity = {userId: string; email: string; displayName: string; provider?: 'password'; authToken?: string; authVerified?:boolean};
 export type Member = {id: string; email: string; name: string; role: Role | null; requested_role: Role; status: string; auth_version: number};
 export type Candidate = {id: string; name: string; identityPending?: boolean; training?: boolean; coach?: string};
 export class AccessError extends Error {
@@ -60,12 +60,16 @@ function cookieToken(request: Request) {
   const name = cookieName(request) + '=';
   return (request.headers.get('cookie') || '').split(';').map(value => value.trim()).find(value => value.startsWith(name))?.slice(name.length) || '';
 }
-export async function sessionHash(request: Request) {return digest(cookieToken(request));}
+export async function sessionHash(request: Request, identity?: Identity | null) {return digest(identity?.authToken ? 'password:' + identity.authToken : cookieToken(request));}
 export async function actor(database: D1Database, identity: Identity | null, request: Request, active = true): Promise<Member> {
   if (!identity) throw new AccessError(401, '请先使用 ChatGPT 验证身份');
-  const member = await database.prepare('SELECT m.* FROM hsc_members m JOIN hsc_sessions s ON s.member_id=m.id AND s.auth_version=m.auth_version WHERE m.id=? AND lower(m.email)=? AND s.hash=? AND s.revoked_at IS NULL AND s.expires_at>?').bind(identity.userId, identity.email.toLowerCase(), await sessionHash(request), nowISO()).first<Member>();
+  const member = await database.prepare('SELECT m.* FROM hsc_members m JOIN hsc_sessions s ON s.member_id=m.id AND s.auth_version=m.auth_version WHERE m.id=? AND lower(m.email)=? AND s.hash=? AND s.revoked_at IS NULL AND s.expires_at>?').bind(identity.userId, identity.email.toLowerCase(), await sessionHash(request, identity), nowISO()).first<Member>();
   if (!member) throw new AccessError(401, '请进入会员入口重新登录');
   if (member.status === 'disabled') throw new AccessError(403, '账号已停用，请联系管理员');
+  if (identity.provider==='password'&&!identity.authVerified&&member.status==='active') {
+    if(active)throw new AccessError(403,'Confirm account ownership using an administrator-issued invitation before accessing private records.');
+    return {...member,status:'pending-verification'};
+  }
   if (active && (member.status !== 'active' || !member.role)) throw new AccessError(403, '账号正在等待管理员批准');
   return member;
 }
@@ -91,8 +95,10 @@ export async function startSession(database: D1Database, identity: Identity | nu
   if (!identity) throw new AccessError(401, '请先使用 ChatGPT 验证身份');
   await rateLimit(database, `session:${identity.userId}`, 15);
   const time = nowISO();
+  const collision = await database.prepare('SELECT id FROM hsc_members WHERE lower(email)=? AND id<>?').bind(identity.email.toLowerCase(), identity.userId).first();
+  if (collision) throw new AccessError(409, 'An account already uses this email. Sign in with ChatGPT and explicitly link your password account first.');
   await database.prepare('INSERT INTO hsc_members (id,email,name,requested_role,status,created_at) VALUES (?,?,?,?,\'pending\',?) ON CONFLICT(id) DO NOTHING').bind(identity.userId, identity.email.toLowerCase(), identity.displayName, requestedRole, time).run();
-  if (identity.email.toLowerCase() === ownerEmail.toLowerCase()) {
+  if (!identity.provider && identity.email.toLowerCase() === ownerEmail.toLowerCase()) {
     await database.batch([
       database.prepare("INSERT INTO hsc_audit (id,actor_id,action,subject_id,payload,created_at) SELECT ?,?,'owner-bootstrap',?,'{}',? WHERE NOT EXISTS (SELECT 1 FROM app_meta WHERE key='hsc-admin-bootstrap')").bind(crypto.randomUUID(), identity.userId, identity.userId, time),
       database.prepare("UPDATE hsc_members SET role='admin',status='active' WHERE id=? AND NOT EXISTS (SELECT 1 FROM app_meta WHERE key='hsc-admin-bootstrap')").bind(identity.userId),
@@ -103,9 +109,9 @@ export async function startSession(database: D1Database, identity: Identity | nu
   if (!member || member.email.toLowerCase() !== identity.email.toLowerCase() || member.status === 'disabled') throw new AccessError(403, '账号不可用，请联系管理员');
   const token = randomToken();
   await database.batch([
-    database.prepare('INSERT INTO hsc_sessions (hash,member_id,auth_version,expires_at,created_at) VALUES (?,?,?,?,?)').bind(await digest(token), member.id, member.auth_version, new Date(Date.now() + 28800000).toISOString(), time),
+    database.prepare('INSERT INTO hsc_sessions (hash,member_id,auth_version,expires_at,created_at) VALUES (?,?,?,?,?) ON CONFLICT(hash) DO UPDATE SET auth_version=excluded.auth_version,expires_at=excluded.expires_at,revoked_at=NULL').bind(identity.authToken ? await sessionHash(request, identity) : await digest(token), member.id, member.auth_version, new Date(Date.now() + 28800000).toISOString(), time),
     database.prepare('DELETE FROM hsc_sessions WHERE expires_at<?').bind(time),
     database.prepare('DELETE FROM hsc_rate_limits WHERE expires_at<?').bind(Date.now()),
   ]);
-  return json({member}, 200, {'Set-Cookie': sessionCookie(request, token)});
+  return json({member}, 200, identity.authToken ? {} : {'Set-Cookie': sessionCookie(request, token)});
 }

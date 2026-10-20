@@ -1,5 +1,6 @@
 import {AccessError, accessibleSkaters, admittedIDs, assertSkater, idsField, nowISO, parseIDs, requireRole, stringField} from './member-access.ts';
 import type {Member} from './member-access.ts';
+import {reconcileReminders,reminderIsCurrent} from './reminders.ts';
 
 type Requirement = {id: string; author_id: string; title: string; body: string; skater_ids: string; event_id: string | null; slot_key: string | null; due_at: string | null; state: string; revision: number; created_at: string; updated_at: string};
 type Outbox = {id: string; kind: string; subject_id: string; skater_id: string; author_id: string | null; payload: string; attempts: number};
@@ -9,6 +10,7 @@ export function outboxStatement(database: D1Database, input: {id: string; kind: 
   return database.prepare(`INSERT INTO hsc_outbox (id,kind,subject_id,skater_id,author_id,payload,available_at,created_at) SELECT ?,?,?,?,?,?,?,? ${gate ? 'WHERE EXISTS (SELECT 1 FROM hsc_audit WHERE id=?)' : ''} ON CONFLICT(id) DO NOTHING`).bind(...values, ...(gate ? [gate] : []));
 }
 export async function drainOutbox(database: D1Database, limit = 30) {
+  await reconcileReminders(database);
   const time = nowISO();
   const {results} = await database.prepare("SELECT * FROM hsc_outbox WHERE (state='pending' AND available_at<=?) OR (state='processing' AND lease_until<?) ORDER BY created_at,id LIMIT ?").bind(time, time, limit).all<Outbox>();
   let delivered = 0, retried = 0;
@@ -17,7 +19,13 @@ export async function drainOutbox(database: D1Database, limit = 30) {
     const acquired = await database.prepare("UPDATE hsc_outbox SET state='processing',lease_until=?,attempts=attempts+1 WHERE id=? AND ((state='pending' AND available_at<=?) OR (state='processing' AND lease_until<?)) RETURNING id").bind(lease, item.id, time, time).first();
     if (!acquired) continue;
     try {
-      const {results: recipients} = await database.prepare("SELECT DISTINCT m.id FROM hsc_members m JOIN hsc_relations r ON r.member_id=m.id AND r.kind=m.role AND r.active=1 JOIN hsc_admissions a ON a.skater_id=r.skater_id AND a.admitted=1 WHERE m.status='active' AND r.skater_id=? AND (?='schedule' OR m.role IN ('parent','skater') OR m.id=?)").bind(item.skater_id, item.kind, item.author_id).all<{id: string}>();
+      if (item.kind==='reminder' && !(await reminderIsCurrent(database,item.id))) {
+        await database.prepare("UPDATE hsc_outbox SET state='cancelled',lease_until=NULL WHERE id=?").bind(item.id).run();
+        continue;
+      }
+      const {results: recipients} = item.kind==='reminder'
+        ? await database.prepare("SELECT id FROM hsc_members WHERE id=? AND status='active'").bind(item.author_id).all<{id:string}>()
+        : await database.prepare("SELECT DISTINCT m.id FROM hsc_members m JOIN hsc_relations r ON r.member_id=m.id AND r.kind=m.role AND r.active=1 JOIN hsc_admissions a ON a.skater_id=r.skater_id AND a.admitted=1 WHERE m.status='active' AND r.skater_id=? AND (?='schedule' OR m.role IN ('parent','skater') OR m.id=?)").bind(item.skater_id, item.kind, item.author_id).all<{id: string}>();
       await database.batch([
         ...recipients.map(recipient => database.prepare('INSERT INTO hsc_notifications (id,outbox_id,member_id,skater_id,kind,subject_id,author_id,payload,created_at) VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING').bind(`${item.id}|${recipient.id}`, item.id, recipient.id, item.skater_id, item.kind, item.subject_id, item.author_id, item.payload, nowISO())),
         database.prepare("UPDATE hsc_outbox SET state='delivered',lease_until=NULL,error=NULL WHERE id=? AND lease_until=?").bind(item.id, lease),

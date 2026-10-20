@@ -74,3 +74,34 @@ export const hscReceipts = sqliteTable('hsc_receipts', {
   id: text('id').primaryKey(), requirementId: text('requirement_id').notNull(), skaterId: text('skater_id').notNull(),
   memberId: text('member_id').notNull(), revision: integer('revision').notNull(), readAt: text('read_at').notNull(), acknowledgedAt: text('acknowledged_at'),
 }, table => [index('hsc_receipt_requirement').on(table.requirementId)]);
+export const authUser = sqliteTable('hsc_auth_user', {
+  id: text('id').primaryKey(), name: text('name').notNull(), email: text('email').notNull().unique(),
+  emailVerified: integer('email_verified', {mode:'boolean'}).notNull(), image: text('image'),
+  createdAt: integer('created_at', {mode:'timestamp_ms'}).notNull(), updatedAt: integer('updated_at', {mode:'timestamp_ms'}).notNull(),
+  username: text('username').unique(), displayUsername: text('display_username'),
+});
+export const authSession = sqliteTable('hsc_auth_session', {
+  id: text('id').primaryKey(), expiresAt: integer('expires_at', {mode:'timestamp_ms'}).notNull(), token: text('token').notNull().unique(),
+  createdAt: integer('created_at', {mode:'timestamp_ms'}).notNull(), updatedAt: integer('updated_at', {mode:'timestamp_ms'}).notNull(),
+  ipAddress: text('ip_address'), userAgent: text('user_agent'), userId: text('user_id').notNull().references(()=>authUser.id,{onDelete:'cascade'}),
+}, table => [index('hsc_auth_session_user').on(table.userId)]);
+export const authAccount = sqliteTable('hsc_auth_account', {
+  id: text('id').primaryKey(), accountId: text('account_id').notNull(), providerId: text('provider_id').notNull(),
+  userId: text('user_id').notNull().references(()=>authUser.id,{onDelete:'cascade'}), accessToken: text('access_token'), refreshToken: text('refresh_token'), idToken: text('id_token'),
+  accessTokenExpiresAt: integer('access_token_expires_at', {mode:'timestamp_ms'}), refreshTokenExpiresAt: integer('refresh_token_expires_at', {mode:'timestamp_ms'}),
+  scope: text('scope'), password: text('password'), createdAt: integer('created_at', {mode:'timestamp_ms'}).notNull(), updatedAt: integer('updated_at', {mode:'timestamp_ms'}).notNull(),
+}, table => [index('hsc_auth_account_user').on(table.userId)]);
+export const authVerification = sqliteTable('hsc_auth_verification', {
+  id: text('id').primaryKey(), identifier: text('identifier').notNull(), value: text('value').notNull(),
+  expiresAt: integer('expires_at', {mode:'timestamp_ms'}).notNull(), createdAt: integer('created_at', {mode:'timestamp_ms'}).notNull(), updatedAt: integer('updated_at', {mode:'timestamp_ms'}).notNull(),
+}, table => [index('hsc_auth_verification_identifier').on(table.identifier)]);
+export const hscAuthLinks = sqliteTable('hsc_auth_links', {
+  authUserId: text('auth_user_id').primaryKey().references(()=>authUser.id,{onDelete:'cascade'}),
+  memberId: text('member_id').notNull().references(()=>hscMembers.id), createdAt: text('created_at').notNull(),
+});
+export const hscReminderRules = sqliteTable('hsc_reminder_rules', {
+  id:text('id').primaryKey(), memberId:text('member_id').notNull(), skaterId:text('skater_id').notNull(),
+  arrivalMinutes:integer('arrival_minutes').notNull().default(90), notifyMinutes:integer('notify_minutes').notNull().default(180),
+  packing:text('packing').notNull(), enabled:integer('enabled').notNull().default(1),
+  revision:integer('revision').notNull().default(1), updatedAt:text('updated_at').notNull(),
+}, table=>[index('hsc_reminder_member').on(table.memberId)]);
