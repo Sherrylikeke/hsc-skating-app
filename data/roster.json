@@ -516,6 +516,14 @@
     "training": false
   },
   {
+    "id": "HSC-MANUAL-NATHANIEL",
+    "name": "Nathaniel",
+    "coach": "Jen Jackson/Bryce Davidson",
+    "training": false,
+    "identityPending": true,
+    "source": "用户补充：全名未确认；负责教练由用户指定"
+  },
+  {
     "id": "HSC-D1D5FC21E1",
     "name": "Quinn Startek",
     "coach": "",

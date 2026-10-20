@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { planPaste } from './paste';
 
-type Row={id:string;name:string;coach:string;training:boolean;revision:number};
+type Row={id:string;name:string;coach:string;training:boolean;identityPending?:boolean;revision:number};
 type Change={id:string;coach:string};
 const DRAFT='hsc-coach-drafts-v1';
 
@@ -154,7 +154,7 @@ export default function CoachEditor(){
           {error && <div className="error" role="alert">{error}<button onClick={()=>void retry()}>重试保存</button></div>}
           {pasteError && !modal && <div className="error" role="alert">{pasteError}<button onClick={()=>setPasteError('')}>关闭</button></div>}
           <div className="table-wrap"><table><colgroup><col className="number-col"/><col className="name-col"/><col/></colgroup><thead><tr><th>#</th><th>选手姓名 <span>SKATER</span></th><th>负责教练 <span>COACH · 可直接编辑</span></th></tr></thead><tbody>
-            {visible.map((row,index)=><tr key={row.id} className={active===row.id?'active-row':''}><td className="row-number">{String(index+1).padStart(2,'0')}</td><td><div className="skater-name">{row.name}</div>{row.training && <span className="training">在 Hamilton 训练</span>}</td><td className="coach-cell"><input ref={el=>{if(el)inputs.current.set(row.id,el);else inputs.current.delete(row.id);}} aria-label={`${row.name} 的负责教练`} value={row.coach} maxLength={500} placeholder="输入或粘贴教练姓名" onFocus={()=>setActive(row.id)} onChange={e=>apply([{id:row.id,coach:e.target.value}])} onPaste={e=>{const text=e.clipboardData.getData('text/plain');if(/[\n\r\t]/.test(text)){e.preventDefault();paste(text,row.id);}}} onKeyDown={e=>{if(e.key==='Enter' || e.key==='ArrowDown' || e.key==='ArrowUp'){e.preventDefault();const next=visible[index+(e.key==='ArrowUp'?-1:1)];if(next)inputs.current.get(next.id)?.focus();}}}/><span className={row.coach?'cell-mark filled':'cell-mark'}>{row.coach?'✓':'＋'}</span></td></tr>)}
+            {visible.map((row,index)=><tr key={row.id} className={active===row.id?'active-row':''}><td className="row-number">{String(index+1).padStart(2,'0')}</td><td><div className="skater-name">{row.name}</div>{row.training && <span className="training">在 Hamilton 训练</span>}{row.identityPending && <span className="training">全名待确认</span>}</td><td className="coach-cell"><input ref={el=>{if(el)inputs.current.set(row.id,el);else inputs.current.delete(row.id);}} aria-label={`${row.name} 的负责教练`} value={row.coach} maxLength={500} placeholder="输入或粘贴教练姓名" onFocus={()=>setActive(row.id)} onChange={e=>apply([{id:row.id,coach:e.target.value}])} onPaste={e=>{const text=e.clipboardData.getData('text/plain');if(/[\n\r\t]/.test(text)){e.preventDefault();paste(text,row.id);}}} onKeyDown={e=>{if(e.key==='Enter' || e.key==='ArrowDown' || e.key==='ArrowUp'){e.preventDefault();const next=visible[index+(e.key==='ArrowUp'?-1:1)];if(next)inputs.current.get(next.id)?.focus();}}}/><span className={row.coach?'cell-mark filled':'cell-mark'}>{row.coach?'✓':'＋'}</span></td></tr>)}
           </tbody></table>{!visible.length && <div className="table-empty">{phase==='loading'?'正在加载选手名单…':rows.length?'没有符合条件的选手':'暂时无法加载名单，请点击重试。'}</div>}</div>
           <div className="table-foot"><span>显示 {visible.length} 位选手</span><span><span className="legend-dot"/> 修改后自动保存</span></div>
         </section>

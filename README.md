@@ -1,6 +1,6 @@
 # HSC 教练编辑页
 
-107 位选手名单取自既有 HSC 公开比赛底稿，包含 Breken Brezden。Sydney Mitchell 的教练按用户填写保留为 Jen Jackson/Bryce Davidson。名单是历史关联候选资料，未经俱乐部现役会员确认。
+108 位选手名单取自既有 HSC 公开比赛底稿，包含 Breken Brezden。Sydney Mitchell 的教练按用户填写保留为 Jen Jackson/Bryce Davidson。名单是历史关联候选资料，未经俱乐部现役会员确认。
 
 - 点击负责教练格输入，或从 Excel 直接粘贴一列、多行。
 - 两列姓名与教练按姓名匹配，找不到或重复的姓名会阻止整次粘贴。
@@ -13,3 +13,5 @@
 
 源代码在 app/；数据库 schema 在 db/schema.ts；初始名单在 data/roster.json。
 用 Sites 插件构建和发布。schema 更改后先生成并检查 drizzle 迁移。
+
+用户补充 Nathaniel（全名待确认），教练 Jen Jackson/Bryce Davidson；确认全名前不关联公开比赛记录。
