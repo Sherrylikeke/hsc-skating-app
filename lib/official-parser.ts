@@ -1,11 +1,12 @@
 import type {LiveEvent,Participant,ScheduleBlock,OfficialDocument,ClubSkater,ScheduleRow} from './club-types';
+import {orderFor} from './starting-order.ts';
 export type PdfItem={str:string;x:number;y:number};
 export function plain(value:string){return value.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'').replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,'').replace(/<[^>]*>/g,' ').replace(/&nbsp;|&#160;/g,' ').replace(/&amp;|&#0*38;/g,'&').replace(/&quot;|&#34;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(Number(n))).replace(/&#x([0-9a-f]+);/gi,(_,n)=>String.fromCodePoint(parseInt(n,16))).replace(/\s+/g,' ').trim();}
 export const normalizeName=(name:string)=>plain(name).normalize('NFKC').toLocaleLowerCase().replace(/[’‘]/g,"'").replace(/\s+/g,' ').trim();
 const attribute=(text:string,name:string)=>{const m=text.match(new RegExp(`\\b${name}\\s*=\\s*(["'])([\\s\\S]*?)\\1`,'i'));return m?plain(m[2]):'';};
 export function categoryKey(value:string){
-  const text=plain(value).toUpperCase().replace(/PRE[ -]?NOVICE/g,'PRENOVICE');
-  const level=text.match(/\b(PRENOVICE|NOVICE|JUNIOR|SENIOR|STAR\s*\d+)\b/)?.[1]||'';
+  const text=plain(value).toUpperCase().replace(/PRE[ -]?NOVICE/g,'PRENOVICE').replace(/PRE[ -]?JUVENILE/g,'PREJUVENILE');
+  const level=text.match(/\b(PREJUVENILE|JUVENILE|PRENOVICE|NOVICE|JUNIOR|SENIOR|GOLD|ADULT|STAR\s*\d+)\b/)?.[1]||'';
   let discipline='';if(/\bPAIR(S)?\b/.test(text))discipline='PAIR';else if(/S[YW]N?CHRO|SYNCHRO/.test(text))discipline='SYNCHRO';else if(/\bSOLO\b/.test(text))discipline='SOLO';else if(/DANCE/.test(text))discipline='DANCE';else if(/\bWOMEN\b|\bGIRLS\b/.test(text))discipline='WOMEN';else if(/\bMEN\b|\bBOYS\b/.test(text))discipline='MEN';
   return level&&discipline?`${level}:${discipline}`:'';
 }
@@ -17,11 +18,11 @@ export function discoverDocuments(html:string,base:string):OfficialDocument[]{
     let url:URL;try{url=new URL(href,base);}catch{continue;}
     if(!/^https?:$/.test(url.protocol))continue;
     const label=plain(match[2]);const signal=label+' '+url.pathname;
-    const kind=/schedule/i.test(signal)?'schedule':/entry\s*list|start\s*order|cssEntryList|entries/i.test(signal)?'entries':/result/i.test(signal)?'results':null;
+    const kind=/schedule/i.test(signal)?'schedule':/start(?:ing)?[ -]*order|SO\.pdf$/i.test(signal)?'start-order':/entry\s*list|cssEntryList|entries/i.test(signal)?'entries':/result/i.test(signal)?'results':null;
     if(!kind || (!/\.pdf$/i.test(url.pathname) && !/dstools\.ca$|skatingresults\.ca$|skateontario\.org$/.test(url.hostname)))continue;
     // Keep entry lists and actual schedule files, not navigation/category pages.
     if(kind==='schedule' && !/\.pdf$/i.test(url.pathname))continue;
-    if(kind==='results' && !/\.pdf$|index\.|\.htm$/i.test(url.pathname))continue;
+    if(kind==='results' && !/\.pdf$|index\.|\.htm$|\/$/i.test(url.pathname))continue;
     found.set(url.href,{url:url.href,label:label||kind,kind});
   }
   return [...found.values()];
@@ -79,11 +80,11 @@ export function scheduleRows(events:LiveEvent[],skaters:ClubSkater[]):ScheduleRo
     const key=categoryKey(entry.category),group=groupOf(entry.category);if(!key)continue;
     const matching=event.blocks.filter(block=>block.categoryKey===key && (group===null || block.group===null || group===block.group));
     for(const id of entry.skaterIds){const skater=skaterMap.get(id);if(!skater)continue;
-      for(const block of matching){const uncertain=(block.group!==null&&group===null)||block.range!==null;const rowId=`${event.id}|${id}|${block.id}`;
+      for(const block of matching){const startingOrder=block.activity==='competition'?orderFor(event.startingOrders||[],id,block.category):undefined;if(block.range&&startingOrder&&(startingOrder.startNumber<block.range[0]||startingOrder.startNumber>block.range[1]))continue;const uncertain=(block.group!==null&&group===null)||(block.range!==null&&!startingOrder);const rowId=`${event.id}|${id}|${block.id}`;
         const normalized=block.category.toUpperCase().replace(/\s+/g,' ').trim();
         const occurrence=event.blocks.filter(other=>other.category.toUpperCase().replace(/\s+/g,' ').trim()===normalized).findIndex(other=>other.id===block.id);
         const slotKey=`${normalized}:${occurrence}`;
-        output.set(rowId,{id:rowId,slotKey,eventId:event.id,eventName:event.name,eventUrl:event.url,skaterId:id,skaterName:skater.name,coach:skater.coach,category:block.category,date:block.date,start:block.start,end:block.end,rink:block.rink,activity:block.activity,uncertain,sourceUrl:block.sourceUrl,page:block.page,timezone:event.timezone,matchStatus:entry.matchStatus});
+        output.set(rowId,{id:rowId,slotKey,eventId:event.id,eventName:event.name,eventUrl:event.url,skaterId:id,skaterName:skater.name,coach:skater.coach,category:block.category,date:block.date,start:block.start,end:block.end,rink:block.rink,activity:block.activity,uncertain,sourceUrl:block.sourceUrl,page:block.page,timezone:event.timezone,matchStatus:entry.matchStatus,startingOrder});
       }
     }
   }

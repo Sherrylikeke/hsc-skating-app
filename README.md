@@ -30,6 +30,16 @@ data/ 保存原始资料，lib/ 保存共享类型及解析器，db/schema.ts �
 
 ## 原教练编辑功能说明
 
+## 2026-10-20 更新
+
+全站采用柔和蓝色，包括原教练编辑页。选手档案增加成绩趋势与记录状态分布，赛季、项目、成绩口径、比赛、状态、文字搜索和重置筛选共用同一份筛选结果。图表按项目与类别/分项口径分别查看，使用实际日期间距；退赛、缺分和队伍记录不画为个人成绩。原始记录仍可点击核对。参考用户已建的 Glissade 数据库的 Progress over time 与清除筛选交互。
+
+新增 Starting Order 读取：从赛事官网和最多两个官方结果页面发现文件，识别文字型 Starting Order PDF 与有明确列名的 HTML 表。保存出场序号、官方明确标示的 Warm-up Group 和个人时间；未列出就留空，赛事 Group 不被当成 warm-up group。比赛详情、个人/教练赛程及 CSV 都显示这些字段。出场序号可用于定位官网已经列明的序号区间，但不按人数计算热身组。每次详情同步最多复核四份出场文件，其余明确标记待核对并在下次继续；失败保留有效快照。扫描件及其他版式尚需适配。
+
+默认负责教练直接读取 D1 的 coach_assignments，多教练保留；仅空值显示待分配。docs/coach-assignments-backup-20261020.json 是所有者已保存资料的独立恢复备份，不用于覆盖现有数据库。原基线 ef837ff 的完整 Git 历史已推送到私人 GitHub 仓库 Sherrylikeke/hsc-skating-app，Site 托管源码仍按 Sites 工作流保存。
+
+新增检查：`node scripts/check-athlete-history.mjs`、`node scripts/check-starting-order.mjs`。出场测试包含真实官方PDF（五行，无热身组列）和明确标为 synthetic 的 HTML 热身组样本，不能把后者当作官网已公布的数据。下一阶段需求与安全验收见 docs/PHASE2_PROMPT.zh-CN.md。
+
 108 位选手名单取自既有 HSC 公开比赛底稿，包含 Breken Brezden。Sydney Mitchell 的教练按用户填写保留为 Jen Jackson/Bryce Davidson。名单是历史关联候选资料，未经俱乐部现役会员确认。
 
 - 点击负责教练格输入，或从 Excel 直接粘贴一列、多行。

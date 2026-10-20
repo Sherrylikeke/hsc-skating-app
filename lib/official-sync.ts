@@ -2,6 +2,7 @@ import {extractTextItems,getDocumentProxy} from 'unpdf';
 import roster from '../data/roster.json';
 import {db,putLiveEvent,readLiveEvents,readLiveEvent,putSyncStatus,readSyncStatus} from './club-store';
 import {calendarEvent,discoverDocuments,parseEntries,parseScheduleItems} from './official-parser';
+import {parseStartingOrderPdf,parseStartingOrderHtml} from './starting-order';
 import {todayToronto} from './club-types';
 import type {LiveEvent,OfficialDocument} from './club-types';
 const allowedHosts=new Set(['skateontario.org','www.skateontario.org','dstools.ca','www.dstools.ca','skatingresults.ca','www.skatingresults.ca']);
@@ -47,6 +48,9 @@ async function syncEventBody(id:string){
   const now=new Date().toISOString();let event={...existing,detailCheckedAt:now};const errors:string[]=[];let changed=0;
   try{
     const html=new TextDecoder().decode(await source(event.url));const discovered=discoverDocuments(html,event.url);
+    for(const hub of discovered.filter(d=>d.kind==='results'&&!/\.pdf(?:$|\?)/i.test(d.url)).slice(0,2)){
+      try{const linked=discoverDocuments(new TextDecoder().decode(await source(hub.url)),hub.url);for(const doc of linked.filter(d=>d.kind==='start-order'))if(!discovered.some(d=>d.url===doc.url))discovered.push(doc);}catch(error){errors.push('出场资料页面：'+message(error));}
+    }
     const documents=discovered.map(document=>({...existing.documents.find(old=>old.url===document.url),...document}));
     event={...event,documents};
     const entries=documents.find(document=>document.kind==='entries');const schedule=documents.find(document=>document.kind==='schedule');
@@ -72,13 +76,24 @@ async function syncEventBody(id:string){
         schedule.hash=hash;schedule.checkedAt=now;delete schedule.error;event.scheduleStatus='已读取官方组别赛程';await revision(event.id,schedule);
       }catch(error){schedule.error=message(error);errors.push(schedule.error);event.scheduleStatus=existing.blocks.length?'赛程更新待核对，显示上次有效版本':'赛程待核对';}
     }else event.scheduleStatus=existing.blocks.length?'官网当前未列出赛程链接，保留已读取版本':'官网尚未公布赛程链接';
+    const orderDocs=documents.filter(d=>d.kind==='start-order');
+    if(orderDocs.length){
+      const selected=[...orderDocs].sort((a,b)=>(a.checkedAt||'').localeCompare(b.checkedAt||'')).slice(0,4);let orders=[...(existing.startingOrders||[])];
+      for(const doc of selected){try{const bytes=await source(doc.url,8_000_000);const hash=await hashBytes(bytes);const previous=existing.documents.find(d=>d.url===doc.url);
+        if(previous?.hash!==hash||!orders.some(o=>o.sourceUrl===doc.url)){
+          let parsed;if(/\.pdf(?:$|\?)/i.test(doc.url)){const pdf=await getDocumentProxy(bytes,{maxImageSize:1_000_000,disableFontFace:true});if(pdf.numPages>20)throw new Error('出场顺序页数超出已验证格式');const {items}=await extractTextItems(pdf);parsed=parseStartingOrderPdf(items,doc.url,roster);}else parsed=parseStartingOrderHtml(new TextDecoder().decode(bytes),doc.url,roster);
+          if(!parsed.length)throw new Error('出场顺序格式待核对，保留上次有效资料');orders=[...orders.filter(o=>o.sourceUrl!==doc.url),...parsed];changed++;
+        }doc.hash=hash;doc.checkedAt=now;delete doc.error;await revision(event.id,doc);
+      }catch(error){doc.error=message(error);errors.push(doc.error);}}
+      event.startingOrders=orders;const pending=orderDocs.filter(d=>!d.checkedAt||d.error).length;event.startingOrderStatus=pending?`已读取 ${orders.length} 条出场信息，${pending} 份文件待核对`:`已读取 ${orders.length} 条官方出场信息`;
+    }else event.startingOrderStatus=existing.startingOrders?.length?'官网当前未列出出场链接，保留已读取版本':'官网尚未发现 Starting Order 链接';
     event.detailError=errors.join('；')||undefined;await putLiveEvent(event);await putSyncStatus({lastAttempt:now,lastSuccess:errors.length?undefined:now,error:errors.join('；')||null,entries:event.participants.filter(row=>row.skaterIds.length).length,blocks:event.blocks.length});
     return {id:event.id,name:event.name,changed,participants:event.participants.length,matchedSkaters:new Set(event.participants.flatMap(row=>row.skaterIds)).size,blocks:event.blocks.length,checkedAt:now,errors};
   }catch(error){event.detailError=message(error);await putLiveEvent(event);await putSyncStatus({lastAttempt:now,error:message(error)});throw error;}
 }
 export async function syncStatus(){return {status:await readSyncStatus(),events:(await readLiveEvents()).map(event=>({id:event.id,name:event.name,start:event.start,end:event.end,detailCheckedAt:event.detailCheckedAt,error:event.detailError,matched:event.participants.filter(row=>row.skaterIds.length).length})),scope:'Skate Ontario 官方日历；DSTools HTML 名单；含明确日期、START/END 与 RINK 表头的赛程 PDF。其他格式保留链接并提示核对。',instructions:'先同步日历，再逐个检查未来45天内最近三场比赛。读取失败不删除旧数据。官方时段是组别时间，不推算个人时间；教练集合与备注独立保存。'};}
 async function withSyncLock<T>(operation:()=>Promise<T>):Promise<T>{
-  const lock=JSON.stringify({token:crypto.randomUUID(),expiresAt:Date.now()+120000});
+  const lock=JSON.stringify({token:crypto.randomUUID(),expiresAt:Date.now()+300000});
   const acquired=await db().prepare("INSERT INTO app_meta (key,value) VALUES ('official-source-lock',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value WHERE CAST(json_extract(app_meta.value,'$.expiresAt') AS INTEGER) <= ? RETURNING value").bind(lock,Date.now()).first();
   if(!acquired)throw new Error('官网资料正在同步中，请稍后重试');
   try{return await operation();}finally{await db().prepare("DELETE FROM app_meta WHERE key='official-source-lock' AND value=?").bind(lock).run();}
