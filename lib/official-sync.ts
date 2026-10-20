@@ -43,6 +43,7 @@ async function syncCalendarBody(){
 async function syncEventBody(id:string){
   const existing=await readLiveEvent(id);if(!existing)throw new Error('请先同步官网日历');
   const roster=await profiles();
+  const matchingRosterHash=await hashBytes(new TextEncoder().encode(JSON.stringify(roster.map(row=>({id:row.id,name:row.name,identityPending:row.identityPending===true})).sort((first,second)=>first.id.localeCompare(second.id)))));
   const now=new Date().toISOString();let event={...existing,detailCheckedAt:now};const errors:string[]=[];let changed=0;
   try{
     const html=new TextDecoder().decode(await source(event.url));const discovered=discoverDocuments(html,event.url);
@@ -55,12 +56,12 @@ async function syncEventBody(id:string){
     if(entries){
       try{
         const bytes=await source(entries.url);const hash=await hashBytes(bytes);const previous=existing.documents.find(document=>document.url===entries.url);
-        if(previous?.hash!==hash||!existing.participants.length){
+        if(previous?.hash!==hash||!existing.participants.length||previous.matchingRosterHash!==matchingRosterHash){
           if(/\.pdf(?:$|\?)/i.test(entries.url))throw new Error('该名单 PDF 格式待核对，已保留官网链接');
           const participants=parseEntries(new TextDecoder().decode(bytes),entries.url,roster);if(!participants.length)throw new Error('名单格式尚未识别，保留上次有效名单');
-          event.participants=participants;changed++;
+          if(previous?.hash!==hash||JSON.stringify(participants)!==JSON.stringify(existing.participants))changed++;event.participants=participants;
         }
-        entries.hash=hash;entries.checkedAt=now;delete entries.error;event.entryStatus='已读取官方名单';
+        entries.hash=hash;entries.matchingRosterHash=matchingRosterHash;entries.checkedAt=now;delete entries.error;event.entryStatus='已读取官方名单';
       }catch(error){entries.error=message(error);errors.push(entries.error);event.entryStatus=existing.participants.length?'名单更新待核对，显示上次有效版本':'名单待核对';}
     }else event.entryStatus=existing.participants.length?'官网当前未列出名单链接，保留已读取版本':'官网尚未公布名单链接';
     if(schedule){
@@ -78,10 +79,10 @@ async function syncEventBody(id:string){
     if(orderDocs.length){
       const selected=[...orderDocs].sort((a,b)=>(a.checkedAt||'').localeCompare(b.checkedAt||'')).slice(0,4);let orders=[...(existing.startingOrders||[])];
       for(const doc of selected){try{const bytes=await source(doc.url,8_000_000);const hash=await hashBytes(bytes);const previous=existing.documents.find(d=>d.url===doc.url);
-        if(previous?.hash!==hash||!orders.some(o=>o.sourceUrl===doc.url)){
+        if(previous?.hash!==hash||!orders.some(o=>o.sourceUrl===doc.url)||previous.matchingRosterHash!==matchingRosterHash){
           let parsed;if(/\.pdf(?:$|\?)/i.test(doc.url)){const pdf=await getDocumentProxy(bytes,{maxImageSize:1_000_000,disableFontFace:true});if(pdf.numPages>20)throw new Error('出场顺序页数超出已验证格式');const {items}=await extractTextItems(pdf);parsed=parseStartingOrderPdf(items,doc.url,roster);}else parsed=parseStartingOrderHtml(new TextDecoder().decode(bytes),doc.url,roster);
-          if(!parsed.length)throw new Error('出场顺序格式待核对，保留上次有效资料');orders=[...orders.filter(o=>o.sourceUrl!==doc.url),...parsed];changed++;
-        }doc.hash=hash;doc.checkedAt=now;delete doc.error;
+          if(!parsed.length)throw new Error('出场顺序格式待核对，保留上次有效资料');if(previous?.hash!==hash||JSON.stringify(parsed)!==JSON.stringify(orders.filter(order=>order.sourceUrl===doc.url)))changed++;orders=[...orders.filter(o=>o.sourceUrl!==doc.url),...parsed];
+        }doc.hash=hash;doc.matchingRosterHash=matchingRosterHash;doc.checkedAt=now;delete doc.error;
       }catch(error){doc.error=message(error);errors.push(doc.error);}}
       event.startingOrders=orders;const pending=orderDocs.filter(d=>!d.checkedAt||d.error).length;event.startingOrderStatus=pending?`已读取 ${orders.length} 条出场信息，${pending} 份文件待核对`:`已读取 ${orders.length} 条官方出场信息`;
     }else event.startingOrderStatus=existing.startingOrders?.length?'官网当前未列出出场链接，保留已读取版本':'官网尚未发现 Starting Order 链接';
