@@ -1,0 +1,14 @@
+export type ClubSkater={id:string;name:string;coach:string;training:boolean;identityPending?:boolean;categories:string[];clubs:string[];firstSeen?:string;lastSeen?:string;recordCount:number;eventCount:number;identityStatus:string};
+export type HistoryRecord={record_id:string;name:string;club:string;section:string;event_name:string;event_url:string;event_key:string;start_date:string;end_date?:string;category:string;result_level:string;rank:number|string|null;total_score:number|null;segment_scores?:Array<number|string>;score_components?:Record<string,unknown>|null;status:string;source_url:string;source_page?:number;source_row?:string;skater_ids:string[];entity_type:string};
+export type HistoryEvent={id:string;name:string;url:string;start:string;end:string;recordCount:number;skaterIds:string[];teamCount:number;dateBasis:string};
+export type OfficialDocument={url:string;label:string;kind:'schedule'|'entries'|'results';hash?:string;checkedAt?:string;error?:string};
+export type Participant={id:string;name:string;category:string;club:string;section:string;skaterIds:string[];matchStatus:string;sourceUrl:string};
+export type ScheduleBlock={id:string;date:string;start:string;end:string;rink:string;category:string;categoryKey:string;group:number|null;range:[number,number]|null;activity:'practice'|'competition';page:number;sourceUrl:string};
+export type LiveEvent={id:string;name:string;url:string;start:string;end:string;timezone:string;venue:string;city:string;updateText:string;officialModified:string;checkedAt:string;documents:OfficialDocument[];participants:Participant[];blocks:ScheduleBlock[];detailCheckedAt?:string;detailError?:string;entryStatus:string;scheduleStatus:string;source:'Skate Ontario'};
+export type CoachPlan={id:string;skaterId:string;eventId:string;slotKey:string;meetingTime:string;note:string;revision:number};
+export type ScheduleRow={id:string;slotKey:string;eventId:string;eventName:string;eventUrl:string;skaterId:string;skaterName:string;coach:string;category:string;date:string;start:string;end:string;rink:string;activity:string;uncertain:boolean;sourceUrl:string;page:number;timezone:string;matchStatus:string};
+export type SyncStatus={lastAttempt?:string;lastSuccess?:string;lastCalendarSuccess?:string;error?:string|null;events?:number;entries?:number;blocks?:number};
+export const splitCoaches=(value:string)=>value.split(/\s*(?:\/|／|;|；|&)\s*/).map(s=>s.trim()).filter(Boolean);
+export const todayToronto=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Toronto',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+export const seasonOf=(date:string)=>{const y=Number(date.slice(0,4));return Number(date.slice(5,7))>=7?`${y}–${String(y+1).slice(2)}`:`${y-1}–${String(y).slice(2)}`;};
+export const statusLabel=(status:string)=>({result:'已公布成绩',withdrawn:'退赛',entry_list_only:'报名名单',start_order_only:'出场名单'}[status]||status);

@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./club.css";
 
 export const metadata: Metadata = {
-  title: "HSC · 选手与教练",
-  description: "Hamilton Skating Club 教练信息编辑表",
+  title: "HSC · Club Portal",
+  description: "Hamilton Skating Club 选手档案、比赛记录与教练赛程",
+  manifest: "/manifest.webmanifest",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",

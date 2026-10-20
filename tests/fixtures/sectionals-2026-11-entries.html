@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sectional Series November - Entry List</title>
+  <style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 9pt; color: #000; background: #fff;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .page { background: #fff; padding: 14px 16px; max-width: 760px; margin: 0 auto; }
+  .doc-header {
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 2px solid #c00; padding-bottom: 8px; margin-bottom: 14px;
+  }
+  .doc-header img { height: 43.2px; width: auto; }
+  .doc-header-center { text-align: center; flex: 1; padding: 0 12px; }
+  .event-name  { font-size: 11pt; font-weight: 700; text-transform: uppercase; }
+  .event-sub   { font-size: 8pt; color: #444; margin-top: 2px; }
+  .event-date  { font-size: 8pt; color: #444; margin-top: 2px; }
+  .doc-note    { font-size: 7pt; color: #888; margin-top: 2px; font-style: italic; }
+  .entries-as-of {
+    color: #111;
+    font-size: 12pt;
+    font-weight: 700;
+    margin: 12px 0 16px;
+    text-align: center;
+  }
+  .optional-message {
+    color: #4a4a4a;
+    font-size: 11pt;
+    font-weight: 700;
+    margin: 10px 0 14px;
+    text-align: center;
+  }
+  .cat-header {
+    background: #1a1a1a; color: #fff;
+    display: flex; align-items: center; gap: 12px;
+    justify-content: space-between;
+    padding: 6px 10px; margin-bottom: 0;
+  }
+  .cat-header--podium-pathway {
+    background: #1a1a1a;
+  }
+  .cat-header--podium-pathway .cat-meta {
+    color: #cecece;
+  }
+  .cat-header--star-skate {
+    background: #c00;
+  }
+  .cat-header--star-skate .cat-meta {
+    color: #cecece;
+  }
+  .cat-title { font-size: 10pt; font-weight: 700; text-transform: uppercase; }
+  .cat-meta  { font-size: 7.5pt; color: #aaa; text-align: right; white-space: nowrap; }
+  .category-section { margin-bottom: 16px; }
+  table { width: 100%; border-collapse: collapse; font-size: 8.5pt; table-layout: fixed; }
+  thead tr { background: #f5f5f5; border-bottom: 1.5px solid #999; }
+  th {
+    font-size: 7pt; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.07em; color: #555;
+    padding: 3px 8px; text-align: left; white-space: nowrap;
+  }
+  td { padding: 4px 8px; border-bottom: 1px solid #eee; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; }
+  tr:last-child td { border-bottom: none; }
+  .row-skater td { background: #fff; }
+  .row-skater:nth-child(even) td { background: #fafafa; }
+  .competitor-identity { align-items: center; display: inline-flex; gap: 5px; max-width: 100%; }
+  .competitor-flag { flex: 0 0 24px; height: 15.6px; object-fit: contain; width: 24px; }
+  .skater-name { font-weight: 600; font-size: 9pt; }
+  .club-name, .region-name, .section-name { font-size: 8pt; color: #444; }
+  .filter-bar {
+    background: #f5f5f5; border: 1px solid #ddd;
+    padding: 6px 10px; margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .filter-bar input {
+    flex: 1; min-width: 160px; padding: 6px 10px; border: 1px solid #ccc;
+    border-radius: 4px; font-size: 9pt; outline: none;
+  }
+  .filter-bar input:focus { border-color: #c00; }
+  .filter-bar select {
+    padding: 5px 8px; border: 1px solid #ccc; border-radius: 4px;
+    font-size: 8pt; background: #fff; cursor: pointer;
+  }
+  .match-count { font-size: 7.5pt; color: #888; width: 100%; }
+  .sheet-footer {
+    margin-top: 10px; padding-top: 6px; border-top: 1px solid #ddd;
+    font-size: 7pt; color: #888; display: flex; justify-content: space-between; gap: 12px;
+  }
+  .hidden { display: none !important; }
+  .no-print { display: none; }
+  @media screen {
+    .no-print { display: flex; }
+    .filter-bar { display: flex; }
+    .page { border: 1px solid #ddd; margin: 20px auto; box-shadow: 0 2px 12px rgba(0,0,0,.1); position: relative; }
+    body { background: #eee; }
+  }
+  @media print {
+    body { background: #fff; }
+    .no-print, .filter-bar, .match-count { display: none !important; }
+    .category-section { break-inside: avoid; }
+  }
+  .toolbar {
+    position: absolute; top: 14px; right: 16px; z-index: 100;
+    display: flex; gap: 6px;
+  }
+  .toolbar button {
+    background: #1a1a1a; color: #fff; border: none;
+    border-radius: 6px; padding: 7px 14px;
+    font-size: 11px; font-weight: 600; cursor: pointer;
+  }
+  .toolbar button:hover { background: #c00; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="doc-header">
+      <img data-entry-list-logo-key="ontario" src="data:image/png;base64,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" alt="Skate Ontario">
+      <div class="doc-header-center">
+        <div class="event-name">Sectional Series November</div>
+        <div class="event-sub">Komoka Wellness Centre, 1 Tunks Lane, Middlesex Centre</div>
+        <div class="event-date">November 5 - 8, 2026</div>
+        <div class="doc-note">207 entries across 16 categories</div>
+      </div>
+    </div>
+
+    
+    <div class="entries-as-of">Competition Entries as of October 20, 2026</div>
+
+    <div class="filter-bar no-print">
+      <input id="searchInput" type="search" placeholder="Search skater, team, or club" autocomplete="off">
+      <select id="filterCategory" data-entry-list-filter="category">
+        <option value="">All categories</option>
+<option value="Podium Pathway - Singles - Novice Men">Podium Pathway - Singles - Novice Men</option>
+<option value="Podium Pathway - Singles - Novice Women Group 1">Podium Pathway - Singles - Novice Women Group 1</option>
+<option value="Podium Pathway - Singles - Novice Women Group 2">Podium Pathway - Singles - Novice Women Group 2</option>
+<option value="Podium Pathway - Singles - Pre-Novice Men">Podium Pathway - Singles - Pre-Novice Men</option>
+<option value="Podium Pathway - Singles - Pre-Novice Women Group 1">Podium Pathway - Singles - Pre-Novice Women Group 1</option>
+<option value="Podium Pathway - Singles - Pre-Novice Women Group 2">Podium Pathway - Singles - Pre-Novice Women Group 2</option>
+<option value="Podium Pathway - Singles - Pre-Novice Women Group 3">Podium Pathway - Singles - Pre-Novice Women Group 3</option>
+<option value="Podium Pathway - Singles - Pre-Novice Women Group 4">Podium Pathway - Singles - Pre-Novice Women Group 4</option>
+<option value="Podium Pathway - Pairs - Novice">Podium Pathway - Pairs - Novice</option>
+<option value="Podium Pathway - Pairs - Pre-Novice">Podium Pathway - Pairs - Pre-Novice</option>
+<option value="Podium Pathway - Ice Dance - Senior Solo">Podium Pathway - Ice Dance - Senior Solo</option>
+<option value="Podium Pathway - Ice Dance - Junior Solo">Podium Pathway - Ice Dance - Junior Solo</option>
+<option value="Podium Pathway - Ice Dance - Novice">Podium Pathway - Ice Dance - Novice</option>
+<option value="Podium Pathway - Ice Dance - Novice Solo">Podium Pathway - Ice Dance - Novice Solo</option>
+<option value="Podium Pathway - Ice Dance - Pre-Novice">Podium Pathway - Ice Dance - Pre-Novice</option>
+<option value="Podium Pathway - Ice Dance - Pre-Novice Solo">Podium Pathway - Ice Dance - Pre-Novice Solo</option>
+      </select>
+      <select id="filterSection" data-entry-list-filter="section" aria-label="Section">
+        <option value="">All sections</option>
+        <option value="Israel Ice Skating Federation">Israel Ice Skating Federation</option>
+        <option value="NL">NL</option>
+        <option value="ON">ON</option>
+      </select>
+      <div id="matchCount" class="match-count"></div>
+    </div>
+
+        <div class="category-section" data-category="Podium Pathway - Singles - Novice Men">
+          <div class="cat-header cat-header--podium-pathway">
+            <div class="cat-title">Podium Pathway - Singles - Novice Men</div>
+            <div class="cat-meta">12 entries</div>
+          </div>
+          <table>
+            <colgroup><col style="width:55%"><col style="width:45%"></colgroup>
+            <thead><tr><th>Skater</th><th>Section</th></tr></thead>
+            <tbody><tr class="row-skater" data-search="Logan BOWMAN ON" data-category="Podium Pathway - Singles - Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Logan BOWMAN</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Jack DAVIDSON ON" data-category="Podium Pathway - Singles - Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Jack DAVIDSON</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="William HILTS ON" data-category="Podium Pathway - Singles - Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">William HILTS</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Jackey HUANG ON" data-category="Podium Pathway - Singles - Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Jackey HUANG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Jason KRAAN ON" data-category="Podium Pathway - Singles - Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Jason KRAAN</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Alex LAMOTHE ON" data-category="Podium Pathway - Singles - Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Alex LAMOTHE</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Matthew LI ON" data-category="Podium Pathway - Singles - Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Matthew LI</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Reagan LIU ON" data-category="Podium Pathway - Singles - Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Reagan LIU</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Jackson MCHUGH ON" data-category="Podium Pathway - Singles - Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Jackson MCHUGH</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Christopher NORDSTROM ON" data-category="Podium Pathway - Singles - Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Christopher NORDSTROM</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Mike POCHAEV ON" data-category="Podium Pathway - Singles - Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Mike POCHAEV</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Aaron YU ON" data-category="Podium Pathway - Singles - Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Aaron YU</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+</tbody>
+          </table>
+        </div>
+
+        <div class="category-section" data-category="Podium Pathway - Singles - Novice Women Group 1">
+          <div class="cat-header cat-header--podium-pathway">
+            <div class="cat-title">Podium Pathway - Singles - Novice Women Group 1</div>
+            <div class="cat-meta">21 entries</div>
+          </div>
+          <table>
+            <colgroup><col style="width:55%"><col style="width:45%"></colgroup>
+            <thead><tr><th>Skater</th><th>Section</th></tr></thead>
+            <tbody><tr class="row-skater" data-search="Alexandra CARRIERE ON" data-category="Podium Pathway - Singles - Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Alexandra CARRIERE</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Emily CHAIKIN ON" data-category="Podium Pathway - Singles - Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Emily CHAIKIN</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Charlotte CHAU ON" data-category="Podium Pathway - Singles - Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Charlotte CHAU</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Carly COLLINS ON" data-category="Podium Pathway - Singles - Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Carly COLLINS</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Linnea COTTER ON" data-category="Podium Pathway - Singles - Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Linnea COTTER</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Acacia HANVELT ON" data-category="Podium Pathway - Singles - Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Acacia HANVELT</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Nicole JIN ON" data-category="Podium Pathway - Singles - Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Nicole JIN</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Autumn KANAAN ON" data-category="Podium Pathway - Singles - Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Autumn KANAAN</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Kennedy LAPRISE ON" data-category="Podium Pathway - Singles - Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Kennedy LAPRISE</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Olivia LECLAIRE ON" data-category="Podium Pathway - Singles - Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Olivia LECLAIRE</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Scarlett LEE ON" data-category="Podium Pathway - Singles - Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Scarlett LEE</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Straun MILLARD-VANLUVEN ON" data-category="Podium Pathway - Singles - Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Straun MILLARD-VANLUVEN</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Hailey MITCHELL ON" data-category="Podium Pathway - Singles - Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Hailey MITCHELL</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Remie MURAMOTO ON" data-category="Podium Pathway - Singles - Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Remie MURAMOTO</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Aria MURRELL ON" data-category="Podium Pathway - Singles - Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Aria MURRELL</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Teresa NIU ON" data-category="Podium Pathway - Singles - Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Teresa NIU</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Mengfan QIN ON" data-category="Podium Pathway - Singles - Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Mengfan QIN</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Ashley SHARRATT ON" data-category="Podium Pathway - Singles - Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Ashley SHARRATT</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Alia TANG ON" data-category="Podium Pathway - Singles - Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Alia TANG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Emma XU ON" data-category="Podium Pathway - Singles - Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Emma XU</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Shuwen YANG ON" data-category="Podium Pathway - Singles - Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Shuwen YANG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+</tbody>
+          </table>
+        </div>
+
+        <div class="category-section" data-category="Podium Pathway - Singles - Novice Women Group 2">
+          <div class="cat-header cat-header--podium-pathway">
+            <div class="cat-title">Podium Pathway - Singles - Novice Women Group 2</div>
+            <div class="cat-meta">22 entries</div>
+          </div>
+          <table>
+            <colgroup><col style="width:55%"><col style="width:45%"></colgroup>
+            <thead><tr><th>Skater</th><th>Section</th></tr></thead>
+            <tbody><tr class="row-skater" data-search="Rose ARTELLE ON" data-category="Podium Pathway - Singles - Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Rose ARTELLE</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Siyul BACK ON" data-category="Podium Pathway - Singles - Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Siyul BACK</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Elizabeth BALONOV Israel Ice Skating Federation" data-category="Podium Pathway - Singles - Novice Women Group 2" data-club="" data-region="" data-section="Israel Ice Skating Federation">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Elizabeth BALONOV</span></span></td>
+              <td><span class="section-name">Israel Ice Skating Federation</span></td>
+            </tr>
+<tr class="row-skater" data-search="Pauline BELIKOV ON" data-category="Podium Pathway - Singles - Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Pauline BELIKOV</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Chantelle CHEUNG ON" data-category="Podium Pathway - Singles - Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Chantelle CHEUNG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Olivia COOPER ON" data-category="Podium Pathway - Singles - Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Olivia COOPER</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Viola HINTON ON" data-category="Podium Pathway - Singles - Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Viola HINTON</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Josie IOCCO ON" data-category="Podium Pathway - Singles - Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Josie IOCCO</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Georga LINDSAY ON" data-category="Podium Pathway - Singles - Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Georga LINDSAY</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Katherine LU ON" data-category="Podium Pathway - Singles - Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Katherine LU</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Madylinn LUMLEY ON" data-category="Podium Pathway - Singles - Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Madylinn LUMLEY</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Izusa MURAKAMI ON" data-category="Podium Pathway - Singles - Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Izusa MURAKAMI</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Leah NORTHWAY ON" data-category="Podium Pathway - Singles - Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Leah NORTHWAY</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Serena PAN ON" data-category="Podium Pathway - Singles - Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Serena PAN</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Emily QUINN ON" data-category="Podium Pathway - Singles - Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Emily QUINN</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Mya SHEARDOWN ON" data-category="Podium Pathway - Singles - Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Mya SHEARDOWN</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Tabatha TRIPP ON" data-category="Podium Pathway - Singles - Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Tabatha TRIPP</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Ayan TSAI ON" data-category="Podium Pathway - Singles - Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Ayan TSAI</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Winnie WANG ON" data-category="Podium Pathway - Singles - Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Winnie WANG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Angela XU ON" data-category="Podium Pathway - Singles - Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Angela XU</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Emma YOUNG ON" data-category="Podium Pathway - Singles - Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Emma YOUNG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Enqi ZHANG ON" data-category="Podium Pathway - Singles - Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Enqi ZHANG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+</tbody>
+          </table>
+        </div>
+
+        <div class="category-section" data-category="Podium Pathway - Singles - Pre-Novice Men">
+          <div class="cat-header cat-header--podium-pathway">
+            <div class="cat-title">Podium Pathway - Singles - Pre-Novice Men</div>
+            <div class="cat-meta">25 entries</div>
+          </div>
+          <table>
+            <colgroup><col style="width:55%"><col style="width:45%"></colgroup>
+            <thead><tr><th>Skater</th><th>Section</th></tr></thead>
+            <tbody><tr class="row-skater" data-search="Daniel BELENKIY ON" data-category="Podium Pathway - Singles - Pre-Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Daniel BELENKIY</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Ron BELENKIY ON" data-category="Podium Pathway - Singles - Pre-Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Ron BELENKIY</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Demien CHENG ON" data-category="Podium Pathway - Singles - Pre-Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Demien CHENG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Ocean DINEL ON" data-category="Podium Pathway - Singles - Pre-Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Ocean DINEL</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Koen GRAHAM ON" data-category="Podium Pathway - Singles - Pre-Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Koen GRAHAM</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Cyrus HUANG ON" data-category="Podium Pathway - Singles - Pre-Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Cyrus HUANG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Owen HUI ON" data-category="Podium Pathway - Singles - Pre-Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Owen HUI</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Takayuki ISHIYAMA ON" data-category="Podium Pathway - Singles - Pre-Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Takayuki ISHIYAMA</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Brandon LEUNG ON" data-category="Podium Pathway - Singles - Pre-Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Brandon LEUNG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Edgar NAVARRO-HE ON" data-category="Podium Pathway - Singles - Pre-Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Edgar NAVARRO-HE</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Kacper NIEWIADOMSKI ON" data-category="Podium Pathway - Singles - Pre-Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Kacper NIEWIADOMSKI</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Flynn SUN ON" data-category="Podium Pathway - Singles - Pre-Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Flynn SUN</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Edward TANG ON" data-category="Podium Pathway - Singles - Pre-Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Edward TANG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Henry TING ON" data-category="Podium Pathway - Singles - Pre-Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Henry TING</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Terran TO ON" data-category="Podium Pathway - Singles - Pre-Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Terran TO</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Vladimir VYRYPAEV ON" data-category="Podium Pathway - Singles - Pre-Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Vladimir VYRYPAEV</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Carson WANG ON" data-category="Podium Pathway - Singles - Pre-Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Carson WANG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Maximilian WONG ON" data-category="Podium Pathway - Singles - Pre-Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Maximilian WONG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Tristan WONG ON" data-category="Podium Pathway - Singles - Pre-Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Tristan WONG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Brendan YANG ON" data-category="Podium Pathway - Singles - Pre-Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Brendan YANG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Aiden YEUNG ON" data-category="Podium Pathway - Singles - Pre-Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Aiden YEUNG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Yufeng YING ON" data-category="Podium Pathway - Singles - Pre-Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Yufeng YING</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Alexander ZHANG LAI ON" data-category="Podium Pathway - Singles - Pre-Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Alexander ZHANG LAI</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Bryson ZHANG ON" data-category="Podium Pathway - Singles - Pre-Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Bryson ZHANG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Fredd ZHANG ON" data-category="Podium Pathway - Singles - Pre-Novice Men" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Fredd ZHANG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+</tbody>
+          </table>
+        </div>
+
+        <div class="category-section" data-category="Podium Pathway - Singles - Pre-Novice Women Group 1">
+          <div class="cat-header cat-header--podium-pathway">
+            <div class="cat-title">Podium Pathway - Singles - Pre-Novice Women Group 1</div>
+            <div class="cat-meta">18 entries</div>
+          </div>
+          <table>
+            <colgroup><col style="width:55%"><col style="width:45%"></colgroup>
+            <thead><tr><th>Skater</th><th>Section</th></tr></thead>
+            <tbody><tr class="row-skater" data-search="Kayla BOWMAN ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Kayla BOWMAN</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Imogen BUTCHART-RAY ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Imogen BUTCHART-RAY</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Britton COATES ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Britton COATES</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Danielle DERGUNOV ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Danielle DERGUNOV</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Tabitha GAYTON ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Tabitha GAYTON</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Linaya HINTON ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Linaya HINTON</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Janice HUANG ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Janice HUANG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Siqi KONG ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Siqi KONG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Alessandra LAPICCIRELLA ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Alessandra LAPICCIRELLA</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Abigail LEUNG ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Abigail LEUNG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Emy RHÉAUME-GAGNON ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Emy RHÉAUME-GAGNON</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Miu TAKEUCHI ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Miu TAKEUCHI</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Katelyn WANG ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Katelyn WANG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Abigail WOOD ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Abigail WOOD</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Luna YIN ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Luna YIN</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Yuguo YING ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Yuguo YING</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Yara ZAYED ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Yara ZAYED</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Grace ZHOU ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 1" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Grace ZHOU</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+</tbody>
+          </table>
+        </div>
+
+        <div class="category-section" data-category="Podium Pathway - Singles - Pre-Novice Women Group 2">
+          <div class="cat-header cat-header--podium-pathway">
+            <div class="cat-title">Podium Pathway - Singles - Pre-Novice Women Group 2</div>
+            <div class="cat-meta">18 entries</div>
+          </div>
+          <table>
+            <colgroup><col style="width:55%"><col style="width:45%"></colgroup>
+            <thead><tr><th>Skater</th><th>Section</th></tr></thead>
+            <tbody><tr class="row-skater" data-search="Kimia ABGHARI ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Kimia ABGHARI</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Sofie BLOCK ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Sofie BLOCK</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Kristen CHAN ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Kristen CHAN</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Raelyn CORRIGAN ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Raelyn CORRIGAN</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Maddie CROCKETT ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Maddie CROCKETT</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Megan FAN ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Megan FAN</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Olivia FUNG ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Olivia FUNG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Alexa GELINAS ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Alexa GELINAS</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Cate GOODE ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Cate GOODE</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Iris HUI ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Iris HUI</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Ava HURST ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Ava HURST</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Abigail MCCABE ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Abigail MCCABE</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Brynleigh MCCULLY ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Brynleigh MCCULLY</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Hailey MEI ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Hailey MEI</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Kaitlyn NGAN ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Kaitlyn NGAN</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Ella PUDDY ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Ella PUDDY</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Eva WANG ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Eva WANG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Tanya WU ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 2" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Tanya WU</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+</tbody>
+          </table>
+        </div>
+
+        <div class="category-section" data-category="Podium Pathway - Singles - Pre-Novice Women Group 3">
+          <div class="cat-header cat-header--podium-pathway">
+            <div class="cat-title">Podium Pathway - Singles - Pre-Novice Women Group 3</div>
+            <div class="cat-meta">18 entries</div>
+          </div>
+          <table>
+            <colgroup><col style="width:55%"><col style="width:45%"></colgroup>
+            <thead><tr><th>Skater</th><th>Section</th></tr></thead>
+            <tbody><tr class="row-skater" data-search="Valerie ANNETT ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 3" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Valerie ANNETT</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Éva BARONETTE ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 3" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Éva BARONETTE</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Sofiia DAVYDOVA ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 3" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Sofiia DAVYDOVA</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Eva DENG ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 3" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Eva DENG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Serena HUNDAL ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 3" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Serena HUNDAL</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Alexandra JIRSCH ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 3" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Alexandra JIRSCH</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Namitha KARTHA ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 3" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Namitha KARTHA</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Zelda KIRKPATRICK ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 3" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Zelda KIRKPATRICK</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Isla KOZIOL ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 3" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Isla KOZIOL</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Kayley KWOK ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 3" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Kayley KWOK</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Elva LU ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 3" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Elva LU</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Emma MA ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 3" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Emma MA</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Madeleine MADER ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 3" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Madeleine MADER</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Ava PLUMMER ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 3" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Ava PLUMMER</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Kate POON ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 3" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Kate POON</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Hana ROCK ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 3" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Hana ROCK</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Amelia SARTARELLI ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 3" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Amelia SARTARELLI</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Amanda WANG ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 3" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Amanda WANG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+</tbody>
+          </table>
+        </div>
+
+        <div class="category-section" data-category="Podium Pathway - Singles - Pre-Novice Women Group 4">
+          <div class="cat-header cat-header--podium-pathway">
+            <div class="cat-title">Podium Pathway - Singles - Pre-Novice Women Group 4</div>
+            <div class="cat-meta">18 entries</div>
+          </div>
+          <table>
+            <colgroup><col style="width:55%"><col style="width:45%"></colgroup>
+            <thead><tr><th>Skater</th><th>Section</th></tr></thead>
+            <tbody><tr class="row-skater" data-search="Kennedy ANDERSON ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 4" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Kennedy ANDERSON</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Natalie BELL ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 4" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Natalie BELL</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Zoe FORTE ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 4" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Zoe FORTE</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Jacqueline FU ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 4" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Jacqueline FU</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Anna GIBBINS ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 4" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Anna GIBBINS</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Veronika KHRAMOVA ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 4" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Veronika KHRAMOVA</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Suzy KIM ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 4" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Suzy KIM</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Emmeline LITTLE ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 4" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Emmeline LITTLE</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Gabriella LUCIA ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 4" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Gabriella LUCIA</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Holly MOK ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 4" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Holly MOK</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Maureen O&#039;CONNOR ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 4" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Maureen O&#039;CONNOR</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Avery SUN ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 4" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Avery SUN</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Angela TRIPODI ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 4" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Angela TRIPODI</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Kate TUCKER ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 4" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Kate TUCKER</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Addison VOLPONE ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 4" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Addison VOLPONE</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Sharon WEI ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 4" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Sharon WEI</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Cici XU ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 4" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Cici XU</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Alison YAN ON" data-category="Podium Pathway - Singles - Pre-Novice Women Group 4" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Alison YAN</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+</tbody>
+          </table>
+        </div>
+
+        <div class="category-section" data-category="Podium Pathway - Pairs - Novice">
+          <div class="cat-header cat-header--podium-pathway">
+            <div class="cat-title">Podium Pathway - Pairs - Novice</div>
+            <div class="cat-meta">3 entries</div>
+          </div>
+          <table>
+            <colgroup><col style="width:55%"><col style="width:45%"></colgroup>
+            <thead><tr><th>Team</th><th>Section</th></tr></thead>
+            <tbody><tr class="row-skater" data-search="Emily CHAIKIN / David SHTEYNGART ON" data-category="Podium Pathway - Pairs - Novice" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Emily CHAIKIN / David SHTEYNGART</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Leah NORTHWAY / Aidan ARMSTRONG ON" data-category="Podium Pathway - Pairs - Novice" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Leah NORTHWAY / Aidan ARMSTRONG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Enqi ZHANG / Ryan CLIFF ON" data-category="Podium Pathway - Pairs - Novice" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Enqi ZHANG / Ryan CLIFF</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+</tbody>
+          </table>
+        </div>
+
+        <div class="category-section" data-category="Podium Pathway - Pairs - Pre-Novice">
+          <div class="cat-header cat-header--podium-pathway">
+            <div class="cat-title">Podium Pathway - Pairs - Pre-Novice</div>
+            <div class="cat-meta">2 entries</div>
+          </div>
+          <table>
+            <colgroup><col style="width:55%"><col style="width:45%"></colgroup>
+            <thead><tr><th>Team</th><th>Section</th></tr></thead>
+            <tbody><tr class="row-skater" data-search="Kylie CHOW / Kayden AU YEUNG ON" data-category="Podium Pathway - Pairs - Pre-Novice" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Kylie CHOW / Kayden AU YEUNG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Avery WHITE / Milan RADAN ON" data-category="Podium Pathway - Pairs - Pre-Novice" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Avery WHITE / Milan RADAN</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+</tbody>
+          </table>
+        </div>
+
+        <div class="category-section" data-category="Podium Pathway - Ice Dance - Senior Solo">
+          <div class="cat-header cat-header--podium-pathway">
+            <div class="cat-title">Podium Pathway - Ice Dance - Senior Solo</div>
+            <div class="cat-meta">5 entries</div>
+          </div>
+          <table>
+            <colgroup><col style="width:55%"><col style="width:45%"></colgroup>
+            <thead><tr><th>Team</th><th>Section</th></tr></thead>
+            <tbody><tr class="row-skater" data-search="Shaundra BUELOW ON" data-category="Podium Pathway - Ice Dance - Senior Solo" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Shaundra BUELOW</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Miracle COLLINS ON" data-category="Podium Pathway - Ice Dance - Senior Solo" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Miracle COLLINS</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Julia FERREIRA ON" data-category="Podium Pathway - Ice Dance - Senior Solo" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Julia FERREIRA</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Meredith OVENDEN ON" data-category="Podium Pathway - Ice Dance - Senior Solo" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Meredith OVENDEN</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Hannah SCHROETER ON" data-category="Podium Pathway - Ice Dance - Senior Solo" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Hannah SCHROETER</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+</tbody>
+          </table>
+        </div>
+
+        <div class="category-section" data-category="Podium Pathway - Ice Dance - Junior Solo">
+          <div class="cat-header cat-header--podium-pathway">
+            <div class="cat-title">Podium Pathway - Ice Dance - Junior Solo</div>
+            <div class="cat-meta">6 entries</div>
+          </div>
+          <table>
+            <colgroup><col style="width:55%"><col style="width:45%"></colgroup>
+            <thead><tr><th>Team</th><th>Section</th></tr></thead>
+            <tbody><tr class="row-skater" data-search="Daisy DANIEL ON" data-category="Podium Pathway - Ice Dance - Junior Solo" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Daisy DANIEL</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Presley EBY ON" data-category="Podium Pathway - Ice Dance - Junior Solo" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Presley EBY</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Alexandra JIN ON" data-category="Podium Pathway - Ice Dance - Junior Solo" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Alexandra JIN</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Adia SMITH ON" data-category="Podium Pathway - Ice Dance - Junior Solo" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Adia SMITH</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Eileen WANG ON" data-category="Podium Pathway - Ice Dance - Junior Solo" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Eileen WANG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Sophie ZHANG ON" data-category="Podium Pathway - Ice Dance - Junior Solo" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Sophie ZHANG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+</tbody>
+          </table>
+        </div>
+
+        <div class="category-section" data-category="Podium Pathway - Ice Dance - Novice">
+          <div class="cat-header cat-header--podium-pathway">
+            <div class="cat-title">Podium Pathway - Ice Dance - Novice</div>
+            <div class="cat-meta">7 entries</div>
+          </div>
+          <table>
+            <colgroup><col style="width:55%"><col style="width:45%"></colgroup>
+            <thead><tr><th>Team</th><th>Section</th></tr></thead>
+            <tbody><tr class="row-skater" data-search="Kayla BOWMAN / Logan BOWMAN ON" data-category="Podium Pathway - Ice Dance - Novice" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Kayla BOWMAN / Logan BOWMAN</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Elsa CHANG / Tristan WONG ON" data-category="Podium Pathway - Ice Dance - Novice" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Elsa CHANG / Tristan WONG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Emily CHIN / Nathan CHIN ON" data-category="Podium Pathway - Ice Dance - Novice" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Emily CHIN / Nathan CHIN</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Stella FARIS / Elliot RECHSTEINER ON" data-category="Podium Pathway - Ice Dance - Novice" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Stella FARIS / Elliot RECHSTEINER</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Josie IOCCO / Nicholas THEIS ON" data-category="Podium Pathway - Ice Dance - Novice" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Josie IOCCO / Nicholas THEIS</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Alexandra JIRSCH / Simon ZELENKA ON" data-category="Podium Pathway - Ice Dance - Novice" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Alexandra JIRSCH / Simon ZELENKA</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Yuguo YING / Yufeng YING ON" data-category="Podium Pathway - Ice Dance - Novice" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Yuguo YING / Yufeng YING</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+</tbody>
+          </table>
+        </div>
+
+        <div class="category-section" data-category="Podium Pathway - Ice Dance - Novice Solo">
+          <div class="cat-header cat-header--podium-pathway">
+            <div class="cat-title">Podium Pathway - Ice Dance - Novice Solo</div>
+            <div class="cat-meta">15 entries</div>
+          </div>
+          <table>
+            <colgroup><col style="width:55%"><col style="width:45%"></colgroup>
+            <thead><tr><th>Team</th><th>Section</th></tr></thead>
+            <tbody><tr class="row-skater" data-search="Anna AFANASEVA ON" data-category="Podium Pathway - Ice Dance - Novice Solo" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Anna AFANASEVA</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Alexandra BAGNALL-TROFYMOWYCH ON" data-category="Podium Pathway - Ice Dance - Novice Solo" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Alexandra BAGNALL-TROFYMOWYCH</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Aline COOK NL" data-category="Podium Pathway - Ice Dance - Novice Solo" data-club="" data-region="" data-section="NL">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Newfoundland%20and%20Labrador.svg?width=40" alt="Newfoundland and Labrador flag"><span class="skater-name">Aline COOK</span></span></td>
+              <td><span class="section-name">NL</span></td>
+            </tr>
+<tr class="row-skater" data-search="Megan DELL ON" data-category="Podium Pathway - Ice Dance - Novice Solo" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Megan DELL</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Sarah KELLY ON" data-category="Podium Pathway - Ice Dance - Novice Solo" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Sarah KELLY</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Piper KROLICK ON" data-category="Podium Pathway - Ice Dance - Novice Solo" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Piper KROLICK</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Lavender KUSAMA ON" data-category="Podium Pathway - Ice Dance - Novice Solo" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Lavender KUSAMA</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Amilea LIN ON" data-category="Podium Pathway - Ice Dance - Novice Solo" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Amilea LIN</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Vivian LIN ON" data-category="Podium Pathway - Ice Dance - Novice Solo" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Vivian LIN</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Emma LIU ON" data-category="Podium Pathway - Ice Dance - Novice Solo" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Emma LIU</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Amelie MARCOUX ON" data-category="Podium Pathway - Ice Dance - Novice Solo" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Amelie MARCOUX</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Amelia MCDANIEL ON" data-category="Podium Pathway - Ice Dance - Novice Solo" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Amelia MCDANIEL</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Giovana TAGLIANETTI ON" data-category="Podium Pathway - Ice Dance - Novice Solo" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Giovana TAGLIANETTI</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Olivia TIMSON ON" data-category="Podium Pathway - Ice Dance - Novice Solo" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Olivia TIMSON</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Isabella ZEINALOV ON" data-category="Podium Pathway - Ice Dance - Novice Solo" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Isabella ZEINALOV</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+</tbody>
+          </table>
+        </div>
+
+        <div class="category-section" data-category="Podium Pathway - Ice Dance - Pre-Novice">
+          <div class="cat-header cat-header--podium-pathway">
+            <div class="cat-title">Podium Pathway - Ice Dance - Pre-Novice</div>
+            <div class="cat-meta">13 entries</div>
+          </div>
+          <table>
+            <colgroup><col style="width:55%"><col style="width:45%"></colgroup>
+            <thead><tr><th>Team</th><th>Section</th></tr></thead>
+            <tbody><tr class="row-skater" data-search="Angelina BRADY / Maximilian WIACEK ON" data-category="Podium Pathway - Ice Dance - Pre-Novice" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Angelina BRADY / Maximilian WIACEK</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Emma FAULHAFER / Prabvir UBHI ON" data-category="Podium Pathway - Ice Dance - Pre-Novice" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Emma FAULHAFER / Prabvir UBHI</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Linaya HINTON / Terran TO ON" data-category="Podium Pathway - Ice Dance - Pre-Novice" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Linaya HINTON / Terran TO</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Lucy JERMYN / Stefan COJOCARU ON" data-category="Podium Pathway - Ice Dance - Pre-Novice" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Lucy JERMYN / Stefan COJOCARU</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Elsie LIU / Xavier RASCAO ON" data-category="Podium Pathway - Ice Dance - Pre-Novice" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Elsie LIU / Xavier RASCAO</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Trina LO / Nathan CUI ON" data-category="Podium Pathway - Ice Dance - Pre-Novice" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Trina LO / Nathan CUI</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Aila PANGILINAN / Hunter KROLICK ON" data-category="Podium Pathway - Ice Dance - Pre-Novice" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Aila PANGILINAN / Hunter KROLICK</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Amelia SHAK / Maximilian WONG ON" data-category="Podium Pathway - Ice Dance - Pre-Novice" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Amelia SHAK / Maximilian WONG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Miu TAKEUCHI / Owen HUI ON" data-category="Podium Pathway - Ice Dance - Pre-Novice" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Miu TAKEUCHI / Owen HUI</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Jinghua WANG / Kyle NATHAN CHEUNG ON" data-category="Podium Pathway - Ice Dance - Pre-Novice" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Jinghua WANG / Kyle NATHAN CHEUNG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Sophia XU / Cyrus HUANG ON" data-category="Podium Pathway - Ice Dance - Pre-Novice" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Sophia XU / Cyrus HUANG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Elizabeth YULEVICH / Reggie BOWMAN ON" data-category="Podium Pathway - Ice Dance - Pre-Novice" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Elizabeth YULEVICH / Reggie BOWMAN</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Madeline ZEINALOV / Kacper NIEWIADOMSKI ON" data-category="Podium Pathway - Ice Dance - Pre-Novice" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Madeline ZEINALOV / Kacper NIEWIADOMSKI</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+</tbody>
+          </table>
+        </div>
+
+        <div class="category-section" data-category="Podium Pathway - Ice Dance - Pre-Novice Solo">
+          <div class="cat-header cat-header--podium-pathway">
+            <div class="cat-title">Podium Pathway - Ice Dance - Pre-Novice Solo</div>
+            <div class="cat-meta">4 entries</div>
+          </div>
+          <table>
+            <colgroup><col style="width:55%"><col style="width:45%"></colgroup>
+            <thead><tr><th>Team</th><th>Section</th></tr></thead>
+            <tbody><tr class="row-skater" data-search="Aubrey LANGE ON" data-category="Podium Pathway - Ice Dance - Pre-Novice Solo" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Aubrey LANGE</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Evelyn NG ON" data-category="Podium Pathway - Ice Dance - Pre-Novice Solo" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Evelyn NG</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Samadhi PATHIRANE ON" data-category="Podium Pathway - Ice Dance - Pre-Novice Solo" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Samadhi PATHIRANE</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+<tr class="row-skater" data-search="Sofia YULEVICH ON" data-category="Podium Pathway - Ice Dance - Pre-Novice Solo" data-club="" data-region="" data-section="ON">
+              <td><span class="competitor-identity"><img class="competitor-flag" src="https://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20Ontario.svg?width=40" alt="Ontario flag"><span class="skater-name">Sofia YULEVICH</span></span></td>
+              <td><span class="section-name">ON</span></td>
+            </tr>
+</tbody>
+          </table>
+        </div>
+
+    <div class="hidden" id="noResults" style="text-align:center;padding:20px;color:#888;font-size:8.5pt;">No matching entries found.</div>
+
+    
+    <div class="sheet-footer">
+      <span>Sectional Series November - Entry List - 207 entries</span>
+      <span>Generated October 20, 2026 9:37 AM ET</span>
+    </div>
+  </div>
+<script>
+(function() {
+  var searchInput = document.getElementById("searchInput");
+  var noResults = document.getElementById("noResults");
+  var matchCount = document.getElementById("matchCount");
+  var filterSelects = document.querySelectorAll("[data-entry-list-filter]");
+
+  searchInput.addEventListener("input", applyFilters);
+  filterSelects.forEach(function(select) {
+    select.addEventListener("change", applyFilters);
+  });
+
+  function applyFilters() {
+    var q = searchInput.value.toLowerCase().trim();
+    var filters = {};
+    var totalVisible = 0;
+
+    filterSelects.forEach(function(select) {
+      var key = select.getAttribute("data-entry-list-filter") || "";
+      if (key) {
+        filters[key] = select.value || "";
+      }
+    });
+
+    var sections = document.querySelectorAll(".category-section");
+    sections.forEach(function(sec) {
+      var secCat = sec.getAttribute("data-category") || "";
+      if (filters.category && secCat !== filters.category) { sec.classList.add("hidden"); return; }
+
+      var rows = sec.querySelectorAll("tbody tr");
+      var sectionVisible = 0;
+      rows.forEach(function(row) {
+        var data = (row.getAttribute("data-search") || "").toLowerCase();
+        var show = !q || data.indexOf(q) !== -1;
+        if (show) {
+          Object.keys(filters).forEach(function(key) {
+            if (!filters[key] || key === "category") {
+              return;
+            }
+            var rowValue = row.getAttribute("data-" + key) || "";
+            if (rowValue !== filters[key]) {
+              show = false;
+            }
+          });
+        }
+        row.classList.toggle("hidden", !show);
+        if (show) sectionVisible++;
+      });
+      sec.classList.toggle("hidden", sectionVisible === 0);
+      totalVisible += sectionVisible;
+    });
+
+    var hasFilter = q || Object.keys(filters).some(function(key) {
+      return !!filters[key];
+    });
+    noResults.classList.toggle("hidden", totalVisible > 0 || !hasFilter);
+    matchCount.textContent = hasFilter ? totalVisible + " match" + (totalVisible !== 1 ? "es" : "") : "";
+  }
+}());
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"39eb933ecb4f409bba201eda5ad44cc2","r":1,"spa":2}' crossorigin="anonymous"></script>
+</body>
+</html>
