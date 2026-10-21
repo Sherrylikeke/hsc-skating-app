@@ -88,5 +88,16 @@ export function scheduleRows(events:LiveEvent[],skaters:ClubSkater[]):ScheduleRo
       }
     }
   }
-  return [...output.values()].sort((a,b)=>`${a.date} ${a.start} ${a.skaterName}`.localeCompare(`${b.date} ${b.start} ${b.skaterName}`));
+  const consolidated=new Map<string,ScheduleRow>();
+  for(const row of output.values()) {
+    if(!row.uncertain||row.startingOrder||! /\(\d+\s*[-–]\s*\d+\)/.test(row.category)){consolidated.set(row.id,row);continue;}
+    const category=row.category.replace(/\s*\(\d+\s*[-–]\s*\d+\)/g,'').replace(/\s+/g,' ').trim();
+    const slotKey=`PENDING:${category.toUpperCase()}:${row.date}:${row.activity}`;
+    const id=`${row.eventId}|${row.skaterId}|${slotKey}`;
+    const candidate={category:row.category,start:row.start,end:row.end,rink:row.rink,sourceUrl:row.sourceUrl,page:row.page,slotKey:row.slotKey};
+    const existing=consolidated.get(id);
+    if(existing){existing.candidates!.push(candidate);if(existing.rink!==row.rink)existing.rink='';}
+    else consolidated.set(id,{...row,id,slotKey,category,start:'',end:'',candidates:[candidate]});
+  }
+  return [...consolidated.values()].sort((a,b)=>`${a.date} ${a.start} ${a.skaterName}`.localeCompare(`${b.date} ${b.start} ${b.skaterName}`));
 }

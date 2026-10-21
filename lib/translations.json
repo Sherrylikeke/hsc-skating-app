@@ -1,4 +1,9 @@
 {
+  "请选择选手、家长或教练身份。": "Choose Skater, Parent or Coach.",
+  "请输入俱乐部选手的完整姓名。": "Enter the club skater's full name.",
+  "注册需要唯一匹配管理员已批准的 HSC 选手。姓名不存在或有重名时，请联系俱乐部。": "Registration requires a uniquely matched, administrator-approved HSC skater. Contact the club if the name is missing or ambiguous.",
+  "所选身份必须与已核实的会员身份一致。": "The selected role must match your verified membership.",
+  "注册暂未完成，请联系俱乐部。": "Registration could not be completed. Please contact the club.",
   "姓名归并，待俱乐部确认":"Name consolidated · Awaiting club confirmation",
   "人工补充":"Manually added",
   "分项分数":"Segment score",

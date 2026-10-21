@@ -11,8 +11,12 @@ assert.equal(categoryKey('Podium Pathway - Singles - Pre-Novice Women Group 2'),
 const event={id:'SO-325444',name:'Sectionals',url:'https://skateontario.org',timezone:'America/Toronto',participants,blocks};
 const rows=scheduleRows([event],roster);
 const eva=rows.filter(r=>r.skaterName==='Eva Wang');assert.equal(eva.length,2);assert.ok(eva.every(r=>r.category.includes('GROUP 2')&&!r.uncertain));
-assert.ok(rows.filter(r=>r.skaterName==='Carson Wang').every(r=>r.uncertain));
+const carson=rows.filter(row=>row.skaterName==='Carson Wang');
+assert.equal(carson.length,2);assert.ok(carson.every(row=>row.uncertain&&row.start===''&&row.end===''&&row.candidates.length===2));
+assert.ok(carson.some(row=>row.category==='PRE-NOVICE MEN SHORT'));assert.ok(carson.some(row=>row.category==='PRE-NOVICE MEN FREE'));
+const confirmed=scheduleRows([{...event,startingOrders:[{id:'test-official-short',name:'Carson Wang',category:'PRE-NOVICE MEN SHORT',program:'short',startNumber:17,warmupGroup:null,individualTime:null,sourceUrl:'https://skateontario.org/test-order.pdf',page:1,skaterIds:[carson[0].skaterId]}]}],roster).filter(row=>row.skaterName==='Carson Wang');
+assert.equal(confirmed.length,2);assert.equal(confirmed.filter(row=>row.uncertain).length,1);assert.equal(confirmed.find(row=>!row.uncertain).start,'11:15');
 assert.ok(!rows.some(r=>r.skaterName==='Nathaniel'));
 
-console.log(JSON.stringify({participants:participants.length,matched:8,blocks:blocks.length,clubScheduleRows:rows.length,noviceMen:men,eva:eva.map(r=>({date:r.date,start:r.start,rink:r.rink})),preservesUnknownIndividualTimes:true},null,2));
+console.log(JSON.stringify({participants:participants.length,matched:8,blocks:blocks.length,clubScheduleRows:rows.length,carson:carson.map(row=>({category:row.category,date:row.date,start:row.start,end:row.end,uncertain:row.uncertain,candidates:row.candidates})),partialOrderResolvesOnlyItsProgram:true,noviceMen:men,eva:eva.map(r=>({date:r.date,start:r.start,rink:r.rink})),preservesUnknownIndividualTimes:true},null,2));
 

@@ -22,6 +22,10 @@ The fixed API origin is the existing HSC site. No hosting bypass key, password, 
 
 ## Alerts
 
+Registration requires username, password, requested role (skater/parent/coach), an exact HSC skater full name and a verification email. The server rejects names outside the administrator-approved, training-confirmed, identity-resolved club list before creating a password account. A match creates only a pending membership request, never an approved relationship. Historic competition candidates are not automatically eligible.
+
+Unresolved starting-number ranges are alternative official time slots, not extra sessions. The shared API combines Carson's alternatives into Short and Free entries with blank start/end and `uncertain=true`; the app displays “Time to be confirmed” and the possible official slots separately. Only the corresponding program's published starting order can resolve a range. Device/server preparation reminders exclude uncertain sessions.
+
 Personal rules are stored on the server. Arrival lead must be at least 60 minutes, and reminder lead at least another 60 minutes before arrival. The current server automation checks hourly. Only confirmed official group starts are eligible; uncertain groups and ambiguous/nonexistent DST clock times are excluded, and individual times/warm-up groups are never inferred.
 
 The user explicitly opts into phone notification permission. The app reconciles up to 50 upcoming local alerts when refreshed or foregrounded. Packing and arrival details are hidden on the lock screen unless separately enabled. Sign-out cancels local HSC alerts. Local alerts depend on the last refreshed schedule; an offline phone cannot learn subsequent official changes. APNs/FCM remote push and email delivery are not configured. OS permission, device power management, notification limits and device settings may affect delivery. Verify permission, offline behaviour, revisions and sign-out on real iOS and Android phones before distribution.

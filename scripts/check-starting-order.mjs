@@ -15,5 +15,6 @@ const skater={id:'cyrus',name:'Cyrus Huang',coach:'Jen Jackson/Bryce Davidson'};
 const block=(id,range)=>({id,category:`PRE-NOVICE MEN FREE (${range.join('-')})`,categoryKey:'PRENOVICE:MEN',group:null,range,activity:'competition',date:'2026-11-06',start:'10:00',end:'11:00',rink:'RINK',page:1,sourceUrl:'https://skateontario.org/schedule.pdf'});
 const event={id:'test',name:'Test',url:'https://skateontario.org',timezone:'America/Toronto',participants:[{category:'Pre-Novice Men',skaterIds:['cyrus'],matchStatus:'test'}],blocks:[block('a',[1,15]),block('b',[16,25])],startingOrders:actual};
 const rows=scheduleRows([event],[skater]);assert.equal(rows.length,1);assert.equal(rows[0].startingOrder.startNumber,17);assert.equal(rows[0].uncertain,false);assert.equal(rows[0].coach,skater.coach);
-assert.equal(scheduleRows([{...event,startingOrders:[]}],[skater]).length,2);
+const pending=scheduleRows([{...event,startingOrders:[]}],[skater]);
+assert.equal(pending.length,1);assert.equal(pending[0].uncertain,true);assert.equal(pending[0].start,'');assert.equal(pending[0].end,'');assert.equal(pending[0].candidates.length,2);assert.ok(!pending[0].category.includes('('));
 console.log(JSON.stringify({officialPdfRows:parsed.length,explicitWarmupVerified:true,missingWarmupNeverGuessed:true,rangeResolvedByOfficialOrder:true,defaultCoachPreserved:true}));

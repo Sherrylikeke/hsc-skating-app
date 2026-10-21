@@ -68,6 +68,7 @@ const {drainOutbox} = await import('../lib/member-messages.ts');
 const {eventWriteStatements} = await import('../lib/change-notifications.ts');
 const {syncEvent} = await import('../lib/official-sync.ts');
 const {createPasswordAuth} = await import('../lib/password-auth.ts');
+const {registrationEligibility} = await import('../lib/registration.ts');
 const {reminderPlans,reconcileReminders} = await import('../lib/reminders.ts');
 const clubAPI = await import('../app/api/club/route.ts');
 const coachAPI = await import('../app/api/coaches/route.ts');
@@ -288,7 +289,38 @@ check('confirmed full names rematch unchanged official files; pending identity n
 const auth=createPasswordAuth(database,'isolated-tests-only-secret-0123456789-abcdef','http://127.0.0.1:5173');
 const authRequest=(path,body,headers={})=>new Request('http://127.0.0.1:5173/api/auth/'+path,{method:'POST',headers:{origin:'http://127.0.0.1:5173','Content-Type':'application/json','cf-connecting-ip':'192.0.2.71',...headers},body:JSON.stringify(body)});
 const testPassword='Isolated-Fixture-Password-2026!';
-const signup=await auth.handler(authRequest('sign-up/email',{email:'password-fixture@example.test',name:'Password Fixture',username:'fixture.account',password:testPassword,role:'admin',emailVerified:true}));
+const registrationBody={email:'password-fixture@example.test',name:'Password Fixture',username:'fixture.account',password:testPassword,role:'parent',skaterName:'Test Alpha',emailVerified:true};
+const registrationDatabase=new LocalD1();
+for(const file of migrations)registrationDatabase.database.exec(fs.readFileSync(path.join('drizzle',file),'utf8'));
+for(const [id,profile,admitted] of [
+  ['approved',{name:'Club Skater',training:true,identityPending:false},1],
+  ['external',{name:'External Skater',training:false,identityPending:false},1],
+  ['pending',{name:'Unknown Identity',training:true,identityPending:true},1],
+  ['not-admitted',{name:'Candidate Only',training:true,identityPending:false},0],
+  ['duplicate-a',{name:'Same Name',training:true,identityPending:false},1],
+  ['duplicate-b',{name:'Same Name',training:true,identityPending:false},1],
+])registrationDatabase.database.prepare('INSERT INTO hsc_admissions (skater_id,admitted,payload,updated_by,updated_at) VALUES (?,?,?,?,?)').run(id,admitted,JSON.stringify(profile),'test',new Date().toISOString());
+for(const role of ['skater','parent','coach'])assert.equal((await registrationEligibility(registrationDatabase,{role,skaterName:'  CLUB  SKATER '},role)).skaterId,'approved');
+for(const skaterName of ['External Skater','Unknown Identity','Candidate Only','Same Name','Missing Name'])await assert.rejects(()=>registrationEligibility(registrationDatabase,{role:'parent',skaterName},skaterName),error=>error.status===403);
+const isolatedAuth=createPasswordAuth(registrationDatabase,'isolated-tests-only-secret-0123456789-abcdef','http://127.0.0.1:5173');
+const limitedRequest=authRequest('sign-up/email',{...registrationBody,skaterName:'Missing Name'},{'cf-connecting-ip':'192.0.2.120'});
+for(let attempt=0;attempt<8;attempt++)assert.equal((await isolatedAuth.handler(limitedRequest.clone())).status,403);
+assert.equal((await isolatedAuth.handler(limitedRequest.clone())).status,429);
+assert.equal(registrationDatabase.database.prepare('SELECT count(*) AS count FROM hsc_auth_user').get().count,0);
+const beforeRegistrationCount=database.database.prepare('SELECT count(*) AS count FROM hsc_auth_user').get().count;
+for(const route of ['sign-up/email/','sign-up/email//','sign-up%2Femail','SIGN-UP/EMAIL','/sign-up/email']) {
+  const rejected=await auth.handler(authRequest(route,{...registrationBody,role:'admin'}));
+  assert.equal(rejected.ok,false,'Registration gate bypass at '+route);
+}
+for(const [index,invalid] of [{role:'admin'},{role:'outsider'},{skaterName:''},{skaterName:'Not In Club'},{skaterName:'Nathaniel'},{skaterName:'Same Name'},{skaterName:'Test Alpha'},{role:'admin',linkExisting:true}].entries()) {
+  const rejected=await auth.handler(authRequest('sign-up/email',{...registrationBody,...invalid},{'cf-connecting-ip':'192.0.2.'+(80+index)}));
+  assert.ok([400,403].includes(rejected.status),await rejected.text());
+}
+assert.equal(database.database.prepare('SELECT count(*) AS count FROM hsc_auth_user').get().count,beforeRegistrationCount);
+const admission=database.database.prepare("SELECT payload FROM hsc_admissions WHERE skater_id='SK-A'").get();
+const originalAdmission=JSON.parse(admission.payload);
+database.database.prepare("UPDATE hsc_admissions SET admitted=1,payload=? WHERE skater_id='SK-A'").run(JSON.stringify({...originalAdmission,training:true}));
+const signup=await auth.handler(authRequest('sign-up/email',{...registrationBody,skaterName:'  TEST   ALPHA  '}));
 assert.equal(signup.status,200,await signup.clone().text());
 const signupValue=await signup.json();
 assert.equal(signupValue.user.emailVerified,false);
@@ -308,6 +340,11 @@ assert.equal(passwordLogin.status,200);
 const passwordMember=(await passwordLogin.json()).member;
 assert.equal(passwordMember.role,null);
 assert.equal(passwordMember.status,'pending');
+assert.equal(passwordMember.requested_role,'parent');
+const registrationClaim=database.database.prepare("SELECT payload FROM hsc_claims WHERE member_id=? AND kind='membership'").get(passwordMember.id);
+assert.deepEqual(JSON.parse(registrationClaim.payload).skaterIds,['SK-A']);
+assert.equal(database.database.prepare('SELECT count(*) AS count FROM hsc_relations WHERE member_id=?').get(passwordMember.id).count,0);
+check('registration rejects invalid roles, missing/unapproved/ambiguous skaters before account creation; an approved club match records only a pending request');
 assert.equal((await memberRequest(passwordContext,request(null,'me'))).status,200);
 assert.equal((await memberRequest(passwordContext,request(null,'admin'))).status,403);
 await memberRequest(passwordContext,request(null,'logout',{}));

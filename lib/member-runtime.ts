@@ -11,7 +11,11 @@ export function passwordAuth(request: Request) {
   if (!runtime.BETTER_AUTH_SECRET) return null;
   const url = new URL(request.url);
   const origin = ['http://127.0.0.1:5173','http://localhost:5173'].includes(url.origin) ? url.origin : productionOrigin;
-  return createPasswordAuth(db(),runtime.BETTER_AUTH_SECRET,origin);
+  return createPasswordAuth(db(),runtime.BETTER_AUTH_SECRET,origin,async(incoming,email)=>{
+    const identity=await getChatGPTUser();
+    if(!identity||identity.email.toLowerCase()!==email)return null;
+    try {const member=await actor(db(),identity,incoming);return member.role;}catch{return null;}
+  });
 }
 export async function requestIdentity(request: Request) {
   const auth = passwordAuth(request);
