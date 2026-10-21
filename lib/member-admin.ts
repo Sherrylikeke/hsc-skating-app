@@ -52,6 +52,16 @@ export async function memberRequest(context: Context, request: Request): Promise
       return json({ok: true}, 200, {'Set-Cookie': sessionCookie(request, '', 0)});
     }
     if (operation === 'accept-invite') return await acceptInvite(database, member, stringField(body.token, 100));
+    if (operation === 'home-skater') {
+      if (!['active','club-viewer'].includes(member.status)) throw new AccessError(403,'Sign in to manage your skater homepage.');
+      const skaterId=stringField(body.skaterId,100);
+      if(typeof body.pinned!=='boolean'||!candidates.some(candidate=>candidate.id===skaterId))throw new AccessError(400,'Choose a skater on the club list.');
+      await database.batch([
+        database.prepare('INSERT INTO hsc_home_skaters (id,member_id,skater_id,pinned,updated_at) VALUES (?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET pinned=excluded.pinned,updated_at=excluded.updated_at').bind(JSON.stringify([member.id,skaterId]),member.id,skaterId,Number(body.pinned),nowISO()),
+        audit(database,member.id,'home-skater',skaterId,{pinned:body.pinned}),
+      ]);
+      return json({preferredSkaterIds:await scheduleSkaterIds(database,member)});
+    }
     if (operation === 'claim') return await submitClaim(database, member, body, candidates);
     requireRole(member, 'admin', 'coach', 'parent', 'skater');
     if (operation === 'notification-read') {await markNotification(database, member, stringField(body.id, 500)); return json({ok: true});}

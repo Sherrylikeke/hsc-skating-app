@@ -1,5 +1,5 @@
 export type Role = 'admin' | 'parent' | 'skater' | 'coach';
-export type Identity = {userId: string; email: string; displayName: string; provider?: 'password'; authToken?: string; authVerified?:boolean};
+export type Identity = {userId: string; email: string; displayName: string; provider?: 'password'; authToken?: string; authVerified?:boolean; emailVerificationRequired?:boolean};
 export type Member = {id: string; email: string; name: string; role: Role | null; requested_role: Role; status: string; auth_version: number};
 export type Candidate = {id: string; name: string; identityPending?: boolean; training?: boolean; coach?: string};
 export class AccessError extends Error {
@@ -66,6 +66,7 @@ export async function actor(database: D1Database, identity: Identity | null, req
   const member = await database.prepare('SELECT m.* FROM hsc_members m JOIN hsc_sessions s ON s.member_id=m.id AND s.auth_version=m.auth_version WHERE m.id=? AND lower(m.email)=? AND s.hash=? AND s.revoked_at IS NULL AND s.expires_at>?').bind(identity.userId, identity.email.toLowerCase(), await sessionHash(request, identity), nowISO()).first<Member>();
   if (!member) throw new AccessError(401, '请进入会员入口重新登录');
   if (member.status === 'disabled') throw new AccessError(403, '账号已停用，请联系管理员');
+  if(identity.provider==='password'&&identity.emailVerificationRequired&&!identity.authVerified&&member.role!=='admin')throw new AccessError(403,'Verify your email before signing in.');
   if (identity.provider==='password'&&!identity.authVerified&&member.status==='active') {
     if(active)throw new AccessError(403,'Confirm account ownership using an administrator-issued invitation before accessing private records.');
     return {...member,status:'pending-verification'};
@@ -84,10 +85,12 @@ export async function assertSkater(database: D1Database, member: Member, skaterI
   if (member.role !== 'admin' && !(await accessibleSkaters(database, member)).includes(skaterId)) throw new AccessError(403, '无权访问该选手');
 }
 export async function scheduleSkaterIds(database:D1Database,member:Member):Promise<string[]> {
-  if(member.status!=='club-viewer')return accessibleSkaters(database,member);
   const claim=await database.prepare("SELECT payload FROM hsc_claims WHERE member_id=? AND kind='membership' ORDER BY created_at DESC LIMIT 1").bind(member.id).first<{payload:string}>();
   const ids=claim?JSON.parse(claim.payload).skaterIds:[];
-  return Array.isArray(ids)?ids.filter((id:unknown):id is string=>typeof id==='string'):[];
+  const defaults=[...await accessibleSkaters(database,member),...(Array.isArray(ids)?ids.filter((id:unknown):id is string=>typeof id==='string'):[])];
+  const {results}=await database.prepare('SELECT skater_id,pinned FROM hsc_home_skaters WHERE member_id=?').bind(member.id).all<{skater_id:string;pinned:number}>();
+  const hidden=new Set(results.filter(row=>!row.pinned).map(row=>row.skater_id));
+  return [...new Set([...defaults,...results.filter(row=>row.pinned).map(row=>row.skater_id)])].filter(id=>!hidden.has(id));
 }
 export async function admittedIDs(database: D1Database, ids: string[]) {
   const {results} = await database.prepare('SELECT skater_id FROM hsc_admissions WHERE admitted=1 AND skater_id IN (SELECT value FROM json_each(?))').bind(JSON.stringify(ids)).all<{skater_id: string}>();

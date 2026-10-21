@@ -42,6 +42,10 @@ export const hscAudit = sqliteTable('hsc_audit', {
   id: text('id').primaryKey(), actorId: text('actor_id').notNull(), action: text('action').notNull(),
   subjectId: text('subject_id').notNull(), payload: text('payload').notNull(), createdAt: text('created_at').notNull(),
 });
+export const hscHomeSkaters = sqliteTable('hsc_home_skaters', {
+  id: text('id').primaryKey(), memberId: text('member_id').notNull(), skaterId: text('skater_id').notNull(),
+  pinned: integer('pinned').notNull(), updatedAt: text('updated_at').notNull(),
+}, table => [index('hsc_home_member').on(table.memberId)]);
 export const hscRateLimits = sqliteTable('hsc_rate_limits', {
   id: text('id').primaryKey(), count: integer('count').notNull().default(1), expiresAt: integer('expires_at').notNull(),
 });

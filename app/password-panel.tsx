@@ -1,10 +1,11 @@
 'use client';
 import {useState} from 'react';
+import EmailVerificationPanel from './email-verification-panel';
 import {translate,text,useLanguage} from '../lib/i18n';
 import type {Role} from '../lib/member-access';
 export default function PasswordPanel({role,onComplete,allowAdminLink=false}:{role:Role;onComplete:()=>Promise<void>;allowAdminLink?:boolean}) {
   useLanguage();
-  const [register,setRegister]=useState(false),[username,setUsername]=useState(''),[password,setPassword]=useState(''),[confirm,setConfirm]=useState(''),[email,setEmail]=useState(''),[skaterName,setSkaterName]=useState(''),[requestedRole,setRequestedRole]=useState<Role>(role==='admin'?'parent':role),[link,setLink]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
+  const [register,setRegister]=useState(false),[username,setUsername]=useState(''),[password,setPassword]=useState(''),[confirm,setConfirm]=useState(''),[email,setEmail]=useState(''),[skaterName,setSkaterName]=useState(''),[requestedRole,setRequestedRole]=useState<Role>(role==='admin'?'parent':role),[link,setLink]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[pendingEmail,setPendingEmail]=useState('');
   const adminLink=allowAdminLink&&link;
   async function submit(event:React.FormEvent) {
     event.preventDefault();if(busy)return;setBusy(true);setError('');
@@ -14,9 +15,15 @@ export default function PasswordPanel({role,onComplete,allowAdminLink=false}:{ro
       const endpoint=register?'sign-up/email':emailLogin?'sign-in/email':'sign-in/username';
       const body=register?{name:identifier,email,username:identifier,password,role:requestedRole,skaterName,linkExisting:adminLink}:emailLogin?{email:identifier,password}:{username:identifier,password};
       const response=await fetch('/api/auth/'+endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-      const result=await response.json() as {message?:string;error?:{message?:string}};
+      const result=await response.json() as {message?:string;token?:string|null;user?:{email:string};error?:{message?:string}};
       setPassword('');setConfirm('');
       if(!response.ok)throw new Error(result.message||result.error?.message||text('Unable to sign in. Please try again.','无法登录，请重试。'));
+      if(register&&result.user&&!result.token){
+        const config=await fetch('/api/auth/config').then(response=>response.json()) as {deliveryConfigured:boolean};
+        if(!adminLink||config.deliveryConfigured){setPendingEmail(email);return;}
+        const signed=await fetch('/api/auth/sign-in/email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:body.password})});
+        if(!signed.ok)throw new Error(text('Sign in to complete account linking.','请登录后完成账号关联。'));
+      }
       if(adminLink) {
         const linked=await fetch('/api/link-password',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
         const value=await linked.json() as {error?:string};if(!linked.ok)throw new Error(value.error||'Account linking failed.');
@@ -30,6 +37,7 @@ export default function PasswordPanel({role,onComplete,allowAdminLink=false}:{ro
     <div className="member-actions"><button type="button" className={!register?'selected':''} onClick={()=>{setRegister(false);setError('');}}>{text('Sign in','登录')}</button><button type="button" className={register?'selected':''} onClick={()=>{setRegister(true);setError('');}}>{text('Create an account','创建账号')}</button></div>
     <h2>{register?text('Create your HSC account','创建 HSC 账号'):text('Sign in to HSC','登录 HSC')}</h2>
     <p className="member-muted">{text('Use your own email and password. No ChatGPT account is required.','使用自己的邮箱和密码，不需要 ChatGPT 账号。')}</p>
+    {pendingEmail&&<EmailVerificationPanel initialEmail={pendingEmail}/>}
     <form onSubmit={event=>void submit(event)}>
       <label>{register?text('Username','用户名'):text('Email or username','邮箱或用户名')}<input required value={username} onChange={event=>setUsername(event.target.value)} autoComplete="username" minLength={register?3:1} maxLength={register?30:254} pattern={register?'[a-zA-Z0-9_.]+':undefined} spellCheck={false} autoCapitalize="none"/></label>
       {register&&<small>{text('3–30 letters, numbers, underscores or periods.','3–30 位英文字母、数字、下划线或句点。')}</small>}
@@ -45,6 +53,7 @@ export default function PasswordPanel({role,onComplete,allowAdminLink=false}:{ro
       <button className="primary" disabled={busy}>{busy?text('Please wait…','请稍候…'):register?text('Check name and create account','核对姓名并创建账号'):text('Sign in','登录')}</button>
       {error&&<p role="alert" className="password-error">{translate(error)}</p>}
     </form>
-    <p className="member-muted">{text('A listed name lets you create an account and view club schedules immediately. It does not verify identity or grant private coach, message or administration permissions.','姓名在名单中即可创建账号并立即查看俱乐部赛程；这不代表身份已核实，也不会自动获得教练、私人消息或管理员权限。')}</p>
+    <details><summary>{text('Need to verify your email?','需要验证邮箱？')}</summary><EmailVerificationPanel/></details>
+    <p className="member-muted">{text('New accounts require a listed skater name and email verification. When mail service setup is pending, existing accounts can still sign in. Homepage choices do not grant private coach, message or administration permissions.','新账号须填写名单内选手姓名并验证邮箱。邮件服务配置期间，现有账号仍可登录；主页选择不会授予教练、私人消息或管理员权限。')}</p>
   </section>;
 }
