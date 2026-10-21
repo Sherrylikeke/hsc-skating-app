@@ -22,6 +22,8 @@ The fixed API origin is the existing HSC site. No hosting bypass key, password, 
 
 ## Alerts
 
+Approved, verified members can read the whole club's official schedules and public competition records. Their linked skaters are pinned first; teammates follow for club support. Shared schedule rows do not include another skater's private coach plans. Message, receipt, reminder, relationship and write permissions remain scoped. The app's instruction/automatic-reminder selectors use server-authorized private skater IDs, not the shared roster.
+
 Registration requires username, password, requested role (skater/parent/coach), an exact HSC skater full name and a verification email. The server rejects names outside the administrator-approved, training-confirmed, identity-resolved club list before creating a password account. A match creates only a pending membership request, never an approved relationship. Historic competition candidates are not automatically eligible.
 
 Unresolved starting-number ranges are alternative official time slots, not extra sessions. The shared API combines Carson's alternatives into Short and Free entries with blank start/end and `uncertain=true`; the app displays “Time to be confirmed” and the possible official slots separately. Only the corresponding program's published starting order can resolve a range. Device/server preparation reminders exclude uncertain sessions.
