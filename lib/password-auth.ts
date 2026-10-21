@@ -47,7 +47,7 @@ export function createPasswordAuth(database: D1Database, secret: string, origin 
         const existingRole=body.linkExisting===true&&existingMembership?await existingMembership(request,email):null;
         const registration=existingRole==='admin'?null:await registrationEligibility(database,body,request.headers.get('cf-connecting-ip')||'unknown');
         if(existingRole&&existingRole!=='admin'&&existingRole!==registration?.role)return Response.json({message:'The selected role must match your verified membership.'},{status:403});
-        if(!existingRole&&await database.prepare('SELECT id FROM hsc_members WHERE lower(email)=?').bind(email).first())return Response.json({message:'An account already uses this email. Sign in with ChatGPT and explicitly link your password account first.'},{status:409});
+        if(!existingRole&&await database.prepare('SELECT id FROM hsc_members WHERE lower(email)=?').bind(email).first())return Response.json({message:'An account already uses this email. Sign in or contact the club administrator. Accounts are never merged by email alone.'},{status:409});
         const response=await auth.handler(request);
         if(response.ok&&registration&&!existingRole) {
           const value=await response.clone().json() as {user?:{id:string;email:string;name:string}};

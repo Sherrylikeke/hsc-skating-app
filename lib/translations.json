@@ -1,4 +1,6 @@
 {
+  "此选手姓名不在俱乐部名单中，请检查拼写或联系俱乐部。": "This skater name is not on the club list. Check the spelling or contact the club.",
+  "此邮箱已有账号，请登录或联系俱乐部管理员。不会仅凭相同邮箱合并账号。": "An account already uses this email. Sign in or contact the club administrator. Accounts are never merged by email alone.",
   "请选择选手、家长或教练身份。": "Choose Skater, Parent or Coach.",
   "请输入俱乐部选手的完整姓名。": "Enter the club skater's full name.",
   "注册需要唯一匹配管理员已批准的 HSC 选手。姓名不存在或有重名时，请联系俱乐部。": "Registration requires a uniquely matched, administrator-approved HSC skater. Contact the club if the name is missing or ambiguous.",

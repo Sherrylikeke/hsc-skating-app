@@ -307,8 +307,11 @@ for(const [id,profile,admitted] of [
   ['duplicate-a',{name:'Same Name',training:true,identityPending:false},1],
   ['duplicate-b',{name:'Same Name',training:true,identityPending:false},1],
 ])registrationDatabase.database.prepare('INSERT INTO hsc_admissions (skater_id,admitted,payload,updated_by,updated_at) VALUES (?,?,?,?,?)').run(id,admitted,JSON.stringify(profile),'test',new Date().toISOString());
-for(const role of ['skater','parent','coach'])assert.equal((await registrationEligibility(registrationDatabase,{role,skaterName:'  CLUB  SKATER '},role)).skaterId,'approved');
-for(const skaterName of ['External Skater','Unknown Identity','Candidate Only','Same Name','Missing Name'])await assert.rejects(()=>registrationEligibility(registrationDatabase,{role:'parent',skaterName},skaterName),error=>error.status===403);
+for(const role of ['skater','parent','coach'])assert.deepEqual((await registrationEligibility(registrationDatabase,{role,skaterName:'  CLUB  SKATER '},role)).skaterIds,['approved']);
+for(const skaterName of ['External Skater','Unknown Identity','Candidate Only'])assert.equal((await registrationEligibility(registrationDatabase,{role:'parent',skaterName},skaterName)).skaterIds.length,1);
+assert.equal((await registrationEligibility(registrationDatabase,{role:'parent',skaterName:'Same Name'},'duplicates')).skaterIds.length,2);
+assert.equal((await registrationEligibility(registrationDatabase,{role:'parent',skaterName:'CARSON WANG'},'roster-only')).skaterIds.length,1);
+await assert.rejects(()=>registrationEligibility(registrationDatabase,{role:'parent',skaterName:'Missing Name'},'missing'),error=>error.status===403);
 const isolatedAuth=createPasswordAuth(registrationDatabase,'isolated-tests-only-secret-0123456789-abcdef','http://127.0.0.1:5173');
 const limitedRequest=authRequest('sign-up/email',{...registrationBody,skaterName:'Missing Name'},{'cf-connecting-ip':'192.0.2.120'});
 for(let attempt=0;attempt<8;attempt++)assert.equal((await isolatedAuth.handler(limitedRequest.clone())).status,403);
@@ -319,14 +322,11 @@ for(const route of ['sign-up/email/','sign-up/email//','sign-up%2Femail','SIGN-U
   const rejected=await auth.handler(authRequest(route,{...registrationBody,role:'admin'}));
   assert.equal(rejected.ok,false,'Registration gate bypass at '+route);
 }
-for(const [index,invalid] of [{role:'admin'},{role:'outsider'},{skaterName:''},{skaterName:'Not In Club'},{skaterName:'Nathaniel'},{skaterName:'Same Name'},{skaterName:'Test Alpha'},{role:'admin',linkExisting:true}].entries()) {
+for(const [index,invalid] of [{role:'admin'},{role:'outsider'},{skaterName:''},{skaterName:'Not In Club'},{role:'admin',linkExisting:true}].entries()) {
   const rejected=await auth.handler(authRequest('sign-up/email',{...registrationBody,...invalid},{'cf-connecting-ip':'192.0.2.'+(80+index)}));
   assert.ok([400,403].includes(rejected.status),await rejected.text());
 }
 assert.equal(database.database.prepare('SELECT count(*) AS count FROM hsc_auth_user').get().count,beforeRegistrationCount);
-const admission=database.database.prepare("SELECT payload FROM hsc_admissions WHERE skater_id='SK-A'").get();
-const originalAdmission=JSON.parse(admission.payload);
-database.database.prepare("UPDATE hsc_admissions SET admitted=1,payload=? WHERE skater_id='SK-A'").run(JSON.stringify({...originalAdmission,training:true}));
 const signup=await auth.handler(authRequest('sign-up/email',{...registrationBody,skaterName:'  TEST   ALPHA  '}));
 assert.equal(signup.status,200,await signup.clone().text());
 const signupValue=await signup.json();
@@ -346,14 +346,26 @@ const passwordLogin=await memberRequest(passwordContext,request(null,'session',{
 assert.equal(passwordLogin.status,200);
 const passwordMember=(await passwordLogin.json()).member;
 assert.equal(passwordMember.role,null);
-assert.equal(passwordMember.status,'pending');
+assert.equal(passwordMember.status,'club-viewer');
 assert.equal(passwordMember.requested_role,'parent');
 const registrationClaim=database.database.prepare("SELECT payload FROM hsc_claims WHERE member_id=? AND kind='membership'").get(passwordMember.id);
 assert.deepEqual(JSON.parse(registrationClaim.payload).skaterIds,['SK-A']);
 assert.equal(database.database.prepare('SELECT count(*) AS count FROM hsc_relations WHERE member_id=?').get(passwordMember.id).count,0);
-check('registration rejects invalid roles, missing/unapproved/ambiguous skaters before account creation; an approved club match records only a pending request');
+check('email registration checks only name-list membership, including non-admitted and duplicate names; no ChatGPT or email-ownership assertion grants private relationships');
 assert.equal((await memberRequest(passwordContext,request(null,'me'))).status,200);
 assert.equal((await memberRequest(passwordContext,request(null,'admin'))).status,403);
+const viewerMe=await memberRequest(passwordContext,request(null,'me')).then(response=>response.json());
+assert.deepEqual(viewerMe.skaterIds,[]);assert.deepEqual(viewerMe.preferredSkaterIds,['SK-A']);
+assert.equal((await memberRequest(passwordContext,request(null,'notifications'))).status,403);
+assert.equal((await memberRequest(passwordContext,request(null,'requirement',{title:'forged coach',body:'not allowed',skaterIds:['SK-A']}))).status,403);
+globalThis.hscTestAuthSecret='isolated-tests-only-secret-0123456789-abcdef';globalThis.hscTestHeaders=new Headers();
+const viewerRequest=new Request('https://hsc-coach-roster.sherrylikeke.chatgpt.site/api/mobile',{headers:{authorization:'Bearer '+signedToken}});
+const viewerResponse=await mobileAPI.GET(viewerRequest);assert.equal(viewerResponse.status,200,await viewerResponse.clone().text());
+const viewerData=await viewerResponse.json();assert.deepEqual(viewerData.privateSkaterIds,[]);assert.ok(viewerData.skaters.length>2);assert.equal(viewerData.skaters[0].id,'SK-A');assert.ok(viewerData.rows.every(row=>row.plan===null));
+const viewerClub=await clubAPI.GET(new Request('https://hsc-coach-roster.sherrylikeke.chatgpt.site/api/club',{headers:{authorization:'Bearer '+signedToken}})).then(response=>response.json());
+assert.deepEqual(viewerClub.plans,[]);assert.deepEqual(viewerClub.writableSkaterIds,[]);assert.deepEqual(viewerClub.ownSkaterIds,['SK-A']);
+globalThis.hscTestAuthSecret=undefined;
+check('fresh email accounts immediately read shared club schedules and pin their list match without ChatGPT, while private notes, messages, coach writes and administration remain blocked');
 await memberRequest(passwordContext,request(null,'logout',{}));
 assert.equal((await memberRequest(passwordContext,request(null,'me'))).status,401);
 const spoofedExisting={...passwordIdentity,email:users.owner.identity.email};
@@ -395,6 +407,8 @@ const wrongPassword=await auth.handler(authRequest('sign-in/username',{username:
 assert.notEqual(wrongPassword.status,200);
 const correctPassword=await auth.handler(authRequest('sign-in/username',{username:'FIXTURE.ACCOUNT',password:testPassword}));
 assert.equal(correctPassword.status,200);
+const emailSignIn=await auth.handler(authRequest('sign-in/email',{email:passwordIdentity.email,password:testPassword}));
+assert.equal(emailSignIn.status,200);assert.equal((await emailSignIn.json()).user.id,signupValue.user.id);
 const newSigned=correctPassword.headers.get('set-auth-token');
 const signedOut=await auth.handler(authRequest('sign-out',{}, {authorization:'Bearer '+newSigned}));
 assert.equal(signedOut.status,200);

@@ -1,4 +1,4 @@
-import {AccessError, accessibleSkaters, actor, admittedIDs, audit, bodyJSON, digest, failure, idsField, json, nowISO, parseIDs, randomToken, rateLimit, relationStatement, requireRole, roleField, sessionCookie, sessionHash, startSession, stringField} from './member-access.ts';
+import {AccessError, accessibleSkaters, scheduleSkaterIds, actor, admittedIDs, audit, bodyJSON, digest, failure, idsField, json, nowISO, parseIDs, randomToken, rateLimit, relationStatement, requireRole, roleField, sessionCookie, sessionHash, startSession, stringField} from './member-access.ts';
 import type {Candidate, Identity, Member, Role} from './member-access.ts';
 import {drainOutbox, listNotifications, markNotification, listRequirements, writeRequirement, receiptRequirement} from './member-messages.ts';
 import {listReminders,saveReminder} from './reminders.ts';
@@ -18,13 +18,13 @@ export async function memberRequest(context: Context, request: Request): Promise
       const body = await bodyJSON(request);
       return await startSession(database, identity, request, roleField(body.role), ownerEmail);
     }
-    if (operation === 'identity' && request.method === 'GET') return json({identity: identity ? {name: identity.displayName, email: identity.email, provider:identity.provider || 'chatgpt'} : null});
+    if (operation === 'identity' && request.method === 'GET') return json({identity: identity ? {name: identity.displayName, email: identity.email, provider:identity.provider || 'chatgpt',canRestore:!identity.provider&&identity.email.toLowerCase()===ownerEmail.toLowerCase()} : null});
     const member = await actor(database, identity, request, false);
     if (request.method === 'GET') {
       if (operation === 'me') {
         const allowed = await accessibleSkaters(database, member);
         const {results: claims} = await database.prepare('SELECT id,kind,payload,status,created_at FROM hsc_claims WHERE member_id=? ORDER BY created_at DESC LIMIT 30').bind(member.id).all();
-        return json({member, skaterIds: allowed, claims, channels: {inApp: true, email: false, webPush: false}, syncIntervalMinutes: 60});
+        return json({member, skaterIds: allowed, preferredSkaterIds:await scheduleSkaterIds(database,member), claims, channels: {inApp: member.status==='active', email: false, webPush: false}, syncIntervalMinutes: 60});
       }
       if (operation === 'match') {
         await rateLimit(database, `match:${member.id}`, 15);
@@ -178,7 +178,7 @@ async function adminWrite(database: D1Database, member: Member, operation: strin
     const accepted = body.approve === true;
     const ids = idsField(body.skaterIds ?? requested.skaterIds);
     const target = await database.prepare('SELECT * FROM hsc_members WHERE id=?').bind(claim.member_id).first<Member>();
-    if (!target || target.status === 'disabled' || (claim.kind === 'membership' && target.status !== 'pending')) throw new AccessError(400, '申请账号状态已变更，请重新核对');
+    if (!target || target.status === 'disabled' || (claim.kind === 'membership' && !['pending','club-viewer'].includes(target.status))) throw new AccessError(400, '申请账号状态已变更，请重新核对');
     if (accepted) {
       if (requested.role === 'admin' || (claim.kind === 'coach-link' && target.role !== 'coach')) throw new AccessError(400, '申请身份已变更，请重新核对');
       if (requested.role === 'skater' && ids.length !== 1) throw new AccessError(400, '请明确选手账号的唯一资料');
@@ -188,7 +188,7 @@ async function adminWrite(database: D1Database, member: Member, operation: strin
     const gate = 'EXISTS (SELECT 1 FROM hsc_audit WHERE id=?)';
     const statements = [database.prepare("INSERT INTO hsc_audit (id,actor_id,action,subject_id,payload,created_at) SELECT ?,?,'claim-review',?,?,? WHERE EXISTS (SELECT 1 FROM hsc_claims WHERE id=? AND status='pending')").bind(operationId, member.id, id, JSON.stringify({accepted, ids}), nowISO(), id),database.prepare(`UPDATE hsc_claims SET status=?,reviewed_by=? WHERE id=? AND ${gate}`).bind(accepted ? 'approved' : 'rejected', member.id, id, operationId)];
     if (accepted) {
-      if (claim.kind === 'membership') statements.push(database.prepare(`UPDATE hsc_members SET role=?,status='active',auth_version=auth_version+1 WHERE id=? AND status='pending' AND ${gate}`).bind(requested.role, claim.member_id, operationId));
+      if (claim.kind === 'membership') statements.push(database.prepare(`UPDATE hsc_members SET role=?,status='active',auth_version=auth_version+1 WHERE id=? AND status IN ('pending','club-viewer') AND ${gate}`).bind(requested.role, claim.member_id, operationId));
       statements.push(...ids.map(skaterId => database.prepare(`INSERT INTO hsc_relations (id,member_id,skater_id,kind,active,approved_by,updated_at) SELECT ?,?,?,?,1,?,? WHERE ${gate} ON CONFLICT(id) DO UPDATE SET active=1,approved_by=excluded.approved_by,updated_at=excluded.updated_at`).bind(`${claim.member_id}|${requested.role}|${skaterId}`, claim.member_id, skaterId, requested.role, member.id, nowISO(), operationId)));
     }
     const result=await database.batch(statements);

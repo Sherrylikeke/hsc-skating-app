@@ -1,6 +1,8 @@
 # HSC Skating · iOS / Android internal-test source
 
-React Native / Expo SDK 58 application, not a WebView. Uses the same HSC server, roles and skater relationships as the web portal. Includes username/password registration, pending membership and invitation redemption, scoped group schedules, notifications, version-specific acknowledgements, coach instruction creation, English/Chinese and personal packing/arrival reminders.
+React Native / Expo SDK 58 application, not a WebView. Uses the same HSC server as the web portal. Includes email/username/password sign-in, name-list registration with immediate shared schedules, English/Chinese and optional approved private roles for notifications, acknowledgements, coach instructions and preparation reminders.
+
+**Latest login policy:** the sign-in form comes first, uses email or username plus password, and requires no ChatGPT account. Registration checks only that the supplied skater name exists in the current roster (base list plus club-edited names), not admission/training/identity approval flags. A match immediately creates a `club-viewer` account with shared official schedule access and pinned name preferences, but no verified private relationships or coach/admin privileges. Duplicate names can qualify for shared schedules; they never prove which person is registering. Ordinary email ownership is not marked verified.
 
 ## Run locally
 
@@ -16,7 +18,7 @@ Open the development project on an iPhone or Android device using the supported 
 
 ## Authentication and privacy
 
-The fixed API origin is the existing HSC site. No hosting bypass key, password, signing secret or privileged API credential is embedded. Library-signed session tokens use Expo SecureStore and expire server-side. Web login cookies are not copied into the app. Invalid/revoked sessions clear local data and cancel this device's scheduled HSC alerts. Registration never approves membership. Email/account ownership must be confirmed with an administrator-issued, email-bound invitation. Existing SSO accounts need explicit dual-session linking in the web portal.
+The fixed API origin is the existing HSC site. No hosting bypass key, password, signing secret or privileged API credential is embedded. Library-signed session tokens use Expo SecureStore and expire server-side. Web login cookies are not copied into the app. Invalid/revoked sessions clear local data and cancel this device's scheduled HSC alerts. Name-list registration enables shared schedules immediately. Private role/relationship access still needs club verification and an email-bound invitation; existing privileged accounts are never merged by self-reported email alone.
 
 **The hosted site remains owner-private until internal testing is accepted and the owner explicitly approves opening its login/registration entry point. Mobile API requests cannot bypass that hosting gate.** A successful source export is not a live member release. Do not put the owner-only hosting bypass token into this application.
 
@@ -24,7 +26,7 @@ The fixed API origin is the existing HSC site. No hosting bypass key, password, 
 
 Approved, verified members can read the whole club's official schedules and public competition records. Their linked skaters are pinned first; teammates follow for club support. Shared schedule rows do not include another skater's private coach plans. Message, receipt, reminder, relationship and write permissions remain scoped. The app's instruction/automatic-reminder selectors use server-authorized private skater IDs, not the shared roster.
 
-Registration requires username, password, requested role (skater/parent/coach), an exact HSC skater full name and a verification email. The server rejects names outside the administrator-approved, training-confirmed, identity-resolved club list before creating a password account. A match creates only a pending membership request, never an approved relationship. Historic competition candidates are not automatically eligible.
+Registration requires username, password, requested role (skater/parent/coach), a skater name found in the current list and the user's email. The server rejects an absent name before creating the password account. Admission and training/identity review flags do not block shared-schedule registration. Private relationships are never inferred from the match.
 
 Unresolved starting-number ranges are alternative official time slots, not extra sessions. The shared API combines Carson's alternatives into Short and Free entries with blank start/end and `uncertain=true`; the app displays “Time to be confirmed” and the possible official slots separately. Only the corresponding program's published starting order can resolve a range. Device/server preparation reminders exclude uncertain sessions.
 

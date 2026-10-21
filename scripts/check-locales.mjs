@@ -2,6 +2,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import ts from 'typescript';
 const dictionary=JSON.parse(fs.readFileSync('lib/translations.json','utf8'));
+const loginEntry=fs.readFileSync('app/member-app.tsx','utf8'),passwordPanel=fs.readFileSync('app/password-panel.tsx','utf8');
+assert.ok(loginEntry.indexOf('<PasswordPanel')<loginEntry.indexOf('<section className="member-hero"'),'Login must precede the welcome hero');
+assert.ok(!loginEntry.includes('/signin-with-chatgpt'),'Public login must not offer ChatGPT verification');
+assert.ok(passwordPanel.includes("'sign-in/email'"));assert.ok(passwordPanel.includes('Email or username'));
 const files=['app/member-app.tsx','app/club-app.tsx','app/athlete-history.tsx','app/coach-editor.tsx','app/password-panel.tsx'];
 let calls=0;
 for(const file of files){

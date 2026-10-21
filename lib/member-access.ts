@@ -62,7 +62,7 @@ function cookieToken(request: Request) {
 }
 export async function sessionHash(request: Request, identity?: Identity | null) {return digest(identity?.authToken ? 'password:' + identity.authToken : cookieToken(request));}
 export async function actor(database: D1Database, identity: Identity | null, request: Request, active = true): Promise<Member> {
-  if (!identity) throw new AccessError(401, '请先使用 ChatGPT 验证身份');
+  if (!identity) throw new AccessError(401, '请先使用邮箱或用户名登录');
   const member = await database.prepare('SELECT m.* FROM hsc_members m JOIN hsc_sessions s ON s.member_id=m.id AND s.auth_version=m.auth_version WHERE m.id=? AND lower(m.email)=? AND s.hash=? AND s.revoked_at IS NULL AND s.expires_at>?').bind(identity.userId, identity.email.toLowerCase(), await sessionHash(request, identity), nowISO()).first<Member>();
   if (!member) throw new AccessError(401, '请进入会员入口重新登录');
   if (member.status === 'disabled') throw new AccessError(403, '账号已停用，请联系管理员');
@@ -70,7 +70,7 @@ export async function actor(database: D1Database, identity: Identity | null, req
     if(active)throw new AccessError(403,'Confirm account ownership using an administrator-issued invitation before accessing private records.');
     return {...member,status:'pending-verification'};
   }
-  if (active && (member.status !== 'active' || !member.role)) throw new AccessError(403, '账号正在等待管理员批准');
+  if (active && member.status !== 'club-viewer' && (member.status !== 'active' || !member.role)) throw new AccessError(403, '账号正在等待管理员批准');
   return member;
 }
 export async function accessibleSkaters(database: D1Database, member: Member): Promise<string[]> {
@@ -83,6 +83,12 @@ export async function assertSkater(database: D1Database, member: Member, skaterI
   requireRole(member, ...(write ? ['admin', 'coach'] as Role[] : ['admin', 'coach', 'parent', 'skater'] as Role[]));
   if (member.role !== 'admin' && !(await accessibleSkaters(database, member)).includes(skaterId)) throw new AccessError(403, '无权访问该选手');
 }
+export async function scheduleSkaterIds(database:D1Database,member:Member):Promise<string[]> {
+  if(member.status!=='club-viewer')return accessibleSkaters(database,member);
+  const claim=await database.prepare("SELECT payload FROM hsc_claims WHERE member_id=? AND kind='membership' ORDER BY created_at DESC LIMIT 1").bind(member.id).first<{payload:string}>();
+  const ids=claim?JSON.parse(claim.payload).skaterIds:[];
+  return Array.isArray(ids)?ids.filter((id:unknown):id is string=>typeof id==='string'):[];
+}
 export async function admittedIDs(database: D1Database, ids: string[]) {
   const {results} = await database.prepare('SELECT skater_id FROM hsc_admissions WHERE admitted=1 AND skater_id IN (SELECT value FROM json_each(?))').bind(JSON.stringify(ids)).all<{skater_id: string}>();
   if (ids.some(id => !results.some(row => row.skater_id === id))) throw new AccessError(400, '请先由管理员确认选手会员准入');
@@ -92,11 +98,11 @@ export function relationStatement(database: D1Database, memberId: string, skater
   return database.prepare('INSERT INTO hsc_relations (id,member_id,skater_id,kind,active,approved_by,updated_at) VALUES (?,?,?,?,1,?,?) ON CONFLICT(id) DO UPDATE SET active=1,approved_by=excluded.approved_by,updated_at=excluded.updated_at').bind(`${memberId}|${kind}|${skaterId}`, memberId, skaterId, kind, approvedBy, nowISO());
 }
 export async function startSession(database: D1Database, identity: Identity | null, request: Request, requestedRole: Role, ownerEmail: string) {
-  if (!identity) throw new AccessError(401, '请先使用 ChatGPT 验证身份');
+  if (!identity) throw new AccessError(401, '请先使用邮箱或用户名登录');
   await rateLimit(database, `session:${identity.userId}`, 15);
   const time = nowISO();
   const collision = await database.prepare('SELECT id FROM hsc_members WHERE lower(email)=? AND id<>?').bind(identity.email.toLowerCase(), identity.userId).first();
-  if (collision) throw new AccessError(409, 'An account already uses this email. Sign in with ChatGPT and explicitly link your password account first.');
+  if (collision) throw new AccessError(409, 'An account already uses this email. Sign in or contact the club administrator. Accounts are never merged by email alone.');
   await database.prepare('INSERT INTO hsc_members (id,email,name,requested_role,status,created_at) VALUES (?,?,?,?,\'pending\',?) ON CONFLICT(id) DO NOTHING').bind(identity.userId, identity.email.toLowerCase(), identity.displayName, requestedRole, time).run();
   if (!identity.provider && identity.email.toLowerCase() === ownerEmail.toLowerCase()) {
     await database.batch([
