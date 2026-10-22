@@ -1,4 +1,5 @@
 'use client';
+import {apiFetch as fetch} from '../lib/client-platform';
 import {useState} from 'react';
 import {text,useLanguage} from '../lib/i18n';
 import './home-skaters.css';

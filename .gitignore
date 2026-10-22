@@ -60,3 +60,14 @@ next-env.d.ts
 /mobile/.expo/
 /mobile/dist/
 /mobile/build/
+/capacitor/node_modules/
+/capacitor/dist/
+/capacitor/android/.gradle/
+/capacitor/android/local.properties
+/capacitor/android/**/build/
+/capacitor/android/app/src/main/assets/public/
+/capacitor/ios/App/App/public/
+/capacitor/ios/App/Pods/
+/capacitor/ios/DerivedData/
+*.keystore
+*.jks

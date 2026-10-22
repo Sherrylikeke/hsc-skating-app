@@ -1,4 +1,5 @@
 'use client';
+import {apiFetch as fetch} from '../lib/client-platform';
 import {translate,text,useLanguage,LanguageSwitch,currentLocale} from '../lib/i18n';
 import PasswordPanel from './password-panel';
 import HomeSkaters from './home-skaters';

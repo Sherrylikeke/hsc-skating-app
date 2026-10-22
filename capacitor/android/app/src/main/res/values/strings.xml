@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">HSC Skating</string>
+    <string name="title_activity_main">HSC Skating</string>
+    <string name="package_name">ca.hsc.skating</string>
+    <string name="custom_url_scheme">ca.hsc.skating</string>
+</resources>

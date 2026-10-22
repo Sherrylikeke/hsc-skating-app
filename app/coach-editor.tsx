@@ -1,4 +1,5 @@
 'use client';
+import {apiFetch as fetch,saveTextFile} from '../lib/client-platform';
 import {translate,useLanguage,LanguageSwitch} from '../lib/i18n';
 
 import { useEffect, useRef, useState } from 'react';
@@ -140,8 +141,7 @@ export default function CoachEditor(){
   function exportCsv(){
     const cell=(value:string)=>'"'+(/^[=+@-]/.test(value)?"'"+value:value).replaceAll('"','""')+'"';
     const text='\uFEFF'+[[translate("选手姓名"),translate("负责教练")],...current.current.map(row=>[row.name,row.coach])].map(row=>row.map(cell).join(',')).join('\r\n');
-    const url=URL.createObjectURL(new Blob([text],{type:'text/csv;charset=utf-8'}));
-    const a=document.createElement('a');a.href=url;a.download=translate("HSC_教练名单.csv");a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    void saveTextFile(translate("HSC_教练名单.csv"),text).catch(failure=>window.alert((failure as Error).message));
   }
 
   return <div className="shell">

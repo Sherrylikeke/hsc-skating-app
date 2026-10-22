@@ -1,0 +1,35 @@
+{
+  "name":"hsc-capacitor",
+  "version":"1.0.0",
+  "private":true,
+  "type":"module",
+  "engines":{"node":">=22.13.0"},
+  "scripts":{
+    "dev":"vite --host 127.0.0.1",
+    "build":"tsc --noEmit && vite build",
+    "sync":"cap sync",
+    "android":"cap run android",
+    "check":"node scripts/check.mjs"
+  },
+  "dependencies":{
+    "@capacitor/core":"8.5.3",
+    "@capacitor/android":"8.5.3",
+    "@capacitor/ios":"8.5.3",
+    "@capacitor/app":"^8.0.0",
+    "@capacitor/browser":"^8.0.0",
+    "@capacitor/filesystem":"^8.0.0",
+    "@capacitor/share":"^8.0.0",
+    "@capacitor/local-notifications":"^8.0.0",
+    "@aparajita/capacitor-secure-storage":"8.0.1",
+    "react":"19.2.6",
+    "react-dom":"19.2.6"
+  },
+  "devDependencies":{
+    "@capacitor/cli":"8.5.3",
+    "@types/react":"19.2.14",
+    "@types/react-dom":"19.2.3",
+    "@vitejs/plugin-react":"6.0.2",
+    "vite":"8.0.13",
+    "typescript":"5.9.3"
+  }
+}
