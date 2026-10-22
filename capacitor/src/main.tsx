@@ -13,8 +13,9 @@ import './native.css';
 
 function Router(){
   const [path,setPath]=useState(location.pathname);
-  useEffect(()=>{const changed=()=>setPath(location.pathname);window.addEventListener('popstate',changed);return()=>window.removeEventListener('popstate',changed);},[]);
-  return path==='/workspace'?<ClubApp/>:path==='/coaches'?<CoachEditor/>:path==='/verify-email'?<VerifyEmailPage/>:<MemberApp/>;
+  const [query,setQuery]=useState(location.search);
+  useEffect(()=>{const changed=()=>{setPath(location.pathname);setQuery(location.search);};window.addEventListener('popstate',changed);return()=>window.removeEventListener('popstate',changed);},[]);
+  return path==='/workspace'?<ClubApp/>:path==='/coaches'?<CoachEditor/>:path==='/verify-email'?<VerifyEmailPage key={query}/>:<MemberApp/>;
 }
 const root=createRoot(document.getElementById('root')!);
 bootstrap().then(()=>root.render(<StrictMode><Router/></StrictMode>)).catch(()=>root.render(<main><h1>HSC Skating</h1><p>Secure device storage could not be opened. Please unlock your phone and restart the app. / 请解锁手机后重新打开应用。</p></main>));
