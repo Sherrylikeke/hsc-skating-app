@@ -25,11 +25,11 @@ node node_modules/@capacitor/cli/bin/capacitor sync
 
 共享适配层 `lib/client-platform.ts` 接入所有现有客户端请求。Web 保持原同源 fetch；原生使用显式 `CapacitorHttp.request`，未全局改写 fetch。原生目标只允许原站点的 `/api/`，拒绝路径穿越和其他主机，禁止跟随重定向，超时为连接 15 秒、读取 30 秒。API 地址是公开配置，不是密钥；本次刻意不提供任意服务器地址输入，以免令牌泄露到误填主机。
 
-原生请求携带固定服务器 Origin 和 Better Auth 返回的已签名 bearer。Origin 是浏览器写入防护的一部分，不能作为原生应用身份；真正权限仍由服务器验证签名会话、角色、状态和批准关系。浏览器不能任意伪造 Origin，跨源写入/CSRF 校验没有删除，也没有增加通配 CORS。
+原生请求携带固定服务器 Origin 和 Better Auth 返回的已签名 bearer。Origin 是浏览器写入防护的一部分，不能作为原生应用身份；真正权限仍由服务器验证签名会话、角色、状态和批准关系。浏览器不能任意伪造 Origin，跨源写入/CSRF 校验没有删除，也没有增加通配 CORS。Android 增加 HSCSession 小型桥接，等待 CookieManager 删除回调后才放行请求；iOS 清理原生 HTTP Cookie 容器。Capacitor loggingBehavior 设为 none，避免调试桥接日志记录认证响应。
 
 仅保存 `set-auth-token` 签名令牌，不保存密码或登录 JSON 中的原始 token。使用 `@aparajita/capacitor-secure-storage`：iOS Keychain（whenUnlockedThisDeviceOnly、关闭 iCloud 同步），Android Keystore AES-GCM。浏览器预览不调用插件的 localStorage 实现。令牌只在内存和系统安全存储中；源码、聊天、构建包均无真实凭据。
 
-退出时先清内存，再串行清安全存储、待发/已显示通知和导出缓存。即使服务端 sign-out 网络失败也清本机数据；并发登录响应不能在退出后恢复令牌。API JSON 401 清本机会话并回登录页；HTML 401 被识别为平台网关错误，不误判成应用密码错误。原生启动清编辑草稿，避免账号串用；不持久缓存私人档案。
+退出时先清内存，再清安全存储、待发/已显示通知和导出缓存。原生 HTTP 请求串行执行，请求前后、启动和退出均清理应用 Cookie 容器，避免网络库保存的 Cookie 退化为第二套隐式认证。即使服务端 sign-out 网络失败也清本机数据；并发登录响应不能在退出后恢复令牌。API JSON 401 清本机会话并回登录页；HTML 401 被识别为平台网关错误，不误判成应用密码错误。原生启动清编辑草稿，避免账号串用；不持久缓存私人档案。
 
 **实际接入检查：2026-10-22 对原站点无凭据 GET 返回 HTTP 401、Content-Type text/html。Sites owner-private 外层网关先于应用登录；Better Auth 账号不能解锁它。** 官方 Sites 身份说明只提供浏览器顶层登录或服务访问；服务令牌不能写入手机包。当前未取得可面向独立手机客户端的受支持平台访问通道，因此生产手机登录尚未验收。保留现有私人范围，后续需解决平台支持的客户端接入；不能靠公开站点、复制浏览器 Cookie、嵌入服务令牌或删除来源校验解决。
 
@@ -73,7 +73,7 @@ iOS 已生成 Xcode + Swift Package Manager 工程并完成 sync，注册 URL sc
 - Web TypeScript、原 Expo TypeScript 均通过。
 - 原 18 组身份/权限/邮箱/多选手/提醒回归通过；测试使用隔离 D1/捕获式邮件，真实发送 0。
 - 语言、粘贴、选手历史、官方赛程解析、出场顺序回归通过。
-- 新增 9 组客户端回归通过：目标限制、网关错误、签名 bearer、返回/安全来源链接、提醒隔离与取消、HTML 401、会话清除、退出竞态、静态包边界。
+- 新增 10 组客户端回归通过：目标限制、网关错误、签名 bearer、Cookie 清理、返回/安全来源链接、提醒隔离与取消、HTML 401、会话清除、退出竞态、静态包边界。
 - Capacitor 静态生产构建及 Android/iOS sync 通过。浏览器检查登录、中文注册和连接错误提示，未伪造真实账号登录或真机验收。
 - 原站点生产构建已通过；最终源码同步、GitHub 推送及私人部署结果在交付记录中补充。
 

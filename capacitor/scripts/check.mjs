@@ -7,9 +7,10 @@ const requests=[],scheduled=[],listeners=new Map(),stored=new Map(),events=[];
 let responder=async()=>({status:200,headers:{'content-type':'application/json'},data:'{}'});
 let pending=[];
 let blockStorage;
+let cookieJar='old-fixture-cookie';
 const secure={setSynchronize:async()=>{},setDefaultKeychainAccess:async()=>{},get:async key=>stored.get(key),remove:async key=>stored.delete(key),set:async(key,value)=>{if(blockStorage)await blockStorage;stored.set(key,value);}};
 globalThis.hscNativeMocks={
-  core:{Capacitor:{isNativePlatform:()=>true},CapacitorHttp:{request:async options=>{requests.push(options);return responder(options);}}},
+  core:{Capacitor:{isNativePlatform:()=>true,getPlatform:()=> 'android'},registerPlugin:()=>({clearCookies:async()=>{cookieJar='';}}),CapacitorCookies:{clearAllCookies:async()=>{cookieJar='';}},CapacitorHttp:{request:async options=>{assert.equal(cookieJar,'');requests.push(options);const result=await responder(options);cookieJar='fixture-response-cookie';return result;}}},
   app:{App:{addListener:async(name,listener)=>{listeners.set(name,listener);},getLaunchUrl:async()=>null,minimizeApp:async()=>events.push('minimize')}},
   browser:{Browser:{open:async options=>events.push(options)}},
   filesystem:{Filesystem:{rmdir:async()=>{},writeFile:async options=>({uri:'file:///cache/'+options.path})},Directory:{Cache:'CACHE'},Encoding:{UTF8:'utf8'}},
@@ -68,7 +69,9 @@ await apiFetch('/api/member?action=me');
 const last=requests.at(-1);
 assert.equal(last.headers.Origin,serverOrigin);assert.equal(last.headers.Authorization,'Bearer fixture-signed');assert.equal(last.disableRedirects,true);
 assert.equal(last.url,serverOrigin+'/api/member?action=me');
+assert.equal(cookieJar,'');
 passed('signed bearer uses native HTTP with fixed origin and no redirect following');
+passed('native cookie jar is cleared before and after serialized API calls, preventing cookie fallback');
 listeners.get('backButton')({canGoBack:true});assert.ok(events.includes('back'));
 await listeners.get('backButton')({canGoBack:false});assert.ok(events.includes('minimize'));
 let prevented=false;
@@ -100,7 +103,7 @@ responder=async()=>({status:200,headers:{'content-type':'application/json','set-
 await apiFetch('/api/auth/sign-in/email',{method:'POST',body:'{}'});
 assert.equal(stored.size,1);
 responder=async()=>{throw new Error('fixture network failure');};
-await assert.rejects(apiFetch('/api/auth/sign-out',{method:'POST',body:'{}'}),/network failure/);assert.equal(stored.size,0);
+await assert.rejects(apiFetch('/api/auth/sign-out',{method:'POST',body:'{}'}),/network failure/);assert.equal(stored.size,0);assert.equal(cookieJar,'');
 passed('logout wins concurrent token writes and clears an existing token even if sign-out transport fails');
 const config=fs.readFileSync(new URL('../capacitor.config.ts',import.meta.url),'utf8');
 assert.doesNotMatch(config,/server\s*:\s*\{[^}]*\burl\s*:/);

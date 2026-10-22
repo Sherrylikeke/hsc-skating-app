@@ -1,4 +1,4 @@
-import {Capacitor,CapacitorHttp} from '@capacitor/core';
+import {Capacitor,CapacitorHttp,CapacitorCookies,registerPlugin} from '@capacitor/core';
 import {App} from '@capacitor/app';
 import {Browser} from '@capacitor/browser';
 import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
@@ -10,11 +10,15 @@ import type {ReminderPlan} from '../../lib/reminders';
 import {apiURL,deepLinkPath,devicePlans,serverOrigin,verificationURL} from './policy';
 
 const sessionKey='hsc-session-v1';
+const nativeSession=registerPlugin<{clearCookies:()=>Promise<void>}>('HSCSession');
+const clearCookies=()=>Capacitor.getPlatform()==='android'?nativeSession.clearCookies():CapacitorCookies.clearAllCookies();
 let token:string|null=null;
 let memberId='';
 let generation=0;
 let reminderQueue:Promise<unknown>=Promise.resolve();
 let storageQueue:Promise<unknown>=Promise.resolve();
+let httpQueue:Promise<unknown>=Promise.resolve();
+function queueHTTP<T>(work:()=>Promise<T>):Promise<T>{const result=httpQueue.then(work);httpQueue=result.catch(()=>{});return result;}
 function queueStorage<T>(work:()=>Promise<T>):Promise<T>{const result=storageQueue.then(work);storageQueue=result.catch(()=>{});return result;}
 function queueReminders<T>(work:()=>Promise<T>):Promise<T>{const result=reminderQueue.then(work);reminderQueue=result.catch(()=>{});return result;}
 async function cancelReminders(){
@@ -28,8 +32,10 @@ async function logout(){
   try{localStorage.removeItem('hsc-coach-drafts-v1');}catch{}
   try{await queueStorage(()=>SecureStorage.remove(sessionKey));}
   finally{
-    await queueReminders(cancelReminders);
-    await Filesystem.rmdir({path:'hsc-exports',directory:Directory.Cache,recursive:true}).catch(()=>{});
+    await Promise.all([
+      queueReminders(cancelReminders),clearCookies(),
+      Filesystem.rmdir({path:'hsc-exports',directory:Directory.Cache,recursive:true}).catch(()=>{}),
+    ]);
   }
 }
 async function scheduleReminders(plans:ReminderPlan[],askPermission:boolean){
@@ -58,8 +64,12 @@ async function request(path:string,init:RequestInit={}):Promise<Response>{
   const requestedGeneration=generation;
   const signingOut=new URL(url).pathname==='/api/auth/sign-out';
   try{
-    const result=await CapacitorHttp.request({url,method,headers,responseType:'text',disableRedirects:true,
-      connectTimeout:15000,readTimeout:30000,...(init.body===undefined?{}:{data:JSON.parse(String(init.body))}),
+    const result=await queueHTTP(async()=>{
+      if(requestedGeneration!==generation)throw new Error('Session changed. Please retry.');
+      await clearCookies();
+      try{return await CapacitorHttp.request({url,method,headers,responseType:'text',disableRedirects:true,
+        connectTimeout:15000,readTimeout:30000,...(init.body===undefined?{}:{data:JSON.parse(String(init.body))}),
+      });}finally{await clearCookies();}
     });
     if(requestedGeneration!==generation)throw new Error('Session changed. Please retry.');
     const responseHeaders=new Headers(result.headers);
@@ -111,6 +121,7 @@ export async function bootstrap(){
   await SecureStorage.setSynchronize(false);
   await SecureStorage.setDefaultKeychainAccess(KeychainAccess.whenUnlockedThisDeviceOnly);
   const stored=await SecureStorage.get(sessionKey);token=typeof stored==='string'?stored:null;
+  await clearCookies();
   try{localStorage.removeItem('hsc-coach-drafts-v1');}catch{}
   await Filesystem.rmdir({path:'hsc-exports',directory:Directory.Cache,recursive:true}).catch(()=>{});
   installClientPlatform({request,saveText,scheduleReminders,logout,verificationURL});
