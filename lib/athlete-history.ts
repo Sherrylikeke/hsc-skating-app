@@ -9,8 +9,6 @@ export function scoreSeries(rows:HistoryRecord[]){
   return [...groups].map(([label,records])=>({label,records:records.sort((a,b)=>a.start_date.localeCompare(b.start_date)||a.record_id.localeCompare(b.record_id))})).sort((a,b)=>b.records.length-a.records.length||a.label.localeCompare(b.label));
 }
 export function scoreTrend(rows:HistoryRecord[],requestedSeries=''){
-  const series=scoreSeries(rows),active=series.find(group=>group.label===requestedSeries);
-  const plotted=active?[active]:series;
-  const points=plotted.flatMap(group=>group.records).sort((first,second)=>first.start_date.localeCompare(second.start_date)||first.record_id.localeCompare(second.record_id));
-  return {series,active,plotted,points};
+  const series=scoreSeries(rows),active=series.find(group=>group.label===requestedSeries)||series[0];
+  return {series,active,points:active?.records||[]};
 }
