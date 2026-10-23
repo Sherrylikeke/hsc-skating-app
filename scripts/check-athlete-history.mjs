@@ -1,20 +1,20 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {filterAthleteHistory,scoreSeries,scoreTrend,emptyHistoryFilters} from '../lib/athlete-history.ts';
+import {filterAthleteHistory,scoreSeries,scoreTrend,emptyHistoryFilters,historyCategory,historyCategories} from '../lib/athlete-history.ts';
 import {registerHooks} from 'node:module';
 import ts from 'typescript';
 const rows=JSON.parse(fs.readFileSync('data/history-records.json','utf8'));
 const breken=rows.filter(r=>r.skater_ids.includes('HSC-204DE99B86'));
 const series=scoreSeries(breken);assert.ok(series.length);
 assert.ok(series.every(s=>s.records.every(r=>r.status==='result'&&r.total_score!==null&&r.entity_type!=='team')));
-for(const s of series){assert.equal(new Set(s.records.map(r=>r.category+'|'+r.result_level)).size,1);assert.deepEqual(s.records.map(r=>r.start_date),s.records.map(r=>r.start_date).sort());}
+for(const s of series){assert.equal(new Set(s.records.map(r=>historyCategory(r.category)+'|'+r.result_level)).size,1);assert.deepEqual(s.records.map(r=>r.start_date),s.records.map(r=>r.start_date).sort());}
 const withdrawn=filterAthleteHistory(breken,{...emptyHistoryFilters,status:'withdrawn'});assert.ok(withdrawn.length);assert.equal(scoreSeries(withdrawn).length,0);
-const category=breken.find(r=>r.status==='result').category;const selected=filterAthleteHistory(breken,{...emptyHistoryFilters,category});assert.ok(selected.length);assert.ok(selected.every(r=>r.category===category));
+const category=breken.find(r=>r.status==='result').category;const selected=filterAthleteHistory(breken,{...emptyHistoryFilters,category});assert.ok(selected.length);assert.ok(selected.every(r=>historyCategory(r.category)===historyCategory(category)));
 const entry=filterAthleteHistory(breken,{...emptyHistoryFilters,status:'entry_list_only'});assert.equal(scoreSeries(entry).length,0);
 const trend=scoreTrend(breken);
 assert.equal(trend.active.label,series[0].label);assert.deepEqual(trend.points,series[0].records);
 assert.deepEqual(trend.points.map(record=>record.start_date),trend.points.map(record=>record.start_date).sort());
-assert.equal(new Set(trend.points.map(record=>record.category+'|'+record.result_level)).size,1);
+assert.equal(new Set(trend.points.map(record=>historyCategory(record.category)+'|'+record.result_level)).size,1);
 const single=scoreTrend(breken,series.at(-1).label);assert.equal(single.active.label,series.at(-1).label);assert.deepEqual(single.points,single.active.records);
 assert.deepEqual(scoreTrend(selected).points,scoreSeries(selected)[0].records);
 assert.equal(scoreTrend(selected,'no longer available').active.label,scoreSeries(selected)[0].label);
@@ -24,7 +24,23 @@ const invalid=[null,'',' ',undefined,'not a score',Infinity].map((score,index)=>
 assert.equal(scoreTrend(invalid).points.length,0);assert.equal(scoreTrend([{...sample,total_score:0}]).points.length,1);
 assert.equal(scoreTrend([{...sample,entity_type:'team'}]).points.length,0);
 const fiora=rows.filter(record=>record.skater_ids.includes('HSC-84710E9259'));
-assert.ok(scoreTrend(fiora).series.length>1);assert.equal(new Set(scoreTrend(fiora).points.map(record=>record.category+'|'+record.result_level)).size,1);
+assert.ok(scoreTrend(fiora).series.length>1);assert.equal(new Set(scoreTrend(fiora).points.map(record=>historyCategory(record.category)+'|'+record.result_level)).size,1);
+const originalFiora=structuredClone(fiora),fioraGroups=scoreSeries(fiora);
+assert.equal(fioraGroups.length,4);
+assert.equal(fioraGroups.find(group=>group.label==='STAR 5 U10 · 类别总分').records.length,9);
+assert.equal(fioraGroups.find(group=>group.label==='STAR 7 U12 · 类别总分').records.length,5);
+assert.equal(fioraGroups.flatMap(group=>group.records).length,17);
+assert.equal(new Set(fioraGroups.flatMap(group=>group.records.map(record=>record.record_id))).size,17);
+assert.deepEqual(fiora,originalFiora);
+const broadFilter=historyCategories(fiora.map(record=>record.category));assert.equal(broadFilter.length,6);assert.ok(broadFilter.every(item=>!/\b(?:GROUP|GRP|NQ)\b|NON-QUALIFYING/i.test(item.label)));
+const star5=broadFilter.find(item=>item.label==='STAR 5 U10');assert.equal(filterAthleteHistory(fiora,{...emptyHistoryFilters,category:star5.value}).length,9);
+assert.equal(historyCategory('STAR 5 Women (U10 - Group 1)'),historyCategory('star5 girls (u10 - Grp 2)'));
+assert.equal(historyCategory('STAR 5 Women (U10 - Non-Qualifying)'),historyCategory('STAR 5 Women (U10 NQ)'));
+assert.deepEqual(historyCategories(['Category: STAR 2 STAR 2 (Group 8)']).map(item=>item.label),['STAR 2']);
+const separate=['STAR 5 Women U10','STAR 7 Women U12','STAR 5 Women U13','STAR 5 Women O13','Senior Women Short','Senior Women Free','STAR 5 Women U10 Artistic','STAR 5 Men U10','Gold Women Class I','Gold Women Class II','Pre-Juvenile Women U11','Pre-Juvenile / Singles'];
+assert.equal(new Set(separate.map(historyCategory)).size,separate.length);
+assert.equal(new Set(historyCategories(separate).map(item=>item.label)).size,separate.length);
+const scoreTypes=scoreSeries([{...sample,category:'STAR 5 Women U10',result_level:'category'},{...sample,record_id:'segment-fixture',category:'STAR 5 Women U10',result_level:'segment'}]);assert.equal(scoreTypes.length,2);
 registerHooks({
   resolve(specifier,context,next){try{return next(specifier,context);}catch(error){if(specifier.startsWith('.')&&context.parentURL)for(const extension of ['.ts','.tsx']){const candidate=new URL(specifier+extension,context.parentURL);if(fs.existsSync(candidate))return {url:candidate.href,shortCircuit:true};}throw error;}},
   load(url,context,next){
@@ -40,6 +56,9 @@ assert.ok(!rendered.includes('All categories · overall trend'));assert.ok(!rend
 assert.equal((rendered.match(/class="chart-point"/g)||[]).length,scoreTrend(fiora).points.length);
 assert.equal((rendered.match(/class="chart-series"/g)||[]).length,scoreTrend(fiora).points.length>1?1:0);
 assert.ok(!rendered.includes('club-chart-legend'));
+assert.ok(rendered.includes('STAR 5 U10'));assert.ok(rendered.includes('STAR 7 U12'));
+const optionLabels=[...rendered.matchAll(/<option\b[^>]*>(.*?)<\/option>/g)].map(match=>match[1]);
+assert.ok(optionLabels.every(label=>!/\b(?:GROUP|GRP|NQ)\b|NON-QUALIFYING/i.test(label)));assert.ok(rendered.includes('Grp 2'));
 const emptyRendered=renderToStaticMarkup(createElement(AthleteHistory,{records:withdrawn,onRecord(){},renderTable(){return null;}}));
 assert.equal((emptyRendered.match(/class="chart-point"/g)||[]).length,0);assert.ok(emptyRendered.includes('disabled=""'));
 const app=fs.readFileSync('app/club-app.tsx','utf8');
@@ -47,4 +66,4 @@ const reference=app.indexOf('<details className="club-reference"');
 assert.ok(reference>app.indexOf('<AthleteHistory'));assert.ok(reference<app.indexOf('<footer className="club-footer"'));
 assert.ok(app.indexOf('<OfficialSourceStatus')>reference);assert.ok(app.indexOf('<EntryImportStatus')>reference);
 assert.ok(!app.slice(reference,app.indexOf('>',reference)).includes(' open'));
-console.log(JSON.stringify({records:breken.length,comparableSeries:series.length,withdrawn:withdrawn.length,categoryFilter:category,excludesMissingScores:true,mixedCategoryTrendRemoved:true,singleCategoryDefaultAndSwitching:true,fioraPlottedScores:scoreTrend(fiora).points.length,fioraAvailableSeries:scoreTrend(fiora).series.length,emptyStateVerified:true,serverRenderedChartVerified:true,referenceCollapsedAtPageEnd:true}));
+console.log(JSON.stringify({records:breken.length,comparableSeries:series.length,withdrawn:withdrawn.length,categoryFilter:category,excludesMissingScores:true,mixedCategoryTrendRemoved:true,singleCategoryDefaultAndSwitching:true,fioraPlottedScores:scoreTrend(fiora).points.length,fioraAvailableSeries:scoreTrend(fiora).series.length,fioraStar5:9,fioraStar7:5,original17ScoresPreserved:true,groupAndNQAliasesMerged:true,agesProgramsGendersAndScoreTypesSeparated:true,emptyStateVerified:true,serverRenderedChartVerified:true,referenceCollapsedAtPageEnd:true}));
