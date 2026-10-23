@@ -46,41 +46,58 @@ export function parseEntries(html:string,sourceUrl:string,roster:Array<{id:strin
   }
   return rows;
 }
-function time24(value:string){const m=value.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);if(!m)return '';const hour=(Number(m[1])%12)+(m[3].toUpperCase()==='PM'?12:0);return `${String(hour).padStart(2,'0')}:${m[2]}`;}
-function pageDate(items:PdfItem[]){
-  const text=items.map(i=>i.str).join(' ');const m=text.match(/(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(20\d{2})/i);
-  if(!m)return '';const months=['january','february','march','april','may','june','july','august','september','october','november','december'];return `${m[3]}-${String(months.indexOf(m[1].toLowerCase())+1).padStart(2,'0')}-${m[2].padStart(2,'0')}`;
+function time24(value:string){const match=value.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);if(!match||Number(match[1])<1||Number(match[1])>12||Number(match[2])>59)return '';const hour=(Number(match[1])%12)+(match[3].toUpperCase()==='PM'?12:0);return String(hour).padStart(2,'0')+':'+match[2];}
+function pdfLines(items:PdfItem[],tolerance=2){
+  const lines:Array<{y:number;items:PdfItem[]}>=[];for(const item of [...items].sort((first,second)=>second.y-first.y||first.x-second.x)){if(!item.str.trim())continue;let line=lines.find(value=>Math.abs(value.y-item.y)<tolerance);if(!line){line={y:item.y,items:[]};lines.push(line);}line.items.push(item);}return lines;
 }
-export function parseScheduleItems(pages:PdfItem[][],sourceUrl:string):ScheduleBlock[]{
-  const blocks:ScheduleBlock[]=[];
-  pages.forEach((items,page)=>{
-    const date=pageDate(items);if(!date)return;
-    const starts=items.filter(i=>i.str.trim()==='START').sort((a,b)=>a.x-b.x);
-    for(let col=0;col<starts.length;col++){
-      const header=starts[col];const left=header.x-25;const right=starts[col+1]?starts[col+1].x-25:Infinity;
-      const rink=items.filter(i=>Math.abs(i.y-header.y)<3 && i.x>header.x+40 && i.x<right && /RINK/i.test(i.str)).map(i=>i.str).join(' ');if(!rink)continue;
-      const content=items.filter(i=>i.str.trim() && i.y<header.y-3 && i.x>=left && i.x<right).sort((a,b)=>b.y-a.y||a.x-b.x);
-      const lines:Array<{y:number;items:PdfItem[]}>=[];
-      for(const item of content){let line=lines.find(l=>Math.abs(l.y-item.y)<2);if(!line){line={y:item.y,items:[]};lines.push(line);}line.items.push(item);}
-      for(const line of lines){
-        const text=line.items.sort((a,b)=>a.x-b.x).map(i=>i.str).join(' ').replace(/\s+/g,' ').trim();
-        const m=text.match(/^(\d{1,2}:\d{2}\s*[AP]M)\s+(\d{1,2}:\d{2}\s*[AP]M)\s+(.+)$/i);if(!m)continue;
-        const category=m[3].trim();const key=categoryKey(category);if(!key || /FLOOD|GOOD NIGHT|DRIVE SAFE/.test(category))continue;
-        const start=time24(m[1]),end=time24(m[2]);if(!start||!end||start>=end)continue;
+function dateOnLine(text:string){
+  const matches=[...text.matchAll(/(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(20\d{2})/gi)];
+  if(matches.length!==1)return '';const match=matches[0],months=['january','february','march','april','may','june','july','august','september','october','november','december'];
+  const date=match[3]+'-'+String(months.indexOf(match[1].toLowerCase())+1).padStart(2,'0')+'-'+match[2].padStart(2,'0');
+  return new Date(date+'T12:00:00Z').toISOString().slice(0,10)===date?date:'';
+}
+export function parseScheduleDocument(pages:PdfItem[][],sourceUrl:string):{blocks:ScheduleBlock[];warnings:string[]}{
+  const blocks:ScheduleBlock[]=[],warnings=new Set<string>();
+  for(const [page,items] of pages.entries()){
+    const anchors=pdfLines(items).map(line=>({y:line.y,text:line.items.map(item=>item.str).join(' ')})).filter(line=>/\b(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+/i.test(line.text)).map(line=>({y:line.y,date:dateOnLine(line.text)}));
+    const starts=items.filter(item=>item.str.trim()==='START').sort((first,second)=>second.y-first.y||first.x-second.x);
+    if(!starts.length){warnings.add('第 '+(page+1)+' 页缺少可确认的 START/END 赛程表头');continue;}
+    for(const header of starts){
+      const date=anchors.filter(anchor=>anchor.y>header.y+2).at(-1)?.date;
+      if(!date){warnings.add('第 '+(page+1)+' 页有缺少明确日期的表格，暂不导入');continue;}
+      const neighbors=starts.filter(item=>Math.abs(item.y-header.y)<3).sort((first,second)=>first.x-second.x),index=neighbors.indexOf(header);
+      const left=header.x-25,right=neighbors[index+1]?neighbors[index+1].x-25:Infinity;
+      const endHeader=items.find(item=>item.str.trim()==='END'&&Math.abs(item.y-header.y)<3&&item.x>header.x&&item.x<right);
+      const rink=items.filter(item=>Math.abs(item.y-header.y)<3&&item.x>header.x+40&&item.x<right&&/RINK/i.test(item.str)).map(item=>item.str).join(' ');
+      if(!endHeader||!rink){warnings.add('第 '+(page+1)+' 页有未明确标注 END 或冰场的表格，暂不导入');continue;}
+      const lowerDate=anchors.find(anchor=>anchor.y<header.y-3)?.y??0;
+      const lowerHeader=starts.find(item=>item.y<header.y-3)?.y??0;
+      const bottom=Math.max(lowerDate,lowerHeader);
+      const content=items.filter(item=>item.y<header.y-3&&item.y>bottom+3&&item.x>=left&&item.x<right);
+      for(const line of pdfLines(content)){
+        const text=line.items.sort((first,second)=>first.x-second.x).map(item=>item.str).join(' ').replace(/\s+/g,' ').trim();
+        const match=text.match(/^(\d{1,2}:\d{2}\s*[AP]M)\s+(\d{1,2}:\d{2}\s*[AP]M)\s+(.+)$/i);
+        if(!match){if(categoryKey(text))warnings.add('第 '+(page+1)+' 页有未明确列出完整起止时间的类别，暂不导入');continue;}
+        const category=match[3].trim(),key=categoryKey(category);if(/FLOOD|GOOD NIGHT|GOODNIGHT|DRIVE SAFE|THANK YOU/i.test(category))continue;
+        if(!key){warnings.add('第 '+(page+1)+' 页有尚未支持的类别，暂不导入');continue;}
+        const start=time24(match[1]),end=time24(match[2]);if(!start||!end||start>=end){warnings.add('第 '+(page+1)+' 页有无效或倒序时间，暂不导入');continue;}
         const range=category.match(/\((\d+)\s*[-–]\s*(\d+)\)/);
-        blocks.push({id:`${date}|${rink}|${start}|${category}`,date,start,end,rink,category,categoryKey:key,group:groupOf(category),range:range?[Number(range[1]),Number(range[2])]:null,activity:/PRACTICE/i.test(category)?'practice':'competition',page:page+1,sourceUrl});
+        blocks.push({id:date+'|'+rink+'|'+start+'|'+category,date,start,end,rink,category,categoryKey:key,group:groupOf(category),range:range?[Number(range[1]),Number(range[2])]:null,activity:/PRACTICE/i.test(category)?'practice':'competition',page:page+1,sourceUrl});
       }
     }
-  });
-  return blocks.sort((a,b)=>`${a.date} ${a.start}`.localeCompare(`${b.date} ${b.start}`));
+  }
+  return {blocks:[...new Map(blocks.map(block=>[block.id,block])).values()].sort((first,second)=>(first.date+' '+first.start).localeCompare(second.date+' '+second.start)),warnings:[...warnings]};
 }
+export function parseScheduleItems(pages:PdfItem[][],sourceUrl:string):ScheduleBlock[]{return parseScheduleDocument(pages,sourceUrl).blocks;}
+function categoryDetails(value:string){return {ages:[...value.matchAll(/\b([UO])\s*(\d{1,2})\b/gi)].map(match=>match[0].replace(/\s/g,'').toUpperCase()),band:value.match(/\bCLASS\s+([IVX]+)\b/i)?.[1].toUpperCase(),program:/\bSHORT\b/i.test(value)?'short':/\bART(?:ISTIC)?\b/i.test(value)?'artistic':/\bFREE(?:SKATE)?\b/i.test(value)?'free':undefined,nonqualifying:/NON[ -]?QUALIF/i.test(value)};}
+function categoryCompatible(first:string,second:string){const entry=categoryDetails(first),block=categoryDetails(second);return (!entry.ages.length||!block.ages.length||entry.ages.some(age=>block.ages.includes(age)))&&(!entry.band||!block.band||entry.band===block.band)&&(!entry.program||!block.program||entry.program===block.program);}
 export function scheduleRows(events:LiveEvent[],skaters:ClubSkater[]):ScheduleRow[]{
   const skaterMap=new Map(skaters.map(row=>[row.id,row]));const output=new Map<string,ScheduleRow>();
   for(const event of events)for(const entry of event.participants){
     const key=categoryKey(entry.category),group=groupOf(entry.category);if(!key)continue;
-    const matching=event.blocks.filter(block=>block.categoryKey===key && (group===null || block.group===null || group===block.group));
+    const matching=event.blocks.filter(block=>block.categoryKey===key&&categoryCompatible(entry.category,block.category)&&(group===null||block.group===null||group===block.group));
     for(const id of entry.skaterIds){const skater=skaterMap.get(id);if(!skater)continue;
-      for(const block of matching){const startingOrder=block.activity==='competition'?orderFor(event.startingOrders||[],id,block.category):undefined;if(block.range&&startingOrder&&(startingOrder.startNumber<block.range[0]||startingOrder.startNumber>block.range[1]))continue;const uncertain=(block.group!==null&&group===null)||(block.range!==null&&!startingOrder);const rowId=`${event.id}|${id}|${block.id}`;
+      for(const block of matching){const startingOrder=block.activity==='competition'?orderFor(event.startingOrders||[],id,block.category):undefined;if(block.range&&startingOrder&&(startingOrder.startNumber<block.range[0]||startingOrder.startNumber>block.range[1]))continue;const entryDetails=categoryDetails(entry.category),blockDetails=categoryDetails(block.category);const uncertain=(block.group!==null&&group===null)||(block.range!==null&&!startingOrder)||!!(blockDetails.ages.length&&!entryDetails.ages.length)||!!(blockDetails.band&&!entryDetails.band)||(blockDetails.nonqualifying&&!entryDetails.nonqualifying);const rowId=`${event.id}|${id}|${block.id}`;
         const normalized=block.category.toUpperCase().replace(/\s+/g,' ').trim();
         const occurrence=event.blocks.filter(other=>other.category.toUpperCase().replace(/\s+/g,' ').trim()===normalized).findIndex(other=>other.id===block.id);
         const slotKey=`${normalized}:${occurrence}`;

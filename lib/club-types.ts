@@ -1,7 +1,8 @@
 export type ClubSkater={id:string;name:string;coach:string;training:boolean;identityPending?:boolean;categories:string[];clubs:string[];firstSeen?:string;lastSeen?:string;recordCount:number;eventCount:number;identityStatus:string};
 export type HistoryRecord={record_id:string;name:string;club:string;section:string;event_name:string;event_url:string;event_key:string;start_date:string;end_date?:string;category:string;result_level:string;rank:number|string|null;total_score:number|null;segment_scores?:Array<number|string>;score_components?:Record<string,unknown>|null;status:string;source_url:string;source_page?:number;source_row?:string;skater_ids:string[];entity_type:string};
 export type HistoryEvent={id:string;name:string;url:string;start:string;end:string;recordCount:number;skaterIds:string[];teamCount:number;dateBasis:string};
-export type OfficialDocument={url:string;label:string;kind:'schedule'|'entries'|'results'|'start-order';category?:string;hash?:string;matchingRosterHash?:string;checkedAt?:string;error?:string};
+export type OfficialDocument={url:string;label:string;kind:'schedule'|'entries'|'results'|'start-order';category?:string;hash?:string;matchingRosterHash?:string;checkedAt?:string;attemptedAt?:string;parserVersion?:string;entryCount?:number;entryFiles?:OfficialDocument[];error?:string};
+export const ENTRY_PDF_VERSION='entry-pdf-1';
 export type StartingOrder={id:string;name:string;category:string;program:string;startNumber:number;warmupGroup:number|null;individualTime:string|null;sourceUrl:string;page:number;skaterIds:string[]};
 export type Participant={id:string;name:string;category:string;club:string;section:string;skaterIds:string[];matchStatus:string;sourceUrl:string};
 export type ScheduleBlock={id:string;date:string;start:string;end:string;rink:string;category:string;categoryKey:string;group:number|null;range:[number,number]|null;activity:'practice'|'competition';page:number;sourceUrl:string};

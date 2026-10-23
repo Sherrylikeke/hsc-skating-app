@@ -59,6 +59,7 @@
 - Android 便携构建：`capacitor/scripts/build-android.ps1 -ToolchainRoot <工具目录> -OutputDirectory <交付目录>`；用户已于 2026-10-22 批准精简工具下载及 SDK 许可。只使用 `ANDROID_USER_HOME`，避免与旧目录变量冲突，不将 SDK、缓存和调试密钥提交 Git。配置见 `docs/android-build.md`。
 - 核心回归：`node scripts/check-members.mjs`；语言：`node scripts/check-locales.mjs`。
 - 相关解析/编辑回归：`check-paste.mjs`、`check-athlete-history.mjs`、`check-official-source.mjs`、`check-starting-order.mjs`，均位于 `scripts/`。
+- 报名 PDF / 多日期赛程回归：`node scripts/check-official-import.mjs`；真实样本来源、人数校验、分批轮转和格式边界见 `docs/official-import-formats.md`。目录每轮最多四份，未完成不能报全量成功；同步后保留嵌套 PDF 来源修订。
 - 网页官网同步客户端：`node scripts/check-official-sync-client.mjs`；逐场 HTTP/网络/解析失败必须展示部分失败，不得报全量成功。普通会员只重新读取存档，手动官网检查仍限管理员。
 - 网页会员入口：`node scripts/check-member-client.mjs`；仅允许已知身份的真实 JSON 401 恢复一次会话，权限/网络/资料服务错误不得重建会话或被吞掉。主页搜索按姓名/编号过滤候选，偏好选择不授予私人关系。
 - 手机导出在 `mobile/` 执行：`node node_modules/expo/bin/cli export --platform ios --platform android`。

@@ -293,6 +293,46 @@ try {
   assert.equal(database.database.prepare('SELECT count(*) AS count FROM hsc_changes WHERE event_id=?').get(rematchEventId).count,count);
 } finally {globalThis.fetch=originalFetch;}
 check('confirmed full names rematch unchanged official files; pending identity never matches and repeat sync creates no duplicate changes');
+const importEventId='SO-999002',importUrl='https://skateontario.org/import-fixture/';
+const scheduleBytes=fs.readFileSync('tests/fixtures/keswick-2026-schedule.pdf');
+const entryBytes=fs.readFileSync('tests/fixtures/adult-2026-gold-entry.pdf');
+const scheduleHash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',scheduleBytes))).map(value=>value.toString(16).padStart(2,'0')).join('');
+const importFixture={...fixture,id:importEventId,url:importUrl,documents:[{kind:'schedule',url:importUrl+'schedule.pdf',hash:scheduleHash}],participants:[],startingOrders:[]};
+database.database.prepare('INSERT INTO live_events (id,payload,updated_at) VALUES (?,?,?)').run(importEventId,JSON.stringify(importFixture),new Date().toISOString());
+database.database.prepare('INSERT INTO hsc_admissions (skater_id,admitted,payload,updated_by,updated_at) VALUES (?,1,?,?,?)').run('fixture-gold',JSON.stringify({name:'Alexis Collins',identityPending:false,training:true}),'owner',new Date().toISOString());
+let invalidImport=false;
+globalThis.fetch=async input=>{
+  const pathname=new URL(input).pathname;
+  if(pathname.endsWith('.pdf'))return new Response(invalidImport?'invalid PDF revision':pathname.endsWith('schedule.pdf')?scheduleBytes:entryBytes);
+  if(pathname.endsWith('/entries/'))return new Response(Array.from({length:6},(_,index)=>'<a href="entry-'+index+'.pdf">Entry List</a>').join(''));
+  return new Response('<a href="'+importUrl+'entries/">Entry Lists</a><a href="'+importUrl+'schedule.pdf">Schedule</a>');
+};
+const readImport=()=>JSON.parse(database.database.prepare('SELECT payload FROM live_events WHERE id=?').get(importEventId).payload);
+try{
+  await syncEvent(importEventId);
+  const first=readImport();
+  assert.equal(first.participants.length,16);assert.equal(first.documents.find(document=>document.kind==='entries').entryFiles.filter(file=>file.checkedAt).length,4);
+  assert.equal(first.blocks.length,40);assert.deepEqual([...new Set(first.blocks.map(block=>block.date))],['2026-11-20','2026-11-21','2026-11-22']);
+  assert.equal(first.documents.find(document=>document.kind==='schedule').hash,scheduleHash);
+  assert.equal(first.documents.find(document=>document.kind==='schedule').parserVersion,'schedule-bands-2');
+  assert.match(first.entryStatus,/4\/6/);assert.match(first.scheduleStatus,/部分导入/);
+  assert.equal(database.database.prepare("SELECT count(*) AS count FROM source_revisions WHERE event_id=? AND kind='entries'").get(importEventId).count,4);
+  await syncEvent(importEventId);
+  const second=readImport();assert.equal(second.participants.length,24);
+  assert.ok(second.documents.find(document=>document.kind==='entries').entryFiles.every(file=>file.checkedAt&&!file.error));
+  const changes=database.database.prepare('SELECT count(*) AS count FROM hsc_changes WHERE event_id=?').get(importEventId).count;assert.ok(changes>0);
+  const outbox=database.database.prepare('SELECT count(*) AS count FROM hsc_outbox').get().count;
+  invalidImport=true;
+  await syncEvent(importEventId);
+  const failed=readImport();assert.deepEqual(failed.participants,second.participants);assert.deepEqual(failed.blocks,second.blocks);assert.ok(failed.detailError);
+  assert.equal(failed.documents.find(document=>document.kind==='schedule').hash,scheduleHash);
+  invalidImport=false;
+  await syncEvent(importEventId);
+  assert.equal(database.database.prepare('SELECT count(*) AS count FROM hsc_changes WHERE event_id=?').get(importEventId).count,changes);
+  assert.equal(database.database.prepare('SELECT count(*) AS count FROM hsc_outbox').get().count,outbox);
+  assert.equal(database.database.prepare("SELECT count(*) AS count FROM source_revisions WHERE event_id=? AND kind='entries' AND url LIKE '%.pdf'").get(importEventId).count,6);
+}finally{globalThis.fetch=originalFetch;}
+check('real PDF batches persist progress and nested source revisions; unchanged schedules reparse after parser upgrades, failed revisions preserve records, and repeated sync deduplicates changes/outbox');
 const verificationLinks=[];
 const testDelivery={enabled:true,async send(email,url){verificationLinks.push({email,url});}};
 const auth=createPasswordAuth(database,'isolated-tests-only-secret-0123456789-abcdef','http://127.0.0.1:5173',undefined,testDelivery);

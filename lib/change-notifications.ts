@@ -17,13 +17,14 @@ export function officialSnapshot(event: LiveEvent | null, skaterId: string) {
 export function eventWriteStatements(database: D1Database, event: LiveEvent, previous: LiveEvent | null) {
   const time = nowISO();
   const statements = [database.prepare('INSERT INTO live_events (id,payload,updated_at) VALUES (?,?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload,updated_at=excluded.updated_at').bind(event.id, JSON.stringify(event), time)];
-  for (const document of event.documents.filter(document => document.hash && !document.error)) statements.push(database.prepare('INSERT INTO source_revisions (id,event_id,kind,url,hash,checked_at) VALUES (?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING').bind(`${event.id}|${document.kind}|${document.url}|${document.hash}`, event.id, document.kind, document.url, document.hash!, document.checkedAt || time));
+  const documents = event.documents.flatMap(document => [document, ...(document.entryFiles || [])]).filter(document => document.hash && !document.error);
+  for (const document of documents) statements.push(database.prepare('INSERT INTO source_revisions (id,event_id,kind,url,hash,checked_at) VALUES (?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING').bind(`${event.id}|${document.kind}|${document.url}|${document.hash}`, event.id, document.kind, document.url, document.hash!, document.checkedAt || time));
   const ids = new Set([...(previous?.participants || []), ...event.participants, ...(previous?.startingOrders || []), ...(event.startingOrders || [])].flatMap(row => row.skaterIds));
   for (const skaterId of ids) {
     const before = officialSnapshot(previous, skaterId), after = officialSnapshot(event, skaterId);
     if (JSON.stringify(before) === JSON.stringify(after)) continue;
     const id = crypto.randomUUID();
-    const payload = {eventId: event.id, eventName: event.name, before, after, action: !before ? '新增官方安排' : !after ? '已从官方名单移除，请核对' : '官方安排有实质修订', source: event.url, documents: event.documents.filter(document => document.hash && !document.error).map(document => ({url: document.url, hash: document.hash, checkedAt: document.checkedAt})), checkedAt: event.detailCheckedAt || event.checkedAt || time};
+    const payload = {eventId: event.id, eventName: event.name, before, after, action: !before ? '新增官方安排' : !after ? '已从官方名单移除，请核对' : '官方安排有实质修订', source: event.url, documents: documents.map(document => ({url: document.url, hash: document.hash, checkedAt: document.checkedAt})), checkedAt: event.detailCheckedAt || event.checkedAt || time};
     statements.push(database.prepare('INSERT INTO hsc_changes (id,event_id,skater_id,payload,created_at) VALUES (?,?,?,?,?)').bind(id, event.id, skaterId, JSON.stringify(payload), time));
     statements.push(outboxStatement(database, {id: `schedule|${id}`, kind: 'schedule', subjectId: id, skaterId, payload}));
   }
