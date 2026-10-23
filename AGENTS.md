@@ -55,6 +55,7 @@
 - Web 类型：`node node_modules/typescript/bin/tsc --noEmit`。
 - 手机类型：`node mobile/node_modules/typescript/bin/tsc --noEmit --project mobile/tsconfig.json`。
 - Capacitor：在 `capacitor/` 运行 `npm.cmd run build`、`node scripts/check.mjs`、`node node_modules/@capacitor/cli/bin/capacitor sync`；Android/iOS 原生编译与真机结果另外记录，不以 sync 冒充。
+- Android 便携构建：`capacitor/scripts/build-android.ps1 -ToolchainRoot <工具目录> -OutputDirectory <交付目录>`；用户已于 2026-10-22 批准精简工具下载及 SDK 许可。只使用 `ANDROID_USER_HOME`，避免与旧目录变量冲突，不将 SDK、缓存和调试密钥提交 Git。配置见 `docs/android-build.md`。
 - 核心回归：`node scripts/check-members.mjs`；语言：`node scripts/check-locales.mjs`。
 - 相关解析/编辑回归：`check-paste.mjs`、`check-athlete-history.mjs`、`check-official-source.mjs`、`check-starting-order.mjs`，均位于 `scripts/`。
 - 手机导出在 `mobile/` 执行：`node node_modules/expo/bin/cli export --platform ios --platform android`。

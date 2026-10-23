@@ -12,3 +12,5 @@ node node_modules/@capacitor/cli/bin/capacitor sync
 ```
 
 `dist/` 只包含浏览器资源。原站点目前为 owner-private，手机端未取得独立托管访问通道；本地构建成功不代表生产登录已打通。不要在客户端配置 Sites 服务令牌。
+
+Android 精简工具安装、可复用构建脚本和 APK 验证见 [Android 本地构建](../docs/android-build.md)。

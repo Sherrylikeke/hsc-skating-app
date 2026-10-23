@@ -43,7 +43,7 @@ Android Manifest 与 iOS Info.plist 注册 `hscskating://verify-email`。处理�
 
 ## 4. 下载、提醒与权限隔离
 
-CSV 继续使用现有列与公式注入防护；Web 使用下载链接，原生使用 Filesystem Cache + 系统分享面板，可保存到文件或分享。Android FileProvider 只暴露 `hsc-exports/` 缓存子目录，关闭系统备份和明文 HTTP；启动/退出清理临时导出。外部官方 PDF 在浏览器中下载，不把私人令牌附加到官方 URL。
+CSV 继续使用现有列与公式注入防护；Web 使用下载链接，原生使用 Filesystem Cache + 系统分享面板，可保存到文件或分享。Android FileProvider 只暴露 `hsc-exports/` 缓存子目录，关闭系统备份和明文 HTTP；Android 12+ 的 `data_extraction_rules.xml` 同时排除全部云备份与设备迁移数据域，启动/退出清理临时导出。外部官方 PDF 在浏览器中下载，不把私人令牌附加到官方 URL。
 
 本机提醒由服务端已授权 ReminderPlan 生成；只接收当前 memberId、明确 official-group-start、未来提醒、提前至少 60 分钟到场且提醒至少早于到场 60 分钟的计划。上限最近 60 条，按计划 ID 去重。保存规则/刷新/重新启动/前台恢复重新核对，旧版本先取消；退出清除待发和已显示提醒。账号主页选手偏好仍由服务器按 member_id 保存，不参与私人授权。
 
@@ -51,18 +51,15 @@ CSV 继续使用现有列与公式注入防护；Web 使用下载链接，原生
 
 ## 5. Android 与 iOS 配置/命令
 
-Android 生成配置为 minSdk 24、compileSdk/targetSdk 36、Gradle 8.14.3；需要 JDK 21、Android SDK 36/build-tools 和测试设备/模拟器。当前本机 Node 24.16.0 满足要求，检测到 Java 8.0.202，未找到 Android SDK/adb。官方设备检测已实际运行，返回 ERR_SDK_NOT_FOUND。尚未生成 APK、安装设备或验收原生通知；SDK 下载与许可接受已提出明确授权请求，未在无答复时自动接受。
+Android 配置为 minSdk 24、compileSdk/targetSdk 36。用户于 2026-10-22 同意精简下载并接受 SDK 许可后，已在工作目录安装 Temurin JDK 21.0.12.1、Android 36 平台 revision 2、Build Tools 35.0.0、Platform Tools 37.0.1，以及带官方 SHA-256 校验的 Gradle 8.14.3 bin 分发包；未安装 Studio、模拟器或 NDK，系统 Java 8 未替换。可复用构建脚本、目录变量和 APK 验证方法见 `docs/android-build.md`。真机安装、通知实发和生产托管接入仍须另行验收，不能由本地编译结果推断成功。
 
-工具链配置示例（不含密钥，路径按实际安装调整）：
+在 `capacitor/` 使用工具根目录中的 `toolchain.json` 运行（路径按实际安装调整）：
 
 ```powershell
-$env:JAVA_HOME='C:\\path\\to\\jdk-21'
-$env:ANDROID_HOME='C:\\path\\to\\android-sdk'
-$env:GRADLE_USER_HOME=Join-Path (Get-Location) 'work/gradle'
-$env:PATH=$env:JAVA_HOME+'\\bin;'+$env:ANDROID_HOME+'\\platform-tools;'+$env:PATH
-Set-Location android
-.\\gradlew.bat :app:assembleDebug
+.\scripts\build-android.ps1 -ToolchainRoot 'C:\HSC-tools' -OutputDirectory 'C:\HSC-output'
 ```
+
+脚本隔离缓存和 Android 用户目录，恢复进程环境变量，并校验构建、Lint、签名及 minSdk/targetSdk。仅在静态资源已验证且未更改时追加 `-SkipWebBuild`。
 
 调试 APK 是 `android/app/build/outputs/apk/debug/app-debug.apk`。有设备后运行 `cap run android`；深链可用 `adb shell am start -a android.intent.action.VIEW -d "hscskating://verify-email?verified=1" ca.hsc.skating` 检查。调试构建与正式签名/商店发布分开，签名密钥不入 Git。
 
@@ -75,6 +72,8 @@ iOS 已生成 Xcode + Swift Package Manager 工程并完成 sync，注册 URL sc
 - 语言、粘贴、选手历史、官方赛程解析、出场顺序回归通过。
 - 新增 10 组客户端回归通过：目标限制、网关错误、签名 bearer、Cookie 清理、返回/安全来源链接、提醒隔离与取消、HTML 401、会话清除、退出竞态、静态包边界。
 - Capacitor 静态生产构建及 Android/iOS sync 通过。浏览器检查登录、中文注册和连接错误提示，未伪造真实账号登录或真机验收。
+- 2026-10-22 实际完成 Android `:app:assembleDebug :app:lintDebug`，Lint 无错误；调试 APK 通过 `apksigner verify`，`aapt2` 核对应用 ID、minSdk 24、targetSdk 36。ZIP/DEX 检查确认本地 HTML、关闭桥接日志、无远站 `server.url`，且包含自定义 HSCSessionPlugin。逐次哈希与警告数量以交付验收记录为准。
+- 本机 `adb version` 和 `adb devices -l` 均无输出退出 1，无法完成设备发现；未安装真机、未验证通知实发或桥接运行。不能把设备检测失败写成“没有设备连接”。
 - 原站点生产构建已通过；最终源码同步、GitHub 推送及私人部署结果在交付记录中补充。
 
 参考：[Capacitor 环境要求](https://capacitorjs.com/docs/getting-started/environment-setup)、[原生 HTTP](https://capacitorjs.com/docs/apis/http)、[App/深链](https://capacitorjs.com/docs/apis/app)、[安全存储插件](https://github.com/aparajita/capacitor-secure-storage)。
