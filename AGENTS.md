@@ -60,6 +60,7 @@
 - 核心回归：`node scripts/check-members.mjs`；语言：`node scripts/check-locales.mjs`。
 - 相关解析/编辑回归：`check-paste.mjs`、`check-athlete-history.mjs`、`check-official-source.mjs`、`check-starting-order.mjs`，均位于 `scripts/`。
 - 网页官网同步客户端：`node scripts/check-official-sync-client.mjs`；逐场 HTTP/网络/解析失败必须展示部分失败，不得报全量成功。普通会员只重新读取存档，手动官网检查仍限管理员。
+- 网页会员入口：`node scripts/check-member-client.mjs`；仅允许已知身份的真实 JSON 401 恢复一次会话，权限/网络/资料服务错误不得重建会话或被吞掉。主页搜索按姓名/编号过滤候选，偏好选择不授予私人关系。
 - 手机导出在 `mobile/` 执行：`node node_modules/expo/bin/cli export --platform ios --platform android`。
 - 网站代码变更遵循当前 Sites 技能：核对原项目及访问范围，官方助手打开源码、检查/构建、源提交同步、归档、保存版本并私人部署；归档与推送源码须一致。
 - 原用户已明确授权同范围内提交推送原私人 GitHub；核对真实远端后正常推送，不强推；未经用户明确要求不新建仓库/分支，不改变仓库或站点可见性。

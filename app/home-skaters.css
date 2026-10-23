@@ -6,8 +6,8 @@
 .home-skaters a{color:#245e9e;text-decoration:underline;text-underline-offset:3px}
 .home-skaters form{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-top:16px}
 .home-skaters label{display:flex;flex-direction:column;gap:6px;flex:1;min-width:200px;margin:0;font-size:14px;font-weight:600}
-.home-skaters select{min-width:0;width:100%;padding:10px 12px;border:1px solid #b9cadf;border-radius:7px;background:#fff;font:inherit;color:#18324f}
+.home-skaters select,.home-skaters input{min-width:0;width:100%;padding:10px 12px;border:1px solid #b9cadf;border-radius:7px;background:#fff;font:inherit;color:#18324f}
 .home-skaters button{padding:10px 12px;border:1px solid #bdcfe3;border-radius:7px;background:#f6f9fe;font:inherit;color:#245489;cursor:pointer}
 .home-skaters button:disabled{opacity:.5;cursor:not-allowed}
-.home-skaters :is(button,select,a):focus-visible{outline:3px solid #a8c9ef;outline-offset:2px}
+.home-skaters :is(button,select,input,a):focus-visible{outline:3px solid #a8c9ef;outline-offset:2px}
 @media(max-width:650px){.home-skaters{padding:16px}.home-skaters li,.home-skaters form>button{width:100%}.home-skaters label{min-width:0;flex-basis:100%}}
