@@ -51,6 +51,7 @@
 
 ## 修改、验证与发布
 
+- 用户于 2026-10-23 要求主线先提交、手机端改用分支：已建立 `mobile/capacitor`，后续手机原生工作在该分支；当前 `main` 优先完成网页功能和私人上线。既有手机基线保留，不为分支隔离删除共享安全适配或重写历史。
 - 只做本轮范围内的修改。schema 更改只追加迁移，不改已应用迁移，不重建生产数据库；保护备份与历史资料。
 - Web 类型：`node node_modules/typescript/bin/tsc --noEmit`。
 - 手机类型：`node mobile/node_modules/typescript/bin/tsc --noEmit --project mobile/tsconfig.json`。
@@ -58,9 +59,10 @@
 - Android 便携构建：`capacitor/scripts/build-android.ps1 -ToolchainRoot <工具目录> -OutputDirectory <交付目录>`；用户已于 2026-10-22 批准精简工具下载及 SDK 许可。只使用 `ANDROID_USER_HOME`，避免与旧目录变量冲突，不将 SDK、缓存和调试密钥提交 Git。配置见 `docs/android-build.md`。
 - 核心回归：`node scripts/check-members.mjs`；语言：`node scripts/check-locales.mjs`。
 - 相关解析/编辑回归：`check-paste.mjs`、`check-athlete-history.mjs`、`check-official-source.mjs`、`check-starting-order.mjs`，均位于 `scripts/`。
+- 网页官网同步客户端：`node scripts/check-official-sync-client.mjs`；逐场 HTTP/网络/解析失败必须展示部分失败，不得报全量成功。普通会员只重新读取存档，手动官网检查仍限管理员。
 - 手机导出在 `mobile/` 执行：`node node_modules/expo/bin/cli export --platform ios --platform android`。
 - 网站代码变更遵循当前 Sites 技能：核对原项目及访问范围，官方助手打开源码、检查/构建、源提交同步、归档、保存版本并私人部署；归档与推送源码须一致。
-- 原用户已明确授权同范围内提交推送原私人 GitHub；核对真实远端后正常推送，不强推、不新建仓库/分支、不改变仓库或站点可见性。
+- 原用户已明确授权同范围内提交推送原私人 GitHub；核对真实远端后正常推送，不强推；未经用户明确要求不新建仓库/分支，不改变仓库或站点可见性。
 - 仅维护 AGENTS/项目说明且不修改运行代码时，不为文档更新单独重部署生产服务；按本轮指令处理源同步。
 - Windows 如触发 Git 所有权校验，使用命令级 `-c safe.directory=<本仓库绝对路径>`，不要设置全局通配信任。
 - 沙箱阻止网络或必要子进程时按工具规则申请明确范围的升级，不绕过审批拒绝；既有授权可按需从原用户记录核实。
