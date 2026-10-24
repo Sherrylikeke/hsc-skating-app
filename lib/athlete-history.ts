@@ -15,14 +15,22 @@ export function historyCategories(categories:string[]){
   for(const value of values){const label=categoryLabel(value);counts.set(label,(counts.get(label)||0)+1);}
   return values.map(value=>({value,label:categoryLabel(value,(counts.get(categoryLabel(value))||0)>1)})).sort((first,second)=>first.label.localeCompare(second.label,undefined,{numeric:true}));
 }
-export function filterAthleteHistory(rows:HistoryRecord[],f:HistoryFilters){return rows.filter(r=>(!f.season||seasonOf(r.start_date)===f.season)&&(!f.category||historyCategory(r.category)===historyCategory(f.category))&&(!f.level||r.result_level===f.level)&&(!f.event||r.event_key===f.event)&&(!f.status||r.status===f.status)&&(!f.query||`${r.event_name} ${r.category} ${r.club}`.toLocaleLowerCase().includes(f.query.toLocaleLowerCase().trim())));}
-export function scoreSeries(rows:HistoryRecord[]){
+export function historyCategoryResolver(context:HistoryRecord[]){
+  const candidates=new Map<string,Set<string>>();
+  const parts=(category:string)=>{if(!/^PREJUVENILE\b/.test(category))return null;const ages=category.match(/\b[UO]\d{1,2}\b/g)||[];if(ages.length>1)return null;return {age:ages[0],gender:category.match(/\b(?:WOMEN|MEN)\b/)?.[0],base:category.replace(/\b(?:[UO]\d{1,2}|WOMEN|MEN)\b/g,' ').replace(/\s+/g,' ').trim()};};
+  const cohort=(row:HistoryRecord)=>row.entity_type!=='team'&&row.skater_ids.length===1&&/^20\d\d-\d\d-\d\d$/.test(row.start_date)?row.skater_ids[0]+'|'+row.start_date.slice(0,4):'';
+  for(const row of context){const category=historyCategory(row.category),detail=parts(category),key=cohort(row);if(!key||!detail?.age)continue;const group=key+'|'+detail.base;const values=candidates.get(group)||new Set<string>();values.add(category);candidates.set(group,values);}
+  return (row:HistoryRecord)=>{const category=historyCategory(row.category),detail=parts(category),key=cohort(row);if(!key||!detail||detail.age)return category;const matches=[...(candidates.get(key+'|'+detail.base)||[])].filter(candidate=>!detail.gender||parts(candidate)?.gender===detail.gender);return matches.length===1?matches[0]:category;};
+}
+export function historyRecordCategories(rows:HistoryRecord[]){const resolve=historyCategoryResolver(rows);return historyCategories(rows.map(resolve));}
+export function filterAthleteHistory(rows:HistoryRecord[],f:HistoryFilters){const resolve=historyCategoryResolver(rows);return rows.filter(r=>(!f.season||seasonOf(r.start_date)===f.season)&&(!f.category||resolve(r)===historyCategory(f.category))&&(!f.level||r.result_level===f.level)&&(!f.event||r.event_key===f.event)&&(!f.status||r.status===f.status)&&(!f.query||`${r.event_name} ${r.category} ${r.club}`.toLocaleLowerCase().includes(f.query.toLocaleLowerCase().trim())));}
+export function scoreSeries(rows:HistoryRecord[],context:HistoryRecord[]=rows){
   const groups=new Map<string,HistoryRecord[]>();
-  const labels=new Map(historyCategories(rows.map(row=>row.category)).map(category=>[category.value,category.label]));
-  for(const row of rows){if(row.status!=='result'||row.total_score===null||String(row.total_score).trim()===''||!Number.isFinite(Number(row.total_score))||row.entity_type==='team')continue;const key=`${labels.get(historyCategory(row.category))||row.category} · ${row.result_level==='segment'?'分项分数':row.result_level==='category'?'类别总分':row.result_level==='entry'?'条目成绩':row.result_level}`;groups.set(key,[...(groups.get(key)||[]),row]);}
+  const resolve=historyCategoryResolver(context),labels=new Map(historyCategories(context.map(resolve)).map(category=>[category.value,category.label]));
+  for(const row of rows){if(row.status!=='result'||row.total_score===null||String(row.total_score).trim()===''||!Number.isFinite(Number(row.total_score))||row.entity_type==='team')continue;const key=`${labels.get(resolve(row))||row.category} · ${row.result_level==='segment'?'分项分数':row.result_level==='category'?'类别总分':row.result_level==='entry'?'条目成绩':row.result_level}`;groups.set(key,[...(groups.get(key)||[]),row]);}
   return [...groups].map(([label,records])=>({label,records:records.sort((a,b)=>a.start_date.localeCompare(b.start_date)||a.record_id.localeCompare(b.record_id))})).sort((a,b)=>b.records.length-a.records.length||a.label.localeCompare(b.label));
 }
-export function scoreTrend(rows:HistoryRecord[],requestedSeries=''){
-  const series=scoreSeries(rows),active=series.find(group=>group.label===requestedSeries)||series[0];
+export function scoreTrend(rows:HistoryRecord[],requestedSeries='',context:HistoryRecord[]=rows){
+  const series=scoreSeries(rows,context),active=series.find(group=>group.label===requestedSeries)||series[0];
   return {series,active,points:active?.records||[]};
 }

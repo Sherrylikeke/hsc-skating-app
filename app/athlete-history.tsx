@@ -3,13 +3,13 @@ import {translate,text,useLanguage} from '../lib/i18n';
 import {useMemo,useState} from 'react';
 import type {HistoryRecord} from '../lib/club-types';
 import {seasonOf,statusLabel} from '../lib/club-types';
-import {emptyHistoryFilters,filterAthleteHistory,scoreTrend,historyCategories} from '../lib/athlete-history';
+import {emptyHistoryFilters,filterAthleteHistory,scoreTrend,historyRecordCategories} from '../lib/athlete-history';
 const seriesLabel=(value:string)=>value.replace(/ · (分项分数|类别总分|条目成绩)$/,(match,label)=>' · '+translate(label));
 export default function AthleteHistory({records,onRecord,renderTable}:{records:HistoryRecord[];onRecord:(record:HistoryRecord)=>void;renderTable:(records:HistoryRecord[])=>React.ReactNode}){
   useLanguage();
   const [filters,setFilters]=useState({...emptyHistoryFilters}),[requestedSeries,setRequestedSeries]=useState('');
-  const filtered=useMemo(()=>filterAthleteHistory(records,filters),[records,filters]);const {series,active,points}=useMemo(()=>scoreTrend(filtered,requestedSeries),[filtered,requestedSeries]);
-  const categories=useMemo(()=>historyCategories(records.map(record=>record.category)),[records]);
+  const filtered=useMemo(()=>filterAthleteHistory(records,filters),[records,filters]);const {series,active,points}=useMemo(()=>scoreTrend(filtered,requestedSeries,records),[filtered,requestedSeries,records]);
+  const categories=useMemo(()=>historyRecordCategories(records),[records]);
   const title=active?seriesLabel(active.label):translate('暂无可绘制成绩');
   const scores=points.map(record=>Number(record.total_score));const min=scores.length?Math.min(...scores):0,max=scores.length?Math.max(...scores):0;const pad=Math.max((max-min)*.16,3),bottom=Math.max(0,min-pad),top=max+pad;
   const dates=points.map(r=>Date.parse(r.start_date+'T12:00:00Z'));const firstDate=dates.length?Math.min(...dates):0,lastDate=dates.length?Math.max(...dates):0;

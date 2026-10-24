@@ -1,6 +1,6 @@
 'use client';
 import {apiFetch as fetch,saveTextFile} from '../lib/client-platform';
-import {translate,useLanguage,LanguageSwitch} from '../lib/i18n';
+import {translate,text,useLanguage,LanguageSwitch} from '../lib/i18n';
 
 import { useEffect, useRef, useState } from 'react';
 import { planPaste } from './paste';
@@ -38,7 +38,7 @@ export default function CoachEditor(){
     setPhase('loading');setError('');
     try{
       const response=await fetch('/api/coaches',{cache:'no-store'});
-      if(response.status===401){setPhase('login');return;}
+      if(response.status===401||response.status===403){current.current=[];setRows([]);setPhase('login');return;}
       if(!response.ok)throw new Error(translate("读取失败，请重试"));
       const data=await response.json() as {rows:Row[]};
       let loaded:Row[]=data.rows;
@@ -90,7 +90,7 @@ export default function CoachEditor(){
     if(!rows.length){void load();return;}
     try{
       const response=await fetch('/api/coaches',{cache:'no-store'});
-      if(response.status===401){setPhase('login');return;}
+      if(response.status===401||response.status===403){current.current=[];setRows([]);setPhase('login');return;}
       if(!response.ok)throw new Error(translate("仍然无法连接，请稍后重试"));
       const data=await response.json() as {rows:Row[]};
       versions.current=new Map(data.rows.map((row:Row)=>[row.id,row.revision]));
@@ -147,8 +147,9 @@ export default function CoachEditor(){
   return <div className="shell">
     <LanguageSwitch/><header className="topbar"><a href="/" className="brand"><span className="monogram">HSC</span><span>HAMILTON<br/><b>SKATING CLUB</b></span></a><span className="private-label"><span/>{translate("私人工作表")}</span></header>
     <main>
+      <nav className="coach-return-links" aria-label={text('Return navigation','返回导航')}><a href="/workspace?view=coach">← {text('Back to coach schedule','返回教练总表')}</a><a href="/">{text('Back to my homepage','返回我的主页')}</a><span>{text('Administrators only','仅管理员可维护')}</span></nav>
       <div className="page-heading"><div><p className="eyebrow">{translate("CLUB ROSTER / 教练资料")}</p><h1>{translate("选手与教练")}<span className="title-dot">.</span></h1><p className="subtitle">{translate("点一下教练格，直接输入或粘贴。")}</p></div><div className="save-state" role="status" aria-live="polite"><i className={phase}/>{phase==='ready'?translate("全部已保存"):phase==='saving'?translate("正在保存…"):phase==='error'?translate("尚未保存"):phase==='login'?translate("请先登录"):translate("正在读取…")}</div></div>
-      {phase==='login'?<section className="empty-state"><h2>{translate("登录后即可编辑")}</h2><p>{translate("使用当前的 ChatGPT 账号，保存你的教练名单。")}</p><a className="primary button" href="/signin-with-chatgpt?return_to=%2F" target="_top">{translate("使用 ChatGPT 登录 ↗")}</a></section>:<>
+      {phase==='login'?<section className="empty-state"><h2>{translate("登录后即可编辑")}</h2><p>{text('This maintenance page requires an active administrator account. Return to the member homepage to sign in.','此维护页仅限有效管理员账号。请返回会员主页登录。')}</p><a className="primary button" href="/">{text('Return to member homepage','返回会员主页')}</a></section>:<>
         <section className="workspace" aria-label={translate("教练信息编辑表")}>
           <div className="workspace-head"><div><strong>{translate("选手名单")}</strong><span className="count">{rows.length || '—'} {translate(" 位")}</span></div><span className="completion"><b>{filled}</b> / {rows.length || '—'} {translate(" 已填教练")}</span></div>
           <div className="toolbar"><label className="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><input aria-label={translate("搜索选手或教练")} placeholder={translate("搜索选手或教练…")} value={query} onChange={e=>{setActive('');setQuery(e.target.value);}}/>{query && <button aria-label={translate("清除搜索")} onClick={()=>setQuery('')}>×</button>}</label><div className="actions"><button className={onlyEmpty?'filter selected':'filter'} onClick={()=>{setActive('');setOnlyEmpty(!onlyEmpty);}}>{translate("只看未填写")}</button><button onClick={()=>{setBulk('');setPasteError('');setModal(true);}} disabled={!visible.length} className="primary">{translate("批量粘贴")}</button><button className="export" onClick={exportCsv} disabled={!rows.length}>{translate("导出 CSV ↗")}</button></div></div>

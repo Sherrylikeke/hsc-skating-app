@@ -47,8 +47,7 @@ registerHooks({
     if (['cloudflare:workers', 'next/headers', 'next/navigation'].includes(specifier)) return {url: 'test-stub:' + specifier, shortCircuit: true};
     try {return next(specifier, context);} catch (error) {
       if (specifier.startsWith('.') && context.parentURL) {
-        const candidate = new URL(specifier + '.ts', context.parentURL);
-        if (fs.existsSync(candidate)) return {url: candidate.href, shortCircuit: true};
+        for(const extension of ['.ts','.tsx']){const candidate = new URL(specifier + extension, context.parentURL);if (fs.existsSync(candidate)) return {url: candidate.href, shortCircuit: true};}
       }
       throw error;
     }
@@ -58,7 +57,7 @@ registerHooks({
     if (url === 'test-stub:next/headers') return {format: 'module', source: 'export async function headers(){return globalThis.hscTestHeaders}', shortCircuit: true};
     if (url === 'test-stub:next/navigation') return {format: 'module', source: 'export function redirect(path){throw new Error(path)}', shortCircuit: true};
     if (url.startsWith('file:') && url.endsWith('.json')) return {format: 'module', source: 'export default ' + fs.readFileSync(new URL(url), 'utf8'), shortCircuit: true};
-    if (url.startsWith('file:') && url.endsWith('.ts')) return {format: 'module', source: ts.transpileModule(fs.readFileSync(new URL(url), 'utf8'), {compilerOptions: {module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022}}).outputText, shortCircuit: true};
+    if (url.startsWith('file:') && /\.tsx?$/.test(url)) return {format: 'module', source: ts.transpileModule(fs.readFileSync(new URL(url), 'utf8'), {compilerOptions: {module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText, shortCircuit: true};
     return next(url, context);
   },
 });
@@ -72,6 +71,7 @@ const {registrationEligibility} = await import('../lib/registration.ts');
 const {reminderPlans,reconcileReminders} = await import('../lib/reminders.ts');
 const clubAPI = await import('../app/api/club/route.ts');
 const coachAPI = await import('../app/api/coaches/route.ts');
+const {default:CoachesPage}=await import('../app/coaches/page.tsx');
 const planAPI = await import('../app/api/plans/route.ts');
 const syncAPI = await import('../app/api/sync/route.ts');
 const mcpAPI = await import('../app/mcp/route.ts');
@@ -167,6 +167,19 @@ await route(users.parent, clubAPI.GET, '/api/club?skater=SK-C', undefined, 200, 
 await route(users.skater, clubAPI.GET, '/api/club?skater=SK-B', undefined, 200);
 await route(users['other-coach'], clubAPI.GET, '/api/club?skater=SK-A', undefined, 200);
 await route(users.parent, coachAPI.POST, '/api/coaches', {changes: []}, 403);
+for(const user of [users.parent,users.skater,users.coach,users.outsider]){
+  await route(user,coachAPI.GET,'/api/coaches',undefined,403);
+  await route(user,coachAPI.POST,'/api/coaches',{changes:[]},403);
+  setPlatform(user);globalThis.hscTestHeaders.set('cookie',user.cookie);
+  await assert.rejects(()=>CoachesPage(),error=>error.message==='/');
+}
+await route(null,coachAPI.GET,'/api/coaches',undefined,401);
+setPlatform(null);await assert.rejects(()=>CoachesPage(),error=>error.message==='/');
+setPlatform(users.owner);globalThis.hscTestHeaders.set('cookie',users.owner.cookie);
+const editorPage=await CoachesPage();assert.equal(typeof editorPage.type,'function');
+const navigationMarkup=fs.readFileSync('app/coach-editor.tsx','utf8');
+assert.ok(navigationMarkup.includes('href="/workspace?view=coach"'));assert.ok(navigationMarkup.includes('返回我的主页'));
+check('coach maintenance page and GET/POST reject parents, skaters, coaches and viewers; anonymous page redirects, administrator enters, and explicit return navigation exists');
 await route(users.parent, planAPI.POST, '/api/plans', {skaterId: 'SK-A'}, 403);
 await route(users['other-coach'], planAPI.POST, '/api/plans', {skaterId: 'SK-A'}, 403);
 await route(users.coach, syncAPI.POST, '/api/sync', {}, 403);
