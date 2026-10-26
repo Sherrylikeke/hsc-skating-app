@@ -67,6 +67,8 @@ const {drainOutbox} = await import('../lib/member-messages.ts');
 const {eventWriteStatements} = await import('../lib/change-notifications.ts');
 const {syncEvent} = await import('../lib/official-sync.ts');
 const {createPasswordAuth} = await import('../lib/password-auth.ts');
+const {clubEventResponse,clubSyncResponse} = await import('../lib/club-response.ts');
+const {scheduleRows} = await import('../lib/official-parser.ts');
 const {registrationEligibility} = await import('../lib/registration.ts');
 const {reminderPlans,reconcileReminders} = await import('../lib/reminders.ts');
 const clubAPI = await import('../app/api/club/route.ts');
@@ -197,6 +199,48 @@ const ownMember = await actor(database, users.parent.identity, request(users.par
 await assertSkater(database, ownMember, 'SK-A');
 await assert.rejects(() => assertSkater(database, ownMember, 'SK-C'));
 check('club official schedules are shared with verified active members, own skaters are pinned first; private plans, writes, MCP and account identity remain protected');
+
+const diagnosticMarker='fixture-source.pdf: private parser diagnostic';
+const diagnosticTime='2026-10-26T12:00:00Z';
+const diagnosticEvent={id:'SO-900001',name:'Isolated diagnostic event',url:'https://example.test/event',start:'2026-11-01',end:'2026-11-01',timezone:'America/Toronto',venue:'Test rink',city:'Test city',updateText:'Official notice',source:'Skate Ontario',officialModified:diagnosticTime,checkedAt:diagnosticTime,detailCheckedAt:diagnosticTime,detailError:diagnosticMarker,entryStatus:'30/58 verified',scheduleStatus:'Partial schedule',startingOrderStatus:diagnosticMarker,internalDiagnostic:diagnosticMarker,
+  documents:[{url:'https://example.test/entries',label:'Official entries',kind:'entries',category:'Novice Men',hash:diagnosticMarker,matchingRosterHash:diagnosticMarker,checkedAt:diagnosticTime,attemptedAt:diagnosticTime,parserVersion:diagnosticMarker,entryCount:1,error:diagnosticMarker,internalDiagnostic:diagnosticMarker,entryFiles:[{url:'https://example.test/entry.pdf',label:'Entry file',kind:'entries',error:diagnosticMarker,entryFiles:[{error:diagnosticMarker}]}]}],
+  participants:[{id:'fixture-participant',name:'Test Alpha',category:'Novice Men',club:'Test Club',section:'ON',skaterIds:['SK-A'],matchStatus:'Full-name match',sourceUrl:'https://example.test/entries',internalDiagnostic:diagnosticMarker}],
+  blocks:[{id:'fixture-block',date:'2026-11-01',start:'09:00',end:'10:00',rink:'Test rink',category:'Novice Men',categoryKey:'NOVICE:MEN',group:null,range:null,activity:'competition',page:1,sourceUrl:'https://example.test/schedule.pdf',internalDiagnostic:diagnosticMarker}],
+  startingOrders:[{id:'fixture-order',name:'Test Alpha',category:'Novice Men',program:'Free',startNumber:1,warmupGroup:1,individualTime:'09:05',sourceUrl:'https://example.test/start-order.pdf',page:1,skaterIds:['SK-A'],internalDiagnostic:diagnosticMarker}],
+};
+const originalDiagnosticEvent=structuredClone(diagnosticEvent);
+const projectedEvent=clubEventResponse(diagnosticEvent,false);
+const fixtureSkaters=[{id:'SK-A',name:'Test Alpha',coach:'Test Coach'}];
+assert.equal(scheduleRows([projectedEvent],fixtureSkaters).length,1);
+assert.deepEqual(scheduleRows([projectedEvent],fixtureSkaters),scheduleRows([diagnosticEvent],fixtureSkaters));
+assert.deepEqual(diagnosticEvent,originalDiagnosticEvent);
+assert.equal(clubEventResponse({...diagnosticEvent,detailError:undefined,documents:[]},false).needsReview,false);
+assert.equal(clubEventResponse({...diagnosticEvent,detailError:undefined,documents:[{url:'https://example.test/entries',label:'Entries',kind:'entries',entryFiles:[{url:'https://example.test/pending.pdf',label:'Pending',kind:'entries'}]}]},false).needsReview,true);
+assert.deepEqual(clubSyncResponse({},false),{needsReview:false});
+database.database.prepare('INSERT INTO live_events (id,payload,updated_at) VALUES (?,?,?)').run(diagnosticEvent.id,JSON.stringify(diagnosticEvent),diagnosticTime);
+database.database.prepare('INSERT INTO app_meta (key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run('official-sync-status',JSON.stringify({error:diagnosticMarker,lastAttempt:diagnosticTime,lastSuccess:diagnosticTime,lastCalendarSuccess:diagnosticTime,events:1,entries:1,blocks:1,internalDiagnostic:diagnosticMarker}));
+const viewer={identity:identity('viewer'),cookie:''};await login(viewer,'parent');
+database.database.prepare("UPDATE hsc_members SET role=NULL,status='club-viewer' WHERE id='viewer'").run();
+async function assertOrdinaryDiagnostics(user){
+  const data=await route(user,clubAPI.GET,'/api/club',undefined,200,{'oai-authenticated-user-id':'owner'});
+  const event=data.events.find(event=>event.id===diagnosticEvent.id);
+  assert.equal(event.needsReview,true);assert.deepEqual(data.sync,{needsReview:true});
+  for(const field of ['officialModified','checkedAt','detailCheckedAt','detailError','entryStatus','scheduleStatus','startingOrderStatus','internalDiagnostic'])assert.equal(Object.hasOwn(event,field),false,field);
+  assert.deepEqual(event.documents,[{url:'https://example.test/entries',label:'Official entries',kind:'entries',category:'Novice Men'}]);
+  assert.equal(event.participants[0].name,'Test Alpha');assert.equal(event.blocks[0].start,'09:00');assert.equal(event.startingOrders[0].individualTime,'09:05');
+  assert.ok(!JSON.stringify({events:data.events,sync:data.sync}).includes(diagnosticMarker));
+}
+for(const user of [users.parent,users.skater,users.coach,viewer])await assertOrdinaryDiagnostics(user);
+database.database.prepare("UPDATE hsc_members SET role='admin' WHERE id='viewer'").run();await assertOrdinaryDiagnostics(viewer);
+database.database.prepare("UPDATE hsc_members SET role=NULL WHERE id='viewer'").run();
+const diagnosticAdmin=await route(users.owner,clubAPI.GET,'/api/club');
+assert.equal(diagnosticAdmin.sync.error,diagnosticMarker);assert.equal(diagnosticAdmin.sync.lastAttempt,diagnosticTime);
+const adminEvent=diagnosticAdmin.events.find(event=>event.id===diagnosticEvent.id);
+assert.equal(adminEvent.detailError,diagnosticMarker);assert.equal(adminEvent.documents[0].entryFiles[0].entryFiles[0].error,diagnosticMarker);
+assert.equal(adminEvent.entryStatus,'30/58 verified');assert.equal(adminEvent.needsReview,true);
+database.database.prepare('DELETE FROM live_events WHERE id=?').run(diagnosticEvent.id);
+database.database.prepare('DELETE FROM app_meta WHERE key=?').run('official-sync-status');
+check('club API projects diagnostics by the live server role: parents, skaters, coaches, viewers and inactive admin roles retain only review flags and official data; active administrators retain nested diagnostics');
 
 const requirement = (await call(users.coach, 'requirement', {title: 'Test equipment', body: 'Bring guards and meet at the entrance.', skaterIds: ['SK-A', 'SK-B'], dueAt: '2026-11-01T09:00:00-05:00', authorId: 'other-coach'}, 200)).value.requirement;
 assert.equal(requirement.author_id, 'coach');

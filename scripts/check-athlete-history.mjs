@@ -85,8 +85,11 @@ assert.ok(optionLabels.includes('Pre-Juvenile U11'));assert.ok(!optionLabels.inc
 const emptyRendered=renderToStaticMarkup(createElement(AthleteHistory,{records:withdrawn,onRecord(){},renderTable(){return null;}}));
 assert.equal((emptyRendered.match(/class="chart-point"/g)||[]).length,0);assert.ok(emptyRendered.includes('disabled=""'));
 const app=fs.readFileSync('app/club-app.tsx','utf8');
-const reference=app.indexOf('<details className="club-reference"');
+const reference=app.indexOf('<OfficialSourceReference');
 assert.ok(reference>app.indexOf('<AthleteHistory'));assert.ok(reference<app.indexOf('<footer className="club-footer"'));
-assert.ok(app.indexOf('<OfficialSourceStatus')>reference);assert.ok(app.indexOf('<EntryImportStatus')>reference);
-assert.ok(!app.slice(reference,app.indexOf('>',reference)).includes(' open'));
+assert.ok(app.slice(reference,app.indexOf('/>',reference)).includes('member={data.member} sync={data.sync}'));
+const {default:OfficialSourceReference}=await import('../app/official-source-reference.tsx');
+const referenceMarkup=renderToStaticMarkup(createElement(OfficialSourceReference,{member:{role:'admin',status:'active'},sync:{}}));
+assert.match(referenceMarkup,/<details class="club-reference">/);assert.doesNotMatch(referenceMarkup,/<details[^>]*\bopen\b/);
+assert.equal(renderToStaticMarkup(createElement(OfficialSourceReference,{member:{role:'parent',status:'active'},sync:{}})),'');
 console.log(JSON.stringify({records:breken.length,comparableSeries:series.length,withdrawn:withdrawn.length,categoryFilter:category,excludesMissingScores:true,mixedCategoryTrendRemoved:true,singleCategoryDefaultAndSwitching:true,fioraPlottedScores:scoreTrend(fiora).points.length,fioraAvailableSeries:scoreTrend(fiora).series.length,fioraPreJuU11:3,fioraStar5:9,fioraStar7:5,sameAthleteCalendarYearOnly:true,ambiguousAgeNotInferred:true,filteredContextStable:true,original17ScoresPreserved:true,groupAndNQAliasesMerged:true,agesProgramsGendersAndScoreTypesSeparated:true,emptyStateVerified:true,serverRenderedChartVerified:true,referenceCollapsedAtPageEnd:true}));

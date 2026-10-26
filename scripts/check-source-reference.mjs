@@ -39,5 +39,7 @@ for(const expression of ['{liveEvent.entryStatus}','{liveEvent.scheduleStatus}',
 assert.ok(club.includes('Some event details are not yet confirmed. Please check the official documents.'));
 assert.ok(club.includes('member={data.member} sync={data.sync}'));
 assert.ok(club.includes('<SourceLink href={liveEvent.url}>'));
+assert.ok(club.includes('liveEvent.needsReview&&'));assert.ok(club.includes('data.sync.needsReview'));
+assert.ok(!club.includes('.detailError'));assert.ok(!club.includes('liveEvent.startingOrderStatus'));
 checks.push('primary content omits raw diagnostics while retaining uncertainty and official source links');
 console.log(JSON.stringify({passed:checks.length,checks,fixtureOnly:true,productionWrites:0},null,2));

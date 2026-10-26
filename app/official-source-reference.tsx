@@ -1,7 +1,7 @@
 'use client';
 import {text,useLanguage} from '../lib/i18n';
 import {activeMemberRole} from '../lib/member-client';
-import type {LiveEvent,SyncStatus} from '../lib/club-types';
+import type {ClubEvent as LiveEvent,SyncStatus} from '../lib/club-types';
 import OfficialSourceStatus from './official-source-status';
 import EntryImportStatus from './entry-import-status';
 

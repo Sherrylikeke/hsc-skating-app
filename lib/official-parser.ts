@@ -91,7 +91,7 @@ export function parseScheduleDocument(pages:PdfItem[][],sourceUrl:string):{block
 export function parseScheduleItems(pages:PdfItem[][],sourceUrl:string):ScheduleBlock[]{return parseScheduleDocument(pages,sourceUrl).blocks;}
 function categoryDetails(value:string){return {ages:[...value.matchAll(/\b([UO])\s*(\d{1,2})\b/gi)].map(match=>match[0].replace(/\s/g,'').toUpperCase()),band:value.match(/\bCLASS\s+([IVX]+)\b/i)?.[1].toUpperCase(),program:/\bSHORT\b/i.test(value)?'short':/\bART(?:ISTIC)?\b/i.test(value)?'artistic':/\bFREE(?:SKATE)?\b/i.test(value)?'free':undefined,nonqualifying:/NON[ -]?QUALIF/i.test(value)};}
 function categoryCompatible(first:string,second:string){const entry=categoryDetails(first),block=categoryDetails(second);return (!entry.ages.length||!block.ages.length||entry.ages.some(age=>block.ages.includes(age)))&&(!entry.band||!block.band||entry.band===block.band)&&(!entry.program||!block.program||entry.program===block.program);}
-export function scheduleRows(events:LiveEvent[],skaters:ClubSkater[]):ScheduleRow[]{
+export function scheduleRows(events:Array<Pick<LiveEvent,'id'|'name'|'url'|'timezone'|'participants'|'blocks'|'startingOrders'>>,skaters:ClubSkater[]):ScheduleRow[]{
   const skaterMap=new Map(skaters.map(row=>[row.id,row]));const output=new Map<string,ScheduleRow>();
   for(const event of events)for(const entry of event.participants){
     const key=categoryKey(entry.category),group=groupOf(entry.category);if(!key)continue;

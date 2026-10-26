@@ -7,7 +7,7 @@ import ReminderPanel from './reminder-panel';
 import {MemberAPIError,activeMemberRole,readMemberResponse,recoverMemberSession} from '../lib/member-client';
 import {useEffect, useState} from 'react';
 import type {Candidate, Member, Role} from '../lib/member-access';
-import type {ClubSkater, LiveEvent} from '../lib/club-types';
+import type {ClubSkater, ClubEvent as LiveEvent} from '../lib/club-types';
 
 type Claim = {id: string; member_id?: string; kind: string; payload: string; status: string};
 type Me = {member: Member; skaterIds: string[]; preferredSkaterIds:string[]; claims: Claim[]};
