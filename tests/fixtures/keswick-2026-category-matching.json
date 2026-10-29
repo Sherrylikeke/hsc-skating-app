@@ -1,0 +1,851 @@
+{
+  "checkedAt": "2026-10-29T15:15:13.488Z",
+  "entryIndex": "https://skateontario.org/results/27KES/",
+  "scheduleUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf",
+  "event": {
+    "id": "SO-325449",
+    "name": "Provincial Series #3 – Keswick (K.I.S.)",
+    "url": "https://skateontario.org/event/provincial-series-3-keswick-k-i-s/",
+    "timezone": "America/Toronto",
+    "participants": [
+      {
+        "id": "Pre-Juvenile Women (U11 Group 1)|Fiora Dong",
+        "name": "Fiora Dong",
+        "category": "Pre-Juvenile Women (U11 Group 1)",
+        "club": "Hamilton SC",
+        "section": "ON",
+        "skaterIds": [
+          "HSC-84710E9259"
+        ],
+        "matchStatus": "官方名单同名匹配，身份待核对",
+        "sourceUrl": "https://skateontario.org/results/27KES/27KesPre-JuvenileWomenU11Group1EL.pdf"
+      },
+      {
+        "id": "Pre-Juvenile Women (U11 Group 2)|Sydney Mitchell",
+        "name": "Sydney Mitchell",
+        "category": "Pre-Juvenile Women (U11 Group 2)",
+        "club": "Hamilton SC",
+        "section": "ON",
+        "skaterIds": [
+          "HSC-837A240774"
+        ],
+        "matchStatus": "官方名单同名匹配，身份待核对",
+        "sourceUrl": "https://skateontario.org/results/27KES/27KesPre-JuvenileWomenU11Group2EL.pdf"
+      },
+      {
+        "id": "Pre-Juvenile Women (U11 Group 2)|Ariana Wu",
+        "name": "Ariana Wu",
+        "category": "Pre-Juvenile Women (U11 Group 2)",
+        "club": "Hamilton SC",
+        "section": "ON",
+        "skaterIds": [
+          "HSC-545A539606"
+        ],
+        "matchStatus": "官方名单同名匹配，身份待核对",
+        "sourceUrl": "https://skateontario.org/results/27KES/27KesPre-JuvenileWomenU11Group2EL.pdf"
+      },
+      {
+        "id": "STAR 7 Women (O12 - Non-Qualifying)|Milania Caiella",
+        "name": "Milania Caiella",
+        "category": "STAR 7 Women (O12 - Non-Qualifying)",
+        "club": "Hamilton SC",
+        "section": "ON",
+        "skaterIds": [
+          "HSC-FD11C268E9"
+        ],
+        "matchStatus": "官方名单同名匹配，身份待核对",
+        "sourceUrl": "https://skateontario.org/results/27KES/27KesSTAR7WomenO12-Non-QualifyinEL.pdf"
+      },
+      {
+        "id": "STAR 5 Men (U10)|Max Wang",
+        "name": "Max Wang",
+        "category": "STAR 5 Men (U10)",
+        "club": "Hamilton SC",
+        "section": "ON",
+        "skaterIds": [
+          "HSC-DB3B144A1E"
+        ],
+        "matchStatus": "官方名单同名匹配，身份待核对",
+        "sourceUrl": "https://skateontario.org/results/27KES/27KesSTAR5MenU10EL.pdf"
+      },
+      {
+        "id": "STAR 5 Women (O13 Group 1)|Mairead Mcconville",
+        "name": "Mairead Mcconville",
+        "category": "STAR 5 Women (O13 Group 1)",
+        "club": "Hamilton SC",
+        "section": "ON",
+        "skaterIds": [
+          "HSC-70F8B0ED08"
+        ],
+        "matchStatus": "官方名单同名匹配，身份待核对",
+        "sourceUrl": "https://skateontario.org/results/27KES/27KesSTAR5WomenO13Group1EL.pdf"
+      },
+      {
+        "id": "STAR 5 Women (O13 Group 3)|Joycelyn Chang",
+        "name": "Joycelyn Chang",
+        "category": "STAR 5 Women (O13 Group 3)",
+        "club": "Hamilton SC",
+        "section": "ON",
+        "skaterIds": [
+          "HSC-35814CFAFF"
+        ],
+        "matchStatus": "官方名单同名匹配，身份待核对",
+        "sourceUrl": "https://skateontario.org/results/27KES/27KesSTAR5WomenO13Group3EL.pdf"
+      },
+      {
+        "id": "STAR 5 Women (O13 Group 3)|Felicia Ercole",
+        "name": "Felicia Ercole",
+        "category": "STAR 5 Women (O13 Group 3)",
+        "club": "Hamilton SC",
+        "section": "ON",
+        "skaterIds": [
+          "HSC-AD4D7FD569"
+        ],
+        "matchStatus": "官方名单同名匹配，身份待核对",
+        "sourceUrl": "https://skateontario.org/results/27KES/27KesSTAR5WomenO13Group3EL.pdf"
+      },
+      {
+        "id": "STAR 5 Women (O13 Group 3)|Alexis Musgrave-Bond",
+        "name": "Alexis Musgrave-Bond",
+        "category": "STAR 5 Women (O13 Group 3)",
+        "club": "Hamilton SC",
+        "section": "ON",
+        "skaterIds": [
+          "HSC-EEA572A569"
+        ],
+        "matchStatus": "官方名单同名匹配，身份待核对",
+        "sourceUrl": "https://skateontario.org/results/27KES/27KesSTAR5WomenO13Group3EL.pdf"
+      },
+      {
+        "id": "STAR 5 Women (O13 Group 4)|Milania Caiella",
+        "name": "Milania Caiella",
+        "category": "STAR 5 Women (O13 Group 4)",
+        "club": "Hamilton SC",
+        "section": "ON",
+        "skaterIds": [
+          "HSC-FD11C268E9"
+        ],
+        "matchStatus": "官方名单同名匹配，身份待核对",
+        "sourceUrl": "https://skateontario.org/results/27KES/27KesSTAR5WomenO13Group4EL.pdf"
+      },
+      {
+        "id": "STAR 5 Women (U13 - Non-Qualifying)|Makayla Wang",
+        "name": "Makayla Wang",
+        "category": "STAR 5 Women (U13 - Non-Qualifying)",
+        "club": "Hamilton SC",
+        "section": "ON",
+        "skaterIds": [
+          "HSC-F8AEE4668F"
+        ],
+        "matchStatus": "官方名单同名匹配，身份待核对",
+        "sourceUrl": "https://skateontario.org/results/27KES/27KesSTAR5WomenU13-Non-QualifyinEL.pdf"
+      },
+      {
+        "id": "STAR 5 Women (U10 Group 1)|Arielle Pochaev",
+        "name": "Arielle Pochaev",
+        "category": "STAR 5 Women (U10 Group 1)",
+        "club": "Hamilton SC",
+        "section": "ON",
+        "skaterIds": [
+          "HSC-2C47241D0C"
+        ],
+        "matchStatus": "官方名单同名匹配，身份待核对",
+        "sourceUrl": "https://skateontario.org/results/27KES/27KesSTAR5WomenU10Group1EL.pdf"
+      },
+      {
+        "id": "STAR 5 Women (U10 - Non-Qualifying)|Violet Bacon",
+        "name": "Violet Bacon",
+        "category": "STAR 5 Women (U10 - Non-Qualifying)",
+        "club": "Hamilton SC",
+        "section": "ON",
+        "skaterIds": [
+          "HSC-D09BE8ADEE"
+        ],
+        "matchStatus": "官方名单同名匹配，身份待核对",
+        "sourceUrl": "https://skateontario.org/results/27KES/27KesSTAR5WomenU10-Non-QualifyinEL.pdf"
+      },
+      {
+        "id": "STAR 5 Women (U10 Group 2)|Annie Dong",
+        "name": "Annie Dong",
+        "category": "STAR 5 Women (U10 Group 2)",
+        "club": "Hamilton SC",
+        "section": "ON",
+        "skaterIds": [
+          "HSC-73A1CD51C3"
+        ],
+        "matchStatus": "官方名单同名匹配，身份待核对",
+        "sourceUrl": "https://skateontario.org/results/27KES/27KesSTAR5WomenU10Group2EL.pdf"
+      },
+      {
+        "id": "STAR 5 Women (U10 Group 2)|Shirley Dong",
+        "name": "Shirley Dong",
+        "category": "STAR 5 Women (U10 Group 2)",
+        "club": "Hamilton SC",
+        "section": "ON",
+        "skaterIds": [
+          "HSC-1183672EF1"
+        ],
+        "matchStatus": "官方名单同名匹配，身份待核对",
+        "sourceUrl": "https://skateontario.org/results/27KES/27KesSTAR5WomenU10Group2EL.pdf"
+      },
+      {
+        "id": "STAR 7 Women (& Men Artistic Group 2)|Alexis Musgrave-Bond",
+        "name": "Alexis Musgrave-Bond",
+        "category": "STAR 7 Women (& Men Artistic Group 2)",
+        "club": "Hamilton SC",
+        "section": "ON",
+        "skaterIds": [
+          "HSC-EEA572A569"
+        ],
+        "matchStatus": "官方名单同名匹配，身份待核对",
+        "sourceUrl": "https://skateontario.org/results/27KES/27KesSTAR7Women&MenArtisticGp2EL.pdf"
+      },
+      {
+        "id": "STAR 5 Women (& Men Artistic Group 1)|Mairead Mcconville",
+        "name": "Mairead Mcconville",
+        "category": "STAR 5 Women (& Men Artistic Group 1)",
+        "club": "Hamilton SC",
+        "section": "ON",
+        "skaterIds": [
+          "HSC-70F8B0ED08"
+        ],
+        "matchStatus": "官方名单同名匹配，身份待核对",
+        "sourceUrl": "https://skateontario.org/results/27KES/27KesSTAR5Women&MenArtisticGp1EL.pdf"
+      }
+    ],
+    "blocks": [
+      {
+        "id": "2026-11-20|GREEN RINK|10:00|STAR 7 Women U12 - Group 1",
+        "date": "2026-11-20",
+        "start": "10:00",
+        "end": "11:00",
+        "rink": "GREEN RINK",
+        "category": "STAR 7 Women U12 - Group 1",
+        "categoryKey": "STAR 7:WOMEN",
+        "group": 1,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-20|BLUE RINK|10:00|STAR 7 Women O12 - Group 1",
+        "date": "2026-11-20",
+        "start": "10:00",
+        "end": "11:20",
+        "rink": "BLUE RINK",
+        "category": "STAR 7 Women O12 - Group 1",
+        "categoryKey": "STAR 7:WOMEN",
+        "group": 1,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-20|GREEN RINK|11:00|STAR 7 Women U12 - Group 2",
+        "date": "2026-11-20",
+        "start": "11:00",
+        "end": "12:00",
+        "rink": "GREEN RINK",
+        "category": "STAR 7 Women U12 - Group 2",
+        "categoryKey": "STAR 7:WOMEN",
+        "group": 2,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-20|BLUE RINK|11:20|STAR 7 Women O12 - Group 2",
+        "date": "2026-11-20",
+        "start": "11:20",
+        "end": "12:40",
+        "rink": "BLUE RINK",
+        "category": "STAR 7 Women O12 - Group 2",
+        "categoryKey": "STAR 7:WOMEN",
+        "group": 2,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-20|GREEN RINK|12:00|STAR 7 Men U12",
+        "date": "2026-11-20",
+        "start": "12:00",
+        "end": "12:20",
+        "rink": "GREEN RINK",
+        "category": "STAR 7 Men U12",
+        "categoryKey": "STAR 7:MEN",
+        "group": null,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-20|GREEN RINK|12:35|STAR 9 Men U14",
+        "date": "2026-11-20",
+        "start": "12:35",
+        "end": "12:50",
+        "rink": "GREEN RINK",
+        "category": "STAR 9 Men U14",
+        "categoryKey": "STAR 9:MEN",
+        "group": null,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-20|GREEN RINK|12:50|STAR 5 Women O13 - Group 1",
+        "date": "2026-11-20",
+        "start": "12:50",
+        "end": "14:15",
+        "rink": "GREEN RINK",
+        "category": "STAR 5 Women O13 - Group 1",
+        "categoryKey": "STAR 5:WOMEN",
+        "group": 1,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-20|BLUE RINK|13:50|STAR 7 Women O12 - Group 3",
+        "date": "2026-11-20",
+        "start": "13:50",
+        "end": "15:10",
+        "rink": "BLUE RINK",
+        "category": "STAR 7 Women O12 - Group 3",
+        "categoryKey": "STAR 7:WOMEN",
+        "group": 3,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-20|GREEN RINK|14:15|STAR 5 Women O13 - Group 2",
+        "date": "2026-11-20",
+        "start": "14:15",
+        "end": "15:40",
+        "rink": "GREEN RINK",
+        "category": "STAR 5 Women O13 - Group 2",
+        "categoryKey": "STAR 5:WOMEN",
+        "group": 2,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-20|BLUE RINK|15:10|STAR 5 Women U13 - Non-Qualifying",
+        "date": "2026-11-20",
+        "start": "15:10",
+        "end": "16:55",
+        "rink": "BLUE RINK",
+        "category": "STAR 5 Women U13 - Non-Qualifying",
+        "categoryKey": "STAR 5:WOMEN",
+        "group": null,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-20|GREEN RINK|15:55|STAR 9 Women U14 - Group 1",
+        "date": "2026-11-20",
+        "start": "15:55",
+        "end": "17:30",
+        "rink": "GREEN RINK",
+        "category": "STAR 9 Women U14 - Group 1",
+        "categoryKey": "STAR 9:WOMEN",
+        "group": 1,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-20|BLUE RINK|17:10|STAR 5 Women U10 - Non-Qualifying",
+        "date": "2026-11-20",
+        "start": "17:10",
+        "end": "17:35",
+        "rink": "BLUE RINK",
+        "category": "STAR 5 Women U10 - Non-Qualifying",
+        "categoryKey": "STAR 5:WOMEN",
+        "group": null,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-20|GREEN RINK|17:30|Star 5 Women O13 Group 3",
+        "date": "2026-11-20",
+        "start": "17:30",
+        "end": "19:00",
+        "rink": "GREEN RINK",
+        "category": "Star 5 Women O13 Group 3",
+        "categoryKey": "STAR 5:WOMEN",
+        "group": 3,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-20|BLUE RINK|17:35|STAR 5 Men U10 / STAR 5 Men U10 Non-Qualifying",
+        "date": "2026-11-20",
+        "start": "17:35",
+        "end": "18:10",
+        "rink": "BLUE RINK",
+        "category": "STAR 5 Men U10 / STAR 5 Men U10 Non-Qualifying",
+        "categoryKey": "STAR 5:MEN",
+        "group": null,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-20|BLUE RINK|18:10|Star 5 Men U13",
+        "date": "2026-11-20",
+        "start": "18:10",
+        "end": "18:35",
+        "rink": "BLUE RINK",
+        "category": "Star 5 Men U13",
+        "categoryKey": "STAR 5:MEN",
+        "group": null,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-20|BLUE RINK|18:35|Star 7 Women U12/O12 Non Qualifying",
+        "date": "2026-11-20",
+        "start": "18:35",
+        "end": "19:15",
+        "rink": "BLUE RINK",
+        "category": "Star 7 Women U12/O12 Non Qualifying",
+        "categoryKey": "STAR 7:WOMEN",
+        "group": null,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-20|GREEN RINK|19:15|Star 5 Women O13 Group 4",
+        "date": "2026-11-20",
+        "start": "19:15",
+        "end": "20:45",
+        "rink": "GREEN RINK",
+        "category": "Star 5 Women O13 Group 4",
+        "categoryKey": "STAR 5:WOMEN",
+        "group": 4,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-20|BLUE RINK|19:30|Star 9 Women O14 - Group 1",
+        "date": "2026-11-20",
+        "start": "19:30",
+        "end": "20:30",
+        "rink": "BLUE RINK",
+        "category": "Star 9 Women O14 - Group 1",
+        "categoryKey": "STAR 9:WOMEN",
+        "group": 1,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-20|BLUE RINK|20:30|Star 9 Women O14 - Group 2",
+        "date": "2026-11-20",
+        "start": "20:30",
+        "end": "21:30",
+        "rink": "BLUE RINK",
+        "category": "Star 9 Women O14 - Group 2",
+        "categoryKey": "STAR 9:WOMEN",
+        "group": 2,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-20|GREEN RINK|20:45|Gold Women",
+        "date": "2026-11-20",
+        "start": "20:45",
+        "end": "21:25",
+        "rink": "GREEN RINK",
+        "category": "Gold Women",
+        "categoryKey": "GOLD:WOMEN",
+        "group": null,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-21|BLUE RINK|08:00|Star 8 Women - Group 1",
+        "date": "2026-11-21",
+        "start": "08:00",
+        "end": "09:45",
+        "rink": "BLUE RINK",
+        "category": "Star 8 Women - Group 1",
+        "categoryKey": "STAR 8:WOMEN",
+        "group": 1,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-21|GREEN RINK|08:45|Juvenile U12 Men (Shared Warm Up)",
+        "date": "2026-11-21",
+        "start": "08:45",
+        "end": "09:20",
+        "rink": "GREEN RINK",
+        "category": "Juvenile U12 Men (Shared Warm Up)",
+        "categoryKey": "JUVENILE:MEN",
+        "group": null,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-21|GREEN RINK|09:20|Star 6 Men",
+        "date": "2026-11-21",
+        "start": "09:20",
+        "end": "10:00",
+        "rink": "GREEN RINK",
+        "category": "Star 6 Men",
+        "categoryKey": "STAR 6:MEN",
+        "group": null,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-21|GREEN RINK|10:00|STAR 6 Women Group 3",
+        "date": "2026-11-21",
+        "start": "10:00",
+        "end": "11:40",
+        "rink": "GREEN RINK",
+        "category": "STAR 6 Women Group 3",
+        "categoryKey": "STAR 6:WOMEN",
+        "group": 3,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-21|BLUE RINK|10:25|Star 5 Men O13",
+        "date": "2026-11-21",
+        "start": "10:25",
+        "end": "11:00",
+        "rink": "BLUE RINK",
+        "category": "Star 5 Men O13",
+        "categoryKey": "STAR 5:MEN",
+        "group": null,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-21|GREEN RINK|11:55|STAR 5 Women U10 - Group 1",
+        "date": "2026-11-21",
+        "start": "11:55",
+        "end": "13:15",
+        "rink": "GREEN RINK",
+        "category": "STAR 5 Women U10 - Group 1",
+        "categoryKey": "STAR 5:WOMEN",
+        "group": 1,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-21|BLUE RINK|12:50|Juvenile U12 Women",
+        "date": "2026-11-21",
+        "start": "12:50",
+        "end": "14:15",
+        "rink": "BLUE RINK",
+        "category": "Juvenile U12 Women",
+        "categoryKey": "JUVENILE:WOMEN",
+        "group": null,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-21|GREEN RINK|13:15|STAR 5 Women U10 - Group 2",
+        "date": "2026-11-21",
+        "start": "13:15",
+        "end": "14:40",
+        "rink": "GREEN RINK",
+        "category": "STAR 5 Women U10 - Group 2",
+        "categoryKey": "STAR 5:WOMEN",
+        "group": 2,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-21|BLUE RINK|14:15|Juvenile U14 Women",
+        "date": "2026-11-21",
+        "start": "14:15",
+        "end": "15:40",
+        "rink": "BLUE RINK",
+        "category": "Juvenile U14 Women",
+        "categoryKey": "JUVENILE:WOMEN",
+        "group": null,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-21|GREEN RINK|15:35|Pre-Juvenile U11 Women - Group 1",
+        "date": "2026-11-21",
+        "start": "15:35",
+        "end": "16:35",
+        "rink": "GREEN RINK",
+        "category": "Pre-Juvenile U11 Women - Group 1",
+        "categoryKey": "PREJUVENILE:WOMEN",
+        "group": 1,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-21|BLUE RINK|15:55|Pre-Juvenile U13 Women",
+        "date": "2026-11-21",
+        "start": "15:55",
+        "end": "17:40",
+        "rink": "BLUE RINK",
+        "category": "Pre-Juvenile U13 Women",
+        "categoryKey": "PREJUVENILE:WOMEN",
+        "group": null,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-21|GREEN RINK|16:50|Pre-Juvenile U11 Women - Group 2",
+        "date": "2026-11-21",
+        "start": "16:50",
+        "end": "17:50",
+        "rink": "GREEN RINK",
+        "category": "Pre-Juvenile U11 Women - Group 2",
+        "categoryKey": "PREJUVENILE:WOMEN",
+        "group": 2,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-21|BLUE RINK|17:40|Star 6 Women Group 1",
+        "date": "2026-11-21",
+        "start": "17:40",
+        "end": "19:15",
+        "rink": "BLUE RINK",
+        "category": "Star 6 Women Group 1",
+        "categoryKey": "STAR 6:WOMEN",
+        "group": 1,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-21|GREEN RINK|17:50|Star 5 Women O13 Non Qualifying",
+        "date": "2026-11-21",
+        "start": "17:50",
+        "end": "19:30",
+        "rink": "GREEN RINK",
+        "category": "Star 5 Women O13 Non Qualifying",
+        "categoryKey": "STAR 5:WOMEN",
+        "group": null,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-21|BLUE RINK|19:15|Star 6 Women Group 2",
+        "date": "2026-11-21",
+        "start": "19:15",
+        "end": "20:55",
+        "rink": "BLUE RINK",
+        "category": "Star 6 Women Group 2",
+        "categoryKey": "STAR 6:WOMEN",
+        "group": 2,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-21|GREEN RINK|20:00|Star 10 Women",
+        "date": "2026-11-21",
+        "start": "20:00",
+        "end": "21:00",
+        "rink": "GREEN RINK",
+        "category": "Star 10 Women",
+        "categoryKey": "STAR 10:WOMEN",
+        "group": null,
+        "range": null,
+        "activity": "competition",
+        "page": 1,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-22|GREEN RINK|08:00|STAR 5 Women U13 - Group 1",
+        "date": "2026-11-22",
+        "start": "08:00",
+        "end": "09:30",
+        "rink": "GREEN RINK",
+        "category": "STAR 5 Women U13 - Group 1",
+        "categoryKey": "STAR 5:WOMEN",
+        "group": 1,
+        "range": null,
+        "activity": "competition",
+        "page": 2,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-22|GREEN RINK|09:30|STAR 5 Women U13 - Group 2",
+        "date": "2026-11-22",
+        "start": "09:30",
+        "end": "11:00",
+        "rink": "GREEN RINK",
+        "category": "STAR 5 Women U13 - Group 2",
+        "categoryKey": "STAR 5:WOMEN",
+        "group": 2,
+        "range": null,
+        "activity": "competition",
+        "page": 2,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-22|GREEN RINK|11:15|STAR 5 Women U13 Group 3",
+        "date": "2026-11-22",
+        "start": "11:15",
+        "end": "12:50",
+        "rink": "GREEN RINK",
+        "category": "STAR 5 Women U13 Group 3",
+        "categoryKey": "STAR 5:WOMEN",
+        "group": 3,
+        "range": null,
+        "activity": "competition",
+        "page": 2,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      },
+      {
+        "id": "2026-11-22|GREEN RINK|12:50|STAR 5 Women U13 - Group 4",
+        "date": "2026-11-22",
+        "start": "12:50",
+        "end": "14:25",
+        "rink": "GREEN RINK",
+        "category": "STAR 5 Women U13 - Group 4",
+        "categoryKey": "STAR 5:WOMEN",
+        "group": 4,
+        "range": null,
+        "activity": "competition",
+        "page": 2,
+        "sourceUrl": "https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf"
+      }
+    ]
+  },
+  "skaters": [
+    {
+      "id": "HSC-EEA572A569",
+      "name": "Alexis Musgrave-Bond",
+      "coach": ""
+    },
+    {
+      "id": "HSC-73A1CD51C3",
+      "name": "Annie Dong",
+      "coach": ""
+    },
+    {
+      "id": "HSC-545A539606",
+      "name": "Ariana Wu",
+      "coach": ""
+    },
+    {
+      "id": "HSC-2C47241D0C",
+      "name": "Arielle Pochaev",
+      "coach": ""
+    },
+    {
+      "id": "HSC-AD4D7FD569",
+      "name": "Felicia Ercole",
+      "coach": ""
+    },
+    {
+      "id": "HSC-84710E9259",
+      "name": "Fiora Dong",
+      "coach": ""
+    },
+    {
+      "id": "HSC-35814CFAFF",
+      "name": "Joycelyn Chang",
+      "coach": ""
+    },
+    {
+      "id": "HSC-70F8B0ED08",
+      "name": "Mairead McConville",
+      "coach": ""
+    },
+    {
+      "id": "HSC-F8AEE4668F",
+      "name": "Makayla Wang",
+      "coach": ""
+    },
+    {
+      "id": "HSC-DB3B144A1E",
+      "name": "Max Wang",
+      "coach": ""
+    },
+    {
+      "id": "HSC-FD11C268E9",
+      "name": "Milania Caiella",
+      "coach": ""
+    },
+    {
+      "id": "HSC-1183672EF1",
+      "name": "Shirley Dong",
+      "coach": ""
+    },
+    {
+      "id": "HSC-837A240774",
+      "name": "Sydney Mitchell",
+      "coach": ""
+    },
+    {
+      "id": "HSC-D09BE8ADEE",
+      "name": "Violet Bacon",
+      "coach": ""
+    }
+  ]
+}

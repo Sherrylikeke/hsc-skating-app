@@ -21,6 +21,10 @@
 
 ## 可复现验收
 
+2026-10-29 赛程匹配修复：普通组与 Non-Qualifying/NQ 必须分开匹配，Artistic 报名不能匹配省略 Free 字样的普通滑行时段。官网明确用完整类别加 `/` 表示共用时段时，两类报名仍可使用该时段；`U12/O12 Non Qualifying` 只是共享年龄范围，NQ 限定仍作用于两种年龄。Starting Order 同样检查资格、年龄与项目，不能借用其他类别的出场信息。历史成绩图表的类别归并规则没有修改。
+
+运行 `node scripts/check-category-matching.mjs`：7 组类别隔离、共用时段、Artistic、出场信息与官方快照回归。`tests/fixtures/keswick-2026-category-matching.json` 来自 2026-10-29 对官网当前 61 份报名 PDF 和 Oct 28 赛程的只读解析，保留当前历史候选名单匹配的报名与可解析时段，仅作离线回归，不用于覆盖生产资料。公开报名目录为 `https://skateontario.org/results/27KES/`，赛程为 `https://skateontario.org/wp-content/uploads/2026/07/Keswick-schedule-OCT-28-1.pdf`。
+
 运行 `node scripts/check-official-import.mjs`：11 项真实 PDF / 目录状态回归，覆盖人数不符、扫描/错行拒绝、日期分区、双冰场、年龄差异、四份批次、失败保留、同链接修订、候选名单变化与移除链接。
 
 运行 `node scripts/check-members.mjs`：隔离内存 D1 中验证原权限/登录/提醒以及 PDF 批次持久化、嵌套来源修订、解析器升级、失败保留和重复同步无额外变更/outbox。测试 fetch 使用捕获适配器，不连接生产数据库、不发真实邮件。其余原官网、Starting Order、客户端、语言及类型检查也须重跑。

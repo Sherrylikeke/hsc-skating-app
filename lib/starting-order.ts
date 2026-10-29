@@ -1,6 +1,6 @@
 import type {StartingOrder} from './club-types';
 import type {PdfItem} from './official-parser';
-import {categoryKey,groupOf,normalizeName,plain} from './official-parser.ts';
+import {categoryKey,categoryCompatible,groupOf,normalizeName,plain} from './official-parser.ts';
 type Roster=Array<{id:string;name:string;identityPending?:boolean}>;
 export const programOf=(text:string)=>/\bSHORT\b/i.test(text)?'short':/\bFREE\b/i.test(text)?'free':/\bRHYTHM\b/i.test(text)?'rhythm':/\bPATTERN\b/i.test(text)?plain(text).toLowerCase().replace(/.*pattern\s*dance/i,'pattern').trim():'';
 function ids(name:string,roster:Roster){return name.split(/\s*\/\s*/).flatMap(part=>{const matches=roster.filter(s=>!s.identityPending&&normalizeName(s.name)===normalizeName(part));return matches.length===1?[matches[0].id]:[];});}
@@ -35,4 +35,4 @@ export function parseStartingOrderHtml(html:string,url:string,roster:Roster):Sta
     const time=cells[timeIndex]||'';output.push(row(cells[nameIndex],current,Number(cells[orderIndex]),warm,/^\d{1,2}:\d{2}(?::\d{2})?(?:\s*[AP]M)?$/i.test(time)?time:null,url,0,roster));
   }return output;
 }
-export function orderFor(orders:StartingOrder[],id:string,category:string){const key=categoryKey(category),program=programOf(category),group=groupOf(category);const matches=orders.filter(o=>o.skaterIds.includes(id)&&categoryKey(o.category)===key&&o.program===program&&(groupOf(o.category)===group||groupOf(o.category)===null||group===null));return matches.length===1?matches[0]:undefined;}
+export function orderFor(orders:StartingOrder[],id:string,category:string){const key=categoryKey(category),program=programOf(category),group=groupOf(category);const matches=orders.filter(o=>o.skaterIds.includes(id)&&categoryKey(o.category)===key&&categoryCompatible(o.category,category)&&o.program===program&&(groupOf(o.category)===group||groupOf(o.category)===null||group===null));return matches.length===1?matches[0]:undefined;}

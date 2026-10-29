@@ -89,15 +89,26 @@ export function parseScheduleDocument(pages:PdfItem[][],sourceUrl:string):{block
   return {blocks:[...new Map(blocks.map(block=>[block.id,block])).values()].sort((first,second)=>(first.date+' '+first.start).localeCompare(second.date+' '+second.start)),warnings:[...warnings]};
 }
 export function parseScheduleItems(pages:PdfItem[][],sourceUrl:string):ScheduleBlock[]{return parseScheduleDocument(pages,sourceUrl).blocks;}
-function categoryDetails(value:string){return {ages:[...value.matchAll(/\b([UO])\s*(\d{1,2})\b/gi)].map(match=>match[0].replace(/\s/g,'').toUpperCase()),band:value.match(/\bCLASS\s+([IVX]+)\b/i)?.[1].toUpperCase(),program:/\bSHORT\b/i.test(value)?'short':/\bART(?:ISTIC)?\b/i.test(value)?'artistic':/\bFREE(?:SKATE)?\b/i.test(value)?'free':undefined,nonqualifying:/NON[ -]?QUALIF/i.test(value)};}
-function categoryCompatible(first:string,second:string){const entry=categoryDetails(first),block=categoryDetails(second);return (!entry.ages.length||!block.ages.length||entry.ages.some(age=>block.ages.includes(age)))&&(!entry.band||!block.band||entry.band===block.band)&&(!entry.program||!block.program||entry.program===block.program);}
+function categoryDetails(value:string){return {ages:[...value.matchAll(/\b([UO])\s*(\d{1,2})\b/gi)].map(match=>match[0].replace(/\s/g,'').toUpperCase()),band:value.match(/\bCLASS\s+([IVX]+)\b/i)?.[1].toUpperCase(),program:/\bSHORT\b/i.test(value)?'short':/\bART(?:ISTIC)?\b/i.test(value)?'artistic':/\bFREE(?:SKATE)?\b/i.test(value)?'free':undefined,nonqualifying:/\bNON[\s\u2010-\u2015-]*QUALIF|\bN\.?\s*Q\b/i.test(value)};}
+function categoryVariants(value:string){
+  const parts=value.split(/\s*\/\s*/);
+  // Full category names joined by a slash are explicit shared sessions.
+  // Keep age alternatives such as U12/O12 together with their NQ qualifier.
+  return parts.length>1&&parts.every(part=>categoryKey(part))?parts:[value];
+}
+export function categoryCompatible(first:string,second:string){
+  return categoryVariants(first).some(entryCategory=>categoryVariants(second).some(blockCategory=>{
+    const entry=categoryDetails(entryCategory),block=categoryDetails(blockCategory);
+    return categoryKey(entryCategory)===categoryKey(blockCategory)&&entry.nonqualifying===block.nonqualifying&&(entry.program==='artistic')===(block.program==='artistic')&&(!entry.ages.length||!block.ages.length||entry.ages.some(age=>block.ages.includes(age)))&&(!entry.band||!block.band||entry.band===block.band)&&(!entry.program||!block.program||entry.program===block.program);
+  }));
+}
 export function scheduleRows(events:Array<Pick<LiveEvent,'id'|'name'|'url'|'timezone'|'participants'|'blocks'|'startingOrders'>>,skaters:ClubSkater[]):ScheduleRow[]{
   const skaterMap=new Map(skaters.map(row=>[row.id,row]));const output=new Map<string,ScheduleRow>();
   for(const event of events)for(const entry of event.participants){
     const key=categoryKey(entry.category),group=groupOf(entry.category);if(!key)continue;
     const matching=event.blocks.filter(block=>block.categoryKey===key&&categoryCompatible(entry.category,block.category)&&(group===null||block.group===null||group===block.group));
     for(const id of entry.skaterIds){const skater=skaterMap.get(id);if(!skater)continue;
-      for(const block of matching){const startingOrder=block.activity==='competition'?orderFor(event.startingOrders||[],id,block.category):undefined;if(block.range&&startingOrder&&(startingOrder.startNumber<block.range[0]||startingOrder.startNumber>block.range[1]))continue;const entryDetails=categoryDetails(entry.category),blockDetails=categoryDetails(block.category);const uncertain=(block.group!==null&&group===null)||(block.range!==null&&!startingOrder)||!!(blockDetails.ages.length&&!entryDetails.ages.length)||!!(blockDetails.band&&!entryDetails.band)||(blockDetails.nonqualifying&&!entryDetails.nonqualifying);const rowId=`${event.id}|${id}|${block.id}`;
+      for(const block of matching){const startingOrder=block.activity==='competition'?orderFor(event.startingOrders||[],id,block.category):undefined;if(block.range&&startingOrder&&(startingOrder.startNumber<block.range[0]||startingOrder.startNumber>block.range[1]))continue;const entryDetails=categoryDetails(entry.category),blockDetails=categoryDetails(block.category);const uncertain=(block.group!==null&&group===null)||(block.range!==null&&!startingOrder)||!!(blockDetails.ages.length&&!entryDetails.ages.length)||!!(blockDetails.band&&!entryDetails.band);const rowId=`${event.id}|${id}|${block.id}`;
         const normalized=block.category.toUpperCase().replace(/\s+/g,' ').trim();
         const occurrence=event.blocks.filter(other=>other.category.toUpperCase().replace(/\s+/g,' ').trim()===normalized).findIndex(other=>other.id===block.id);
         const slotKey=`${normalized}:${occurrence}`;
