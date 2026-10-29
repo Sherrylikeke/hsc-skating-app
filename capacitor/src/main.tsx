@@ -9,6 +9,7 @@ import '../../app/globals.css';
 import '../../app/club.css';
 import '../../app/member.css';
 import '../../app/i18n.css';
+import '../../app/club-mobile.css';
 import './native.css';
 
 function Router(){

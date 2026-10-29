@@ -78,3 +78,9 @@ iOS 已生成 Xcode + Swift Package Manager 工程并完成 sync，注册 URL sc
 
 参考：[Capacitor 环境要求](https://capacitorjs.com/docs/getting-started/environment-setup)、[原生 HTTP](https://capacitorjs.com/docs/apis/http)、[App/深链](https://capacitorjs.com/docs/apis/app)、[安全存储插件](https://github.com/aparajita/capacitor-secure-storage)。
 
+
+## 2026-10-29 Android 1.1 竖屏界面
+
+手机分支先合入截至 fbc68d1 的共享 main 修复，继续复用原后端、数据及系统安全存储。app/club-mobile.css 在 720px 以下把教练、个人与选手页共用的赛程表排为竖向卡片；筛选可展开、日期与教练带标签，冲突说明可展开，底部导航采用中英文短标签及安全区留白。桌面仍用表格。仅改变呈现和筛选展开状态，不增加或推测赛程，也不扩大私人权限。
+
+Android 应用 ID 保持 ca.hsc.skating，versionCode 2、versionName 1.1。使用同一 androidUserHome 中的调试密钥构建以支持覆盖更新。构建/Lint/签名、旧包证书比对及交付文件见本轮 project-note 和会话 outputs/mobile-v1.1；实际手机视觉及操作体验须由用户覆盖安装后验收。本轮没有可用的浏览器专用或真机控制接口，未使用系统级电脑控制，也未发布网页 main。

@@ -1,3 +1,4 @@
 body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);overscroll-behavior-y:none}
 input,select,textarea{font-size:max(16px,1em)}
 .club-sidebar{padding-top:max(16px,env(safe-area-inset-top))}
+@media(max-width:720px){.club-sidebar{padding-top:0}}
