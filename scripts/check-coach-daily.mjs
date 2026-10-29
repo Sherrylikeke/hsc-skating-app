@@ -56,4 +56,7 @@ checks.push('the overview renders date counts, compact table headers, local cloc
 const empty=renderToStaticMarkup(createElement(CoachDailySchedule,{rows:[],conflicts:new Set(),onSkater:()=>{},renderDetails:()=>null}));
 assert.ok(empty.includes('No matching official sessions'));
 checks.push('an empty filtered view explains how to change filters');
+const practice=renderToStaticMarkup(createElement(CoachDailySchedule,{rows:[row('practice','2026-11-20','11:00',{activity:'practice'})],conflicts:new Set(),onSkater:()=>{},renderDetails:()=>null}));
+assert.ok(practice.includes('Practice · STAR 5'));
+checks.push('official practice remains identifiable in the compact overview');
 console.log(JSON.stringify({passed:checks.length,checks,fixtureOnly:true,productionWrites:0},null,2));
