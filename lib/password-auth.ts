@@ -89,7 +89,9 @@ export function createPasswordAuth(database: D1Database, secret: string, origin 
         const previousUser=await database.prepare('SELECT id FROM hsc_auth_user WHERE lower(email)=?').bind(email).first();
         if(pilot&&previousUser)return Response.json({message:'This invitation has already been used. Sign in with your account.'},{status:409});
         const {pilotInvitation:_invitation,...authBody}=body;
-        const response=await auth.handler(new Request(request,{body:JSON.stringify({...authBody,callbackURL:origin+'/verify-email?verified=1'})}));
+        // Framework Request wrappers are not native Worker Request instances.
+        const authHeaders=new Headers(request.headers);authHeaders.delete('content-length');
+        const response=await auth.handler(new Request(request.url,{method:request.method,headers:authHeaders,body:JSON.stringify({...authBody,callbackURL:origin+'/verify-email?verified=1'})}));
         if(registration&&!existingRole&&!previousUser) {
           const createdUser=await database.prepare('SELECT id,email,name FROM hsc_auth_user WHERE lower(email)=?').bind(email).first<{id:string;email:string;name:string}>();
           if(createdUser){
