@@ -8,9 +8,10 @@ import {AccessError} from './member-access';
 import type {Role} from './member-access';
 import {recordRegistration,registrationEligibility} from './registration';
 import type {VerificationDelivery} from './verification-mail';
+import type {PilotRegistration} from './pilot-registration';
 
 export const productionOrigin = 'https://hsc-coach-roster.sherrylikeke.chatgpt.site';
-export function createPasswordAuth(database: D1Database, secret: string, origin = productionOrigin, existingMembership?: (request:Request,email:string)=>Promise<Role|null>, delivery:VerificationDelivery={enabled:false}) {
+export function createPasswordAuth(database: D1Database, secret: string, origin = productionOrigin, existingMembership?: (request:Request,email:string)=>Promise<Role|null>, delivery:VerificationDelivery={enabled:false}, pilotRegistration?: (request:Request,email:string)=>Promise<PilotRegistration|null>) {
   const local = origin === 'http://127.0.0.1:5173' || origin === 'http://localhost:5173';
   if (!secret || secret.length < 32) throw new Error('Password authentication is not configured');
   const schema = {user:authUser, session:authSession, account:authAccount, verification:authVerification};
@@ -47,7 +48,10 @@ export function createPasswordAuth(database: D1Database, secret: string, origin 
   });
   return {...auth,handler:async(request:Request)=>{
     const pathname=new URL(request.url).pathname.replace(/\/$/,'');
-    if(request.method==='GET'&&pathname==='/api/auth/config')return Response.json({emailVerificationRequired:true,deliveryConfigured:delivery.enabled},{headers:{'Cache-Control':'no-store'}});
+    if(request.method==='GET'&&pathname==='/api/auth/config'){
+      const pilot=!delivery.enabled&&pilotRegistration?await pilotRegistration(request,''):null;
+      return Response.json({emailVerificationRequired:!pilot,deliveryConfigured:delivery.enabled,pilotRegistrationAllowed:!!pilot,pilotRole:pilot?.role||null},{headers:{'Cache-Control':'no-store'}});
+    }
     if(request.method==='POST'&&(request.headers.get('origin')!==origin||request.headers.get('sec-fetch-site')==='cross-site'))return Response.json({message:'Invalid request origin.'},{status:403});
     if(request.method==='POST'&&!request.headers.get('content-type')?.startsWith('application/json'))return Response.json({message:'Use application/json.'},{status:415});
     if(request.method==='POST'&&pathname==='/api/auth/send-verification-email'&&!delivery.enabled)return Response.json({message:'Email verification is awaiting mail service setup. Existing accounts can still sign in.'},{status:503});
@@ -59,11 +63,13 @@ export function createPasswordAuth(database: D1Database, secret: string, origin 
         const body=JSON.parse(raw) as Record<string,unknown>;
         if(!body||typeof body!=='object'||Array.isArray(body))return Response.json({message:'Invalid registration request.'},{status:400});
         const email=typeof body.email==='string'?body.email.trim().toLowerCase():'';
+        const pilot=!delivery.enabled&&pilotRegistration?await pilotRegistration(request,email):null;
         const existingRole=body.linkExisting===true&&existingMembership?await existingMembership(request,email):null;
         const registration=existingRole==='admin'?null:await registrationEligibility(database,body,request.headers.get('cf-connecting-ip')||'unknown');
+        if(pilot&&registration?.role!==pilot.role)return Response.json({message:'Use the role assigned to your pilot invitation.'},{status:403});
         if(existingRole&&existingRole!=='admin'&&existingRole!==registration?.role)return Response.json({message:'The selected role must match your verified membership.'},{status:403});
         if(!existingRole&&await database.prepare('SELECT id FROM hsc_members WHERE lower(email)=?').bind(email).first())return Response.json({message:'An account already uses this email. Sign in or contact the club administrator. Accounts are never merged by email alone.'},{status:409});
-        if(!delivery.enabled&&existingRole!=='admin')return Response.json({message:'New accounts require email verification. Mail service setup is pending; please try again after setup. Existing accounts can still sign in.'},{status:503});
+        if(!delivery.enabled&&!pilot&&existingRole!=='admin')return Response.json({message:'New accounts require email verification. Mail service setup is pending; please try again after setup. Existing accounts can still sign in.'},{status:503});
         if(body.callbackURL&&body.callbackURL!==origin+'/verify-email?verified=1')return Response.json({message:'Invalid verification return URL.'},{status:400});
         const previousUser=await database.prepare('SELECT id FROM hsc_auth_user WHERE lower(email)=?').bind(email).first();
         const response=await auth.handler(new Request(request,{body:JSON.stringify({...body,callbackURL:origin+'/verify-email?verified=1'})}));

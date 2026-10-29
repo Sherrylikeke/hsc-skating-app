@@ -6,10 +6,11 @@ import {env} from 'cloudflare:workers';
 import {createPasswordAuth, productionOrigin} from './password-auth';
 import {verificationDelivery} from './verification-mail';
 import type {MailEnvironment} from './verification-mail';
+import {pilotRegistrationFor} from './pilot-registration';
 
 export const ownerEmail = 'sherrylikeke@gmail.com';
 export function passwordAuth(request: Request) {
-  const runtime = env as unknown as MailEnvironment & {BETTER_AUTH_SECRET?:string};
+  const runtime = env as unknown as MailEnvironment & {BETTER_AUTH_SECRET?:string;HSC_PILOT_REGISTRATIONS?:string};
   if (!runtime.BETTER_AUTH_SECRET) return null;
   const url = new URL(request.url);
   const origin = ['http://127.0.0.1:5173','http://localhost:5173'].includes(url.origin) ? url.origin : productionOrigin;
@@ -17,7 +18,7 @@ export function passwordAuth(request: Request) {
     const identity=await getChatGPTUser();
     if(!identity||identity.email.toLowerCase()!==email)return null;
     try {const member=await actor(db(),identity,incoming);return member.role;}catch{return null;}
-  },verificationDelivery(runtime));
+  },verificationDelivery(runtime),async(_request,email)=>pilotRegistrationFor(runtime.HSC_PILOT_REGISTRATIONS,await getChatGPTUser(),email));
 }
 export async function requestIdentity(request: Request) {
   const auth = passwordAuth(request);

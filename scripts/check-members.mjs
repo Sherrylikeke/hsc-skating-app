@@ -53,7 +53,7 @@ registerHooks({
     }
   },
   load(url, context, next) {
-    if (url === 'test-stub:cloudflare:workers') return {format: 'module', source: 'export const env={get DB(){return globalThis.hscTestDatabase},get BETTER_AUTH_SECRET(){return globalThis.hscTestAuthSecret}};', shortCircuit: true};
+    if (url === 'test-stub:cloudflare:workers') return {format: 'module', source: 'export const env={get DB(){return globalThis.hscTestDatabase},get BETTER_AUTH_SECRET(){return globalThis.hscTestAuthSecret},get HSC_PILOT_REGISTRATIONS(){return globalThis.hscTestPilotConfiguration}};', shortCircuit: true};
     if (url === 'test-stub:next/headers') return {format: 'module', source: 'export async function headers(){return globalThis.hscTestHeaders}', shortCircuit: true};
     if (url === 'test-stub:next/navigation') return {format: 'module', source: 'export function redirect(path){throw new Error(path)}', shortCircuit: true};
     if (url.startsWith('file:') && url.endsWith('.json')) return {format: 'module', source: 'export default ' + fs.readFileSync(new URL(url), 'utf8'), shortCircuit: true};
@@ -638,6 +638,59 @@ assert.equal((await call(users.owner,'reminders')).value.plans.length,0);
 check('reminders enforce 60-minute arrival, correct Toronto DST, skip uncertain groups, scope personal rules, deduplicate, reschedule and cancel disabled rules');
 assert.equal(database.database.prepare("SELECT coach FROM coach_assignments WHERE skater_id='SK-A'").get().coach, 'Jen Jackson/Bryce Davidson');
 assert.equal(database.database.prepare("SELECT note FROM coach_plans WHERE id='legacy-plan'").get().note, 'keep this note');
+const {pilotRegistrationFor}=await import('../lib/pilot-registration.ts');
+const {passwordAuth:runtimePasswordAuth}=await import('../lib/member-runtime.ts');
+const pilotEmail='pilot-parent@example.test',pilotConfiguration=JSON.stringify([{email:pilotEmail,role:'parent'}]);
+const pilotPlatformIdentity={userId:'pilot-platform',email:pilotEmail,displayName:'Pilot parent'};
+assert.equal(pilotRegistrationFor(pilotConfiguration,null,pilotEmail),null);
+assert.equal(pilotRegistrationFor(pilotConfiguration,{...pilotPlatformIdentity,provider:'password'},pilotEmail),null);
+assert.equal(pilotRegistrationFor(pilotConfiguration,pilotPlatformIdentity,'another@example.test'),null);
+assert.equal(pilotRegistrationFor('{bad',pilotPlatformIdentity,pilotEmail),null);
+assert.equal(pilotRegistrationFor(JSON.stringify([{email:pilotEmail,role:'admin'}]),pilotPlatformIdentity,pilotEmail),null);
+assert.equal(pilotRegistrationFor(JSON.stringify([{email:pilotEmail,role:'parent'},{email:pilotEmail,role:'coach'}]),pilotPlatformIdentity,pilotEmail),null);
+assert.equal(pilotRegistrationFor(pilotConfiguration,{...pilotPlatformIdentity,email:'PILOT-PARENT@EXAMPLE.TEST'},pilotEmail).role,'parent');
+check('pilot registration is limited to one configured role and the trusted site identity email; password sessions, other emails, malformed lists and admin grants cannot bypass it');
+globalThis.hscTestAuthSecret='isolated-tests-only-secret-0123456789-abcdef';
+globalThis.hscTestPilotConfiguration=pilotConfiguration;
+globalThis.hscTestHeaders=new Headers();
+const pilotAuth=runtimePasswordAuth(authRequest('config',{}));
+const pilotGetConfig=()=>pilotAuth.handler(new Request('http://127.0.0.1:5173/api/auth/config')).then(response=>response.json());
+assert.equal((await pilotGetConfig()).pilotRegistrationAllowed,false);
+const pilotBody={...registrationBody,email:pilotEmail,username:'pilot.parent',role:'parent',skaterName:'Test Alpha',emailVerified:true};
+const forbiddenPilot=await pilotAuth.handler(authRequest('sign-up/email',pilotBody,{'cf-connecting-ip':'192.0.2.201','oai-authenticated-user-email':pilotEmail,'oai-authenticated-user-id':'forged'}));
+assert.equal(forbiddenPilot.status,503);
+assert.equal(database.database.prepare('SELECT id FROM hsc_auth_user WHERE email=?').get(pilotEmail),undefined);
+globalThis.hscTestHeaders=new Headers({'oai-authenticated-user-email':pilotEmail,'oai-authenticated-user-id':'pilot-platform'});
+const pilotConfig=await pilotGetConfig();assert.equal(pilotConfig.pilotRegistrationAllowed,true);assert.equal(pilotConfig.emailVerificationRequired,false);assert.equal(pilotConfig.pilotRole,'parent');
+assert.equal((await pilotAuth.handler(authRequest('sign-up/email',{...pilotBody,role:'coach'},{'cf-connecting-ip':'192.0.2.202'}))).status,403);
+assert.equal((await pilotAuth.handler(authRequest('sign-up/email',{...pilotBody,email:'other-pilot@example.test'},{'cf-connecting-ip':'192.0.2.203'}))).status,503);
+assert.equal((await pilotAuth.handler(authRequest('sign-up/email',pilotBody,{origin:'https://untrusted.example.test','cf-connecting-ip':'192.0.2.204'}))).status,403);
+const pilotFetch=globalThis.fetch;let pilotExternalCalls=0;
+try{
+  globalThis.fetch=async()=>{pilotExternalCalls++;throw new Error('Pilot must not send email');};
+  const pilotCreated=await pilotAuth.handler(authRequest('sign-up/email',pilotBody,{'cf-connecting-ip':'192.0.2.205'}));
+  assert.equal(pilotCreated.status,200,await pilotCreated.clone().text());const pilotUser=(await pilotCreated.json()).user;
+  assert.equal(pilotUser.emailVerified,false);
+  assert.equal(database.database.prepare('SELECT email_verified FROM hsc_auth_user WHERE id=?').get(pilotUser.id).email_verified,0);
+  const pilotStoredPassword=database.database.prepare('SELECT password FROM hsc_auth_account WHERE user_id=?').get(pilotUser.id).password;assert.notEqual(pilotStoredPassword,testPassword);
+  const pilotLogin=await pilotAuth.handler(authRequest('sign-in/email',{email:pilotEmail,password:testPassword},{'cf-connecting-ip':'192.0.2.206'}));assert.equal(pilotLogin.status,200);
+  assert.equal((await pilotAuth.handler(authRequest('sign-in/username',{username:'pilot.parent',password:testPassword},{'cf-connecting-ip':'192.0.2.207'}))).status,200);
+  const pilotSession=await pilotAuth.api.getSession({headers:new Headers({authorization:'Bearer '+pilotLogin.headers.get('set-auth-token')})});
+  const pilotMemberIdentity={userId:'password:'+pilotUser.id,email:pilotEmail,displayName:'Pilot',provider:'password',authToken:pilotSession.session.token,authVerified:false,emailVerificationRequired:false};
+  const pilotContext={database,identity:pilotMemberIdentity,candidates,ownerEmail};
+  await memberRequest(pilotContext,request(null,'session',{role:'admin'}));
+  const pilotMe=await memberRequest(pilotContext,request(null,'me')).then(response=>response.json());
+  assert.equal(pilotMe.member.status,'club-viewer');assert.equal(pilotMe.member.role,null);assert.equal(pilotMe.member.requested_role,'parent');assert.deepEqual(pilotMe.skaterIds,[]);
+  assert.equal((await memberRequest(pilotContext,request(null,'admin'))).status,403);
+  assert.equal((await memberRequest(pilotContext,request(null,'requirement',{title:'not allowed',body:'no',skaterIds:['SK-A']}))).status,403);
+  assert.equal(database.database.prepare('SELECT count(*) AS count FROM hsc_relations WHERE member_id=?').get(pilotMe.member.id).count,0);
+  assert.equal((await pilotAuth.handler(authRequest('send-verification-email',{email:pilotEmail},{'cf-connecting-ip':'192.0.2.208'}))).status,503);
+  assert.equal(pilotExternalCalls,0);
+  globalThis.hscTestPilotConfiguration=undefined;
+  assert.equal((await pilotGetConfig()).pilotRegistrationAllowed,false);
+  assert.equal((await pilotAuth.handler(authRequest('sign-up/email',{...pilotBody,email:'other-pilot@example.test',username:'other.pilot'},{'cf-connecting-ip':'192.0.2.209'}))).status,503);
+  check('invited users create their own hashed-password accounts and sign in by email or username without HSC verification mail; email stays unverified, private roles remain blocked and closing the pilot restores the registration gate');
+}finally{globalThis.fetch=pilotFetch;globalThis.hscTestHeaders=new Headers();globalThis.hscTestPilotConfiguration=undefined;globalThis.hscTestAuthSecret=undefined;}
 const result = {passed: checks.length, checks, migrations, fixtureOnly: true, externalMessagesSent: 0, legacyDataPreserved: true};
 fs.mkdirSync('work', {recursive: true});
 fs.writeFileSync('work/phase2-test-results.json', JSON.stringify(result, null, 2));

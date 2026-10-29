@@ -1,8 +1,16 @@
 # Email verification setup
 
-New self-service accounts require a listed skater name and a verified email address. They receive no session until verification succeeds and they sign in. The verification flow uses Better Auth signed links with a one-hour expiry and a rate-limited resend endpoint. Matching a name, choosing homepage skaters and verifying an email do not grant membership roles, private notes, messages or administrator access.
+Ordinary self-service accounts require a listed skater name and a verified email address. They receive no session until verification succeeds and they sign in. The verification flow uses Better Auth signed links with a one-hour expiry and a rate-limited resend endpoint. Matching a name, choosing homepage skaters and verifying an email do not grant membership roles, private notes, messages or administrator access.
 
-The mail adapter is prepared for Resend's HTTPS API. No provider account, domain, payment or real delivery has been configured or performed. Until setup is complete, new self-service registration returns a clear setup-pending response before creating an account. Existing accounts retain sign-in, and the existing owner can continue using their current administrator session and verified identity. Existing administrator credential linking remains available. No existing user is marked verified by deployment.
+The mail adapter uses Resend's HTTPS API. The account and secret were configured on 2026-10-27, and one authorized self-addressed test was reported Delivered; a production sender domain is still pending. Until sender setup is complete, ordinary new self-service registration returns a clear setup-pending response before creating an account. Existing accounts retain sign-in, and the existing owner can continue using their current administrator session and verified identity. Existing administrator credential linking remains available. No existing user is marked verified by deployment.
+
+## Invited pilot registration (2026-10-29)
+
+The user explicitly authorized self-registration without HSC email verification for a named pilot list. Configure `HSC_PILOT_REGISTRATIONS` as a Sites secret containing an array of `{email,role}` entries; accepted roles are parent, coach and skater. Never put the real list in source or client code. This exception applies only while mail delivery is disabled and only when the requested email equals the trusted signed-in Sites identity email and uniquely matches an entry. An email in the submitted form or request headers is not sufficient. Keep the Site's external visitor list aligned with the named pilot list; do not make the Site public.
+
+Invited users choose their own username and password and still provide a listed skater name. Registration creates a `club-viewer` with the configured requested role, no private role or relationships, and `email_verified=false`. The web form signs in after successful creation instead of showing the email-verification panel. Existing administrator linking is preserved. Removing the runtime list closes this registration exception; existing accounts remain subject to normal account/session and Site access controls. Turning on real verification later requires these unverified pilot accounts to verify before ordinary sign-in.
+
+The isolated core regression covers the actual runtime callback, email and username login, no outgoing requests, unchanged unverified status, role mismatch, cross-site requests, unauthenticated/direct-header spoof attempts, different email addresses and removal of the list.
 
 ## User actions before activation
 

@@ -557,5 +557,6 @@
   "操作暂未完成，请重试": "The operation could not be completed. Please retry.",
   "已有待审核申请，请等待管理员处理": "An application is already awaiting review",
   "邀请无效、已使用、已过期，或邀请邮箱与登录邮箱不符": "The invitation is invalid, used, expired, or bound to a different email",
-  "操作过于频繁，请稍后重试": "Too many attempts. Please retry later."
+  "操作过于频繁，请稍后重试": "Too many attempts. Please retry later.",
+  "请使用内测邀请指定的身份": "Use the role assigned to your pilot invitation."
 }
