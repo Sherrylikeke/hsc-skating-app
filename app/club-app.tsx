@@ -12,7 +12,8 @@ import HomeSkaters from './home-skaters';
 import OfficialSourceReference from './official-source-reference';
 import {checkOfficialSources} from '../lib/official-sync-client';
 import {filterHomeSchedule} from '../lib/home-schedule';
-import {filterCoachSchedule} from '../lib/coach-schedule';
+import {filterCoachSchedule,orderCoachSchedule} from '../lib/coach-schedule';
+import CoachDailySchedule from './coach-daily-schedule';
 import type {HomeScope} from '../lib/home-schedule';
 import type {Member} from '../lib/member-access';
 type View='home'|'skaters'|'events'|'personal'|'coach';
@@ -79,7 +80,7 @@ export default function ClubApp(){
   const allSchedule=useMemo(()=>data?scheduleRows(data.events.filter(event=>event.end>=today),data.skaters):[],[data,today]);
   const futureEvents=data?.events.filter(event=>event.end>=today)||[];
   const coaches=useMemo(()=>data?[...new Set(data.skaters.flatMap(row=>splitCoaches(row.coach)))].sort():[],[data]);
-  const filteredSchedule=filterCoachSchedule(allSchedule,{event:coachEventFilter,coach:coachFilter,date:dateFilter,assignedOnly:onlyAssigned});
+  const filteredSchedule=orderCoachSchedule(filterCoachSchedule(allSchedule,{event:coachEventFilter,coach:coachFilter,date:dateFilter,assignedOnly:onlyAssigned}));
   const conflicts=useMemo(()=>possibleConflicts(allSchedule),[allSchedule]);
   const personalSchedule=filterHomeSchedule(allSchedule,data?.ownSkaterIds||[],personal);
   const orphanPlans=data?.plans.filter(plan=>(!coachEventFilter||plan.eventId===coachEventFilter)&&data.events.some(event=>event.id===plan.eventId&&event.end>=today)&&!allSchedule.some(row=>row.eventId===plan.eventId&&row.skaterId===plan.skaterId&&row.slotKey===plan.slotKey))||[];
@@ -122,7 +123,7 @@ export default function ClubApp(){
               </div>
             </div>
             {filteredSchedule.some(row=>conflicts.has(row.id))&&<details className="club-conflict-notice"><summary><AlertCircle size={17}/>{text('Possible coach overlaps','可能有教练时间重叠')}<ChevronDown size={15}/></summary><p>{translate("检测到同一教练的组别时段重叠。个人时间尚未公布，这些仅为可能冲突，请结合官方出场顺序核对。")}</p></details>}
-            <section className="club-panel"><div className="club-panel-heading"><h2>{translate("教练汇总赛程")}</h2><span>{filteredSchedule.length} {translate(" 项 · ")}{new Set(filteredSchedule.map(row=>row.skaterId)).size} {translate(" 位选手")}</span></div>{renderSchedule(filteredSchedule)}</section>
+            <section className="club-panel"><div className="club-panel-heading"><h2>{text('Coach daily schedule','教练每日综合赛程')}</h2><span>{filteredSchedule.length} {translate(" 项 · ")}{new Set(filteredSchedule.map(row=>row.skaterId)).size} {translate(" 位选手")}</span></div><CoachDailySchedule rows={filteredSchedule} conflicts={conflicts} onSkater={id=>navigate('skaters',id)} renderDetails={row=>renderSchedule([row])}/></section>
             {orphanPlans.length>0&&<section className="club-panel"><div className="club-panel-heading"><h2>{translate("需要重新核对的教练安排")}</h2><span className="club-tag amber">{translate("官方类别发生变化，原安排仍保留")}</span></div><div className="club-table-wrap"><table className="club-table"><thead><tr><th>{translate("选手")}</th><th>{translate("比赛")}</th><th>{translate("原集合时间")}</th><th>{translate("已保存备注")}</th></tr></thead><tbody>{orphanPlans.map(plan=><tr key={plan.id}><td>{data.skaters.find(skater=>skater.id===plan.skaterId)?.name}</td><td><button className="club-text-button" onClick={()=>navigate('events',plan.eventId)}>{data.events.find(event=>event.id===plan.eventId)?.name}</button></td><td>{plan.meetingTime.replace('T',' ')||translate("未填写")}</td><td>{plan.note||translate("未填写")}</td></tr>)}</tbody></table></div></section>}
             <section className="club-panel club-assignment-summary"><div className="club-panel-heading"><h2>{translate("教练分配总览")}</h2><a href="/coaches" className="club-source">{translate("批量维护教练")}<ArrowUpRight size={13}/></a></div><div className="club-assignment-chips">{coaches.map(coach=><button key={coach} onClick={()=>setCoachFilter(coach)}>{coach}<b>{data.skaters.filter(skater=>splitCoaches(skater.coach).includes(coach)).length} {translate(" 位")}</b></button>)}</div></section>
           </>}

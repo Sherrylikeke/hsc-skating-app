@@ -1,0 +1,50 @@
+.coach-daily-legend{margin:0;padding:12px 20px;color:#52647b;font-size:12px;line-height:1.6;border-bottom:1px solid #dce5ef}
+.coach-day+.coach-day{border-top:3px solid #d8e2ee}
+.coach-day-header{display:flex;align-items:center;justify-content:space-between;gap:10px 18px;flex-wrap:wrap;padding:16px 20px;background:#edf3fb}
+.coach-day-header h3{margin:0;color:#193e69;font-size:17px;font-weight:700}
+.coach-day-counts{display:flex;gap:8px 16px;align-items:center;flex-wrap:wrap;color:#385475;font-size:13px}
+.coach-day-counts strong{font-size:17px;color:#193e69}
+.coach-day-pending{color:#77551b;border-radius:5px;background:#fff4d9;padding:3px 7px;font-size:12px}
+.coach-day-context{margin:0;padding:10px 20px;color:#52647b;background:#f8fafd;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+.coach-day-table{width:100%;table-layout:fixed;border-collapse:collapse;text-align:left;color:#304a68}
+.coach-day-table th{padding:10px 14px;background:#fafbfd;border-block:1px solid #e1e7ef;font-size:12px;font-weight:600;color:#52647b}
+.coach-day-table td{padding:12px 14px;vertical-align:top;border-bottom:1px solid #e1e7ef;font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.coach-day-table th.coach-day-time{width:150px}
+.coach-day-table th.coach-day-rink{width:150px}
+.coach-day-table th.coach-day-action{width:48px;padding:0}
+.coach-day-time strong{font-size:16px;color:#193e69;font-variant-numeric:tabular-nums}
+.coach-day-end{font-variant-numeric:tabular-nums}
+.coach-day-time small{display:block;font-size:11px;margin-top:5px;line-height:1.4}
+.coach-day-individual{color:#315d8e}
+.coach-day-time .coach-day-tbc,.coach-day-overlap{color:#77551b}
+.coach-day-skater>button{display:block;background:none;border:0;padding:0;min-height:28px;color:#193e69;text-align:left;font-size:15px;font-weight:600;line-height:1.4}
+.coach-day-category{display:block;margin-top:2px;color:#385475;font-size:13px}
+.coach-day-coach,.coach-day-event{display:block;color:#52647b;font-size:12px;margin-top:2px}
+.coach-day-table td.coach-day-action{padding:5px 0}
+.coach-day-action button{display:flex;align-items:center;justify-content:center;min-width:40px;min-height:44px;padding:0;background:none;border:0;border-radius:6px;color:#315d8e}
+.coach-day-action button[aria-expanded=true] svg{transform:rotate(180deg)}
+.coach-day-action button:focus-visible,.coach-day-skater>button:focus-visible{outline:2px solid #315d8e;outline-offset:1px}
+.coach-day-row.is-expanded{background:#f3f7fd}
+.coach-day-table .coach-day-details>td{padding:12px;background:#f3f7fd}
+.coach-day-details[hidden]{display:none}
+.coach-day-details .club-table-wrap{background:#fff;border:1px solid #dbe5f0;border-radius:8px}
+@media(max-width:720px){
+  .coach-daily-legend{padding:12px 14px;font-size:12px}
+  .coach-day-header{padding:14px;gap:7px 12px}
+  .coach-day-header h3{font-size:16px}
+  .coach-day-counts{font-size:12px;gap:6px 12px}
+  .coach-day-counts strong{font-size:15px}
+  .coach-day-context{padding:8px 12px;font-size:11px}
+  .coach-day-table th{padding:9px 5px;font-size:11px}
+  .coach-day-table td{padding:10px 5px;font-size:12px}
+  .coach-day-table th.coach-day-time{width:70px;padding-left:10px}
+  .coach-day-table th.coach-day-rink{width:62px}
+  .coach-day-table th.coach-day-action{width:34px}
+  .coach-day-table td.coach-day-time{padding-left:10px}
+  .coach-day-time strong{font-size:14px}
+  .coach-day-end{display:block;font-size:12px}
+  .coach-day-skater>button{min-height:28px;font-size:14px;line-height:1.4}
+  .coach-day-category,.coach-day-coach,.coach-day-event{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:11px;line-height:1.5}
+  .coach-day-action button{min-width:34px;min-height:44px}
+  .coach-day-table .coach-day-details>td{padding:6px}
+}

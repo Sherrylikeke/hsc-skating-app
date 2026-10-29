@@ -1,3 +1,4 @@
+@import "./coach-daily-schedule.css";
 .club-nav-short{display:none}
 .club-filter-toggle{display:none!important}
 .club-filter-field{display:flex;flex-direction:column;gap:6px;min-width:0;font-size:12px;color:#435971}
