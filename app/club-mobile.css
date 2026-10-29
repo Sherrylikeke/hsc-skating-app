@@ -1,0 +1,80 @@
+.club-nav-short{display:none}
+.club-filter-toggle{display:none!important}
+.club-filter-field{display:flex;flex-direction:column;gap:6px;min-width:0;font-size:12px;color:#435971}
+.club-filter-field select,.club-filter-field input{min-height:42px;min-width:0;padding:10px;border:1px solid #c6d2df;border-radius:8px;background:#fff;color:#263e59;font:inherit}
+.club-filter-fields{display:flex;align-items:flex-end;flex-wrap:wrap;gap:12px}
+.club-filter-actions{display:flex;align-items:center;gap:8px}
+.club-filter-actions button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:42px;padding:10px 12px;border:1px solid #c6d2df;border-radius:8px;background:white;color:#294c72;font-size:12px}
+.club-schedule-help{margin:0 0 16px;font-size:12px;color:#435971}
+.club-schedule-help summary{cursor:pointer;padding:8px 0}
+.club-schedule-help p{margin:4px 0 10px;line-height:1.6}
+.club-conflict-notice{margin-bottom:16px;border:1px solid #e6d2a5;border-radius:10px;background:#fff8e9;color:#77551b;font-size:13px}
+.club-conflict-notice summary{display:flex;align-items:center;gap:8px;min-height:44px;padding:10px 12px;cursor:pointer;list-style:none}
+.club-conflict-notice summary::-webkit-details-marker{display:none}
+.club-conflict-notice summary svg{flex-shrink:0}
+.club-conflict-notice summary svg:last-child{margin-left:auto}
+.club-conflict-notice[open] summary svg:last-child{transform:rotate(180deg)}
+.club-conflict-notice p{margin:0;padding:0 12px 12px;line-height:1.65}
+
+@media(max-width:720px){
+  .club-app{--muted:#52647b;color:#21364f}
+  .club-main{padding:18px 14px 20px!important}
+  .club-body{padding-bottom:calc(88px + env(safe-area-inset-bottom))}
+  .club-sidebar{height:calc(68px + env(safe-area-inset-bottom));padding:0 4px env(safe-area-inset-bottom);background:#fff;box-shadow:0 -3px 14px #1837550a}
+  .club-sidebar nav{height:68px;width:100%;gap:2px}
+  .club-sidebar nav button{flex:1 1 0;min-width:0;min-height:56px;margin:5px 0;padding:6px 2px;gap:4px;border-radius:10px;font-size:11px;color:#52647b}
+  .club-sidebar nav button svg{width:22px;height:22px;flex-shrink:0}
+  .club-sidebar nav button .club-nav-full{display:none}
+  .club-sidebar nav button .club-nav-short{display:block;white-space:nowrap;font-weight:600}
+  .club-sidebar nav button.active{background:#eaf1fc;color:#214f88}
+  .club-sidebar nav button:focus-visible{outline:2px solid #25568b;outline-offset:-2px}
+  .club-coach-toolbar{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;margin-bottom:14px}
+  .club-coach-toolbar .club-filter-field{width:100%;font-size:13px;font-weight:600}
+  .club-coach-toolbar select,.club-coach-toolbar input[type=date]{width:100%;max-width:none;min-height:46px;min-width:0;box-sizing:border-box;padding:10px 11px;font-size:16px;font-weight:400;color-scheme:light}
+  .club-coach-toolbar>.club-filter-toggle{display:flex!important;align-items:center;gap:8px;width:100%;min-height:44px;margin:0;padding:10px 12px;border-radius:9px;font-size:14px;color:#294c72}
+  .club-filter-toggle>svg:last-child{margin-left:auto}
+  .club-filter-toggle[aria-expanded=true]>svg:last-child{transform:rotate(180deg)}
+  .club-filter-count{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#214f88;color:white;font-size:12px}
+  .club-filter-fields{display:none}
+  .club-filter-fields.is-open{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;padding:14px;border:1px solid #d5dfeb;border-radius:10px;background:#fff}
+  .club-filter-fields>.club-checkbox{grid-column:1/-1;min-height:44px;font-size:14px;color:#334f70}
+  .club-filter-fields .club-checkbox input{width:20px;height:20px}
+  .club-filter-actions{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+  .club-filter-actions button{min-height:44px;padding:8px;font-size:12px}
+  .club-filter-actions button:disabled{opacity:.55}
+  .club-schedule-help{font-size:12px;margin-bottom:10px}
+  .club-panel-heading{flex-wrap:wrap;gap:6px 12px;padding:16px}
+  .club-panel-heading h2{font-size:16px;color:#21364f}
+  .club-panel-heading>span:not(.club-tag){font-size:12px;color:#52647b}
+  .club-schedule-wrap{overflow:visible}
+  .club-schedule-table{display:block;width:100%;min-width:0;position:relative}
+  .club-schedule-table thead{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%)}
+  .club-schedule-table tbody{display:grid;gap:12px;padding:12px;background:#f3f6fa}
+  .club-schedule-table tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:'skater skater' 'time time' 'rink coach' 'plan plan' 'source source';gap:0 12px;min-width:0;padding:16px;border:1px solid #d4dfea;border-radius:12px;background:white}
+  .club-schedule-table td,.club-schedule-table td:first-child{display:block;min-width:0;width:auto;border:0;margin:0;padding:0;overflow-wrap:anywhere;font-size:14px;line-height:1.6;color:#304a68}
+  .club-schedule-table td small{margin-top:4px;font-size:12px;line-height:1.6;color:#52647b}
+  .club-schedule-table .club-session-skater{grid-area:skater;padding-bottom:12px}
+  .club-session-skater>.club-text-button{display:block;min-height:32px;text-align:left;font-size:18px;font-weight:700;color:#183d68}
+  .club-session-skater .club-detail-line{margin-top:3px;font-size:14px;line-height:1.5;color:#334f70}
+  .club-session-skater .club-order-label{margin-top:5px;font-size:12px;color:#435d7b}
+  .club-schedule-table .club-session-skater>.club-tiny-link{max-width:none;min-height:32px;margin-top:5px;padding:4px 0;font-size:12px;line-height:1.5;text-align:left;white-space:normal;color:#325e8f}
+  .club-schedule-table tbody tr td.club-session-time{grid-area:time;padding:12px 0;border-top:1px solid #e2e8f0}
+  .club-session-time .club-date{display:block;font-size:13px;color:#52647b}
+  .club-session-time .club-time{display:block;margin:2px 0 6px;font-size:20px;font-weight:700;line-height:1.4;color:#213f65}
+  .club-session-time .club-tag{font-size:11px;padding:4px 7px;color:#405d7f;background:#eef3f9}
+  .club-session-time .club-tag.amber{color:#77551b;background:#fff4d9}
+  .club-session-time .club-candidate-times{font-size:12px;color:#435d7b}
+  .club-candidate-times summary{min-height:36px;padding:7px 0;line-height:1.5}
+  .club-schedule-table .club-session-rink{grid-area:rink;padding:8px 0 12px}
+  .club-schedule-table .club-session-coach{grid-area:coach;padding:8px 0 12px}
+  .club-session-rink::before,.club-session-coach::before{content:attr(data-label);display:block;margin-bottom:4px;font-size:11px;color:#52647b}
+  .club-session-coach .club-coach-assigned{padding:0;background:none;font-size:13px;line-height:1.6;color:#304a68}
+  .club-schedule-table .club-session-plan{grid-area:plan;padding:10px 0;border-top:1px solid #e2e8f0}
+  .club-schedule-table .club-session-plan:empty{display:none}
+  .club-session-plan .club-note-text{margin-bottom:8px;color:#304a68}
+  .club-session-plan .club-note-button{min-height:44px;font-size:13px}
+  .club-schedule-table .club-session-source{grid-area:source;display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;padding-top:10px;border-top:1px solid #e2e8f0}
+  .club-session-source .club-source{min-height:36px;display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#325e8f}
+  .club-session-source .club-warning-text{width:100%;margin:0}
+  .club-schedule-table td .club-warning-text{color:#77551b}
+}
