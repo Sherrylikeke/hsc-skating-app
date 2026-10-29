@@ -8,7 +8,7 @@
 - 原私人仓库：https://github.com/Sherrylikeke/hsc-skating-app.git
 - Sites 项目：`appgprj_6ad76ca2dba481919ba883865cbd5a0d`。
 - 网页 `main` 优先；手机原生开发留在 `mobile/capacitor`，不因网页验收宣称 APK 同步完成。
-- 2026-10-29 已核验线上 V23 部署成功；运行源码提交 `3e7dfe1c43560b6b11559c9c9355bf8aed873c34`，运行配置 revision 5。其后仅更新此 Note 的文档提交不另部署，不能把文档提交误认为运行版本。此前 V21 运行源码为 `da6c427c2ecf7be7a92efab3fd954b3eff848b09`。
+- 2026-10-29 已核验线上 V24 部署成功；运行源码提交 `35fc81cd70bf21b1918fb3a2fbf858bb1f82bbe7`，运行配置 revision 5。其后仅更新此 Note 的文档提交不另部署，不能把文档提交误认为运行版本。此前 V21 运行源码为 `da6c427c2ecf7be7a92efab3fd954b3eff848b09`。
 - 网站外层已切换 public（access revision 4），公开登录/受邀注册入口；原 owner、4 位 external viewer、0 个组和 0 位额外编辑保留。仅指定四份邀请可免邮箱验证注册；匿名不能读取会员数据或写入。
 - 2026-10-25 首轮网页版只读测试已完成；2026-10-26 用户授权的开放前第一步已完成 API 诊断隔离和失配回归修复，V20 同范围私人发布，仍保留站主访问范围。
 
@@ -167,7 +167,7 @@
 - 用户实际提交“关联当前管理员账号”后返回 503。只读确认当次未生成该邮箱的密码账号或关联记录。线上请求标识 56bddd5ce53dda16c236f20e2c1e7408，POST /api/auth/sign-up/email；不保存请求正文或密码。
 - 使用已构建的实际 Vinext 路由、Cloudflare workerd、临时 D1 与虚构身份复现相同 503，定位原生 Request 构造器收到框架包装对象时报 TypeError: Invalid URL: [object Request]。之前 Node 内存数据库回归未覆盖该运行时差异；受邀注册同样经过此处。
 - 转交 Better Auth 时改用明确 URL、方法、复制的请求头及新的 JSON 正文，删除已失效的 content-length。身份、会话、Origin、邀请绑定和管理员关联校验不放宽；由本人设置密码，不代注册、不改生产数据库或配置。
-- 新增 scripts/check-owner-registration-worker.mjs，在生产构建后用临时 Worker 完整验证管理员注册、同身份关联、邮箱/用户名登录、原会员 ID/管理员角色保留，以及匿名拒绝、受邀家长注册与重复邀请拒绝。实际 Worker 回归已通过；核心权限/认证/提醒 25 组、Web TypeScript 和官方生产构建通过，未发送邮件。发布结果待本轮后续记录。
+- 新增 scripts/check-owner-registration-worker.mjs，在生产构建后用临时 Worker 完整验证管理员注册、同身份关联、邮箱/用户名登录、原会员 ID/管理员角色保留，以及匿名拒绝、受邀家长注册与重复邀请拒绝。实际 Worker 回归已通过；核心权限/认证/提醒 25 组、Web TypeScript 和官方生产构建通过，未发送邮件。V24 部署 appgdep_6ae38999933481918c76ab424f32d8d3 于 2026-10-29 14:00 Toronto 返回 succeeded，env_set_revision=5；网站 public 及四份邀请配置不变。上线后匿名首页与 auth/config 200、club 401，正常入口和数据限制保留。源码已正常快进推送原私人 GitHub main，原本地工作区同提交，七个既有 PDF 删除项保留未提交。用户须刷新后本人重新提交关联表，生产账号实际关联和手机登录仍待本人验收；不以隔离 Worker 回归冒充该账号已成功注册。
 
 ## 更新规则
 
