@@ -8,7 +8,7 @@
 - 原私人仓库：https://github.com/Sherrylikeke/hsc-skating-app.git
 - Sites 项目：`appgprj_6ad76ca2dba481919ba883865cbd5a0d`。
 - 网页 `main` 优先；手机原生开发留在 `mobile/capacitor`，不因网页验收宣称 APK 同步完成。
-- 2026-10-29 已核验线上 V24 部署成功；运行源码提交 `35fc81cd70bf21b1918fb3a2fbf858bb1f82bbe7`，运行配置 revision 5。其后仅更新此 Note 的文档提交不另部署，不能把文档提交误认为运行版本。此前 V21 运行源码为 `da6c427c2ecf7be7a92efab3fd954b3eff848b09`。
+- 2026-10-29 已核验线上 V25 部署成功；运行源码提交 `544034c33a94295b95053b4fb70b238bb4d38096`，运行配置 revision 5。其后仅更新此 Note 的文档提交不另部署，不能把文档提交误认为运行版本。此前 V21 运行源码为 `da6c427c2ecf7be7a92efab3fd954b3eff848b09`。
 - 网站外层已切换 public（access revision 4），公开登录/受邀注册入口；原 owner、4 位 external viewer、0 个组和 0 位额外编辑保留。仅指定四份邀请可免邮箱验证注册；匿名不能读取会员数据或写入。
 - 2026-10-25 首轮网页版只读测试已完成；2026-10-26 用户授权的开放前第一步已完成 API 诊断隔离和失配回归修复，V20 同范围私人发布，仍保留站主访问范围。
 
@@ -174,7 +174,7 @@
 - 用户补充此前由手机网页自动提示安装。此前仅生成 APK 不能证明其原来的浏览器安装入口已更新；本轮明确区分浏览器管理的网页应用与 Android APK，继续在原网址支持手机浏览器及主屏幕入口。
 - 从手机分支 840d070 仅带入 app/club-app.tsx、app/club-mobile.css、app/layout.tsx 三份共享响应式界面文件，不把原生工程版本/构建路径并入网页主线。沿用手机已验证的卡片、短导航、折叠筛选和文字对比度；桌面保留表格。
 - 安装说明见 docs/mobile-web-install.md。原 manifest/start_url 保留，无离线 Service Worker，不强制浏览器弹安装提示，不公开上传 APK。原 public 外层、邀请规则、认证和私人权限不变。
-- Web TypeScript、教练筛选/CSV 8 组、语言检查与官方生产构建通过；在新构建上再次执行隔离 workerd，管理员关联、邮箱/用户名登录、匿名阻断及受邀注册/单次使用通过。源码同步和线上部署结果待本轮后续记录。继续不使用整机控制；真实手机视觉和安装菜单仍须用户本人验收。
+- Web TypeScript、教练筛选/CSV 8 组、语言检查与官方生产构建通过；在新构建上再次执行隔离 workerd，管理员关联、邮箱/用户名登录、匿名阻断及受邀注册/单次使用通过。V25 部署 appgdep_6ae39724148881918fea4a66f98d8a0b 于 2026-10-29 14:57 Toronto 返回 succeeded、env_set_revision=5；原 public 范围不变。原私人 GitHub main 与本地主线已正常快进同步，七个既有 PDF 删除项保留。匿名线上检查：首页 200、3 份样式资源均 200，手机卡片/短导航/折叠筛选规则存在；manifest 和图标 200，display=standalone、start_url=/，club 数据 API 401。检查记录在会话 outputs/mobile-web-http.json，不代表用户已完成安装或视觉验收。继续不使用整机控制；真实手机视觉和安装菜单仍须用户本人验收。
 
 ## 更新规则
 
