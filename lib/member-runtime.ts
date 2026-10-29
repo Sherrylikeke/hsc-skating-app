@@ -6,7 +6,7 @@ import {env} from 'cloudflare:workers';
 import {createPasswordAuth, productionOrigin} from './password-auth';
 import {verificationDelivery} from './verification-mail';
 import type {MailEnvironment} from './verification-mail';
-import {pilotRegistrationFor} from './pilot-registration';
+import {pilotInvitationFor} from './pilot-registration';
 
 export const ownerEmail = 'sherrylikeke@gmail.com';
 export function passwordAuth(request: Request) {
@@ -18,7 +18,7 @@ export function passwordAuth(request: Request) {
     const identity=await getChatGPTUser();
     if(!identity||identity.email.toLowerCase()!==email)return null;
     try {const member=await actor(db(),identity,incoming);return member.role;}catch{return null;}
-  },verificationDelivery(runtime),async(_request,email)=>pilotRegistrationFor(runtime.HSC_PILOT_REGISTRATIONS,await getChatGPTUser(),email));
+  },verificationDelivery(runtime),async(_request,email,token)=>pilotInvitationFor(runtime.HSC_PILOT_REGISTRATIONS,token,email));
 }
 export async function requestIdentity(request: Request) {
   const auth = passwordAuth(request);

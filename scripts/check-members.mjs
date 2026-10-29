@@ -638,40 +638,60 @@ assert.equal((await call(users.owner,'reminders')).value.plans.length,0);
 check('reminders enforce 60-minute arrival, correct Toronto DST, skip uncertain groups, scope personal rules, deduplicate, reschedule and cancel disabled rules');
 assert.equal(database.database.prepare("SELECT coach FROM coach_assignments WHERE skater_id='SK-A'").get().coach, 'Jen Jackson/Bryce Davidson');
 assert.equal(database.database.prepare("SELECT note FROM coach_plans WHERE id='legacy-plan'").get().note, 'keep this note');
-const {pilotRegistrationFor}=await import('../lib/pilot-registration.ts');
+const {pilotInvitationFor,pilotUsedKey}=await import('../lib/pilot-registration.ts');
+const {digest:pilotDigest}=await import('../lib/member-access.ts');
 const {passwordAuth:runtimePasswordAuth}=await import('../lib/member-runtime.ts');
-const pilotEmail='pilot-parent@example.test',pilotConfiguration=JSON.stringify([{email:pilotEmail,role:'parent'}]);
-const pilotPlatformIdentity={userId:'pilot-platform',email:pilotEmail,displayName:'Pilot parent'};
-assert.equal(pilotRegistrationFor(pilotConfiguration,null,pilotEmail),null);
-assert.equal(pilotRegistrationFor(pilotConfiguration,{...pilotPlatformIdentity,provider:'password'},pilotEmail),null);
-assert.equal(pilotRegistrationFor(pilotConfiguration,pilotPlatformIdentity,'another@example.test'),null);
-assert.equal(pilotRegistrationFor('{bad',pilotPlatformIdentity,pilotEmail),null);
-assert.equal(pilotRegistrationFor(JSON.stringify([{email:pilotEmail,role:'admin'}]),pilotPlatformIdentity,pilotEmail),null);
-assert.equal(pilotRegistrationFor(JSON.stringify([{email:pilotEmail,role:'parent'},{email:pilotEmail,role:'coach'}]),pilotPlatformIdentity,pilotEmail),null);
-assert.equal(pilotRegistrationFor(pilotConfiguration,{...pilotPlatformIdentity,email:'PILOT-PARENT@EXAMPLE.TEST'},pilotEmail).role,'parent');
-check('pilot registration is limited to one configured role and the trusted site identity email; password sessions, other emails, malformed lists and admin grants cannot bypass it');
+const pilotEmail='pilot-parent@example.test',pilotToken='a'.repeat(64),coachPilotToken='b'.repeat(64),expiredPilotToken='c'.repeat(64);
+const pilotEntry={email:pilotEmail,role:'parent',invitationHash:await pilotDigest(pilotToken),expiresAt:new Date(Date.now()+3600000).toISOString()};
+const coachPilotEntry={email:'pilot-coach@example.test',role:'coach',invitationHash:await pilotDigest(coachPilotToken),expiresAt:pilotEntry.expiresAt};
+const expiredPilotEntry={email:'expired-pilot@example.test',role:'parent',invitationHash:await pilotDigest(expiredPilotToken),expiresAt:new Date(Date.now()-1000).toISOString()};
+const pilotConfiguration=JSON.stringify([pilotEntry,coachPilotEntry,expiredPilotEntry]);
+assert.equal(await pilotInvitationFor(pilotConfiguration,''),null);
+assert.equal(await pilotInvitationFor(pilotConfiguration,'d'.repeat(64)),null);
+assert.equal(await pilotInvitationFor(pilotConfiguration,pilotToken,'another@example.test'),null);
+assert.equal(await pilotInvitationFor(pilotConfiguration,expiredPilotToken),null);
+assert.equal(await pilotInvitationFor('{bad',pilotToken),null);
+assert.equal(await pilotInvitationFor(JSON.stringify([{...pilotEntry,role:'admin'}]),pilotToken),null);
+assert.equal(await pilotInvitationFor(JSON.stringify([pilotEntry,{...pilotEntry,role:'coach'}]),pilotToken),null);
+assert.equal((await pilotInvitationFor(pilotConfiguration,pilotToken,'PILOT-PARENT@EXAMPLE.TEST')).role,'parent');
+check('public pilot links require an unexpired 256-bit token bound to one email and non-admin role; missing, wrong, expired, malformed and ambiguous grants are rejected');
 globalThis.hscTestAuthSecret='isolated-tests-only-secret-0123456789-abcdef';
 globalThis.hscTestPilotConfiguration=pilotConfiguration;
 globalThis.hscTestHeaders=new Headers();
 const pilotAuth=runtimePasswordAuth(authRequest('config',{}));
 const pilotGetConfig=()=>pilotAuth.handler(new Request('http://127.0.0.1:5173/api/auth/config')).then(response=>response.json());
-assert.equal((await pilotGetConfig()).pilotRegistrationAllowed,false);
+const pilotPublicConfig=await pilotGetConfig();assert.equal(pilotPublicConfig.pilotRegistrationAllowed,false);assert.ok(!JSON.stringify(pilotPublicConfig).includes(pilotEmail));
 const pilotBody={...registrationBody,email:pilotEmail,username:'pilot.parent',role:'parent',skaterName:'Test Alpha',emailVerified:true};
 const forbiddenPilot=await pilotAuth.handler(authRequest('sign-up/email',pilotBody,{'cf-connecting-ip':'192.0.2.201','oai-authenticated-user-email':pilotEmail,'oai-authenticated-user-id':'forged'}));
 assert.equal(forbiddenPilot.status,503);
+const undisclosedName=await pilotAuth.handler(authRequest('sign-up/email',{...pilotBody,skaterName:'Not on the club list'},{'cf-connecting-ip':'192.0.2.219'}));assert.equal(undisclosedName.status,503);assert.equal(await undisclosedName.text(),await forbiddenPilot.clone().text());
 assert.equal(database.database.prepare('SELECT id FROM hsc_auth_user WHERE email=?').get(pilotEmail),undefined);
-globalThis.hscTestHeaders=new Headers({'oai-authenticated-user-email':pilotEmail,'oai-authenticated-user-id':'pilot-platform'});
-const pilotConfig=await pilotGetConfig();assert.equal(pilotConfig.pilotRegistrationAllowed,true);assert.equal(pilotConfig.emailVerificationRequired,false);assert.equal(pilotConfig.pilotRole,'parent');
-assert.equal((await pilotAuth.handler(authRequest('sign-up/email',{...pilotBody,role:'coach'},{'cf-connecting-ip':'192.0.2.202'}))).status,403);
-assert.equal((await pilotAuth.handler(authRequest('sign-up/email',{...pilotBody,email:'other-pilot@example.test'},{'cf-connecting-ip':'192.0.2.203'}))).status,503);
-assert.equal((await pilotAuth.handler(authRequest('sign-up/email',pilotBody,{origin:'https://untrusted.example.test','cf-connecting-ip':'192.0.2.204'}))).status,403);
+const invitationRequest=(token,ip='192.0.2.210')=>authRequest('pilot-invitation',{token},{'cf-connecting-ip':ip});
+assert.equal((await pilotAuth.handler(invitationRequest('d'.repeat(64)))).status,403);
+assert.equal((await pilotAuth.handler(invitationRequest(expiredPilotToken))).status,403);
+assert.equal((await pilotAuth.handler(authRequest('pilot-invitation',{token:pilotToken},{origin:'https://untrusted.example.test'}))).status,403);
+assert.equal((await pilotAuth.handler(authRequest('pilot-invitation',{token:'a'.repeat(600)}))).status,413);
+const inviteInfo=await pilotAuth.handler(invitationRequest(pilotToken));assert.equal(inviteInfo.status,200);
+const pilotConfig=await inviteInfo.json();assert.equal(pilotConfig.pilotRegistrationAllowed,true);assert.equal(pilotConfig.emailVerificationRequired,false);assert.equal(pilotConfig.pilotRole,'parent');assert.equal(pilotConfig.email,pilotEmail);
+assert.ok(!JSON.stringify(pilotConfig).includes(pilotToken));assert.ok(!JSON.stringify(pilotConfig).includes(pilotEntry.invitationHash));
+assert.equal(database.database.prepare('SELECT value FROM app_meta WHERE key=?').get(pilotUsedKey(pilotEntry)),undefined);
+const invitedPilotBody={...pilotBody,pilotInvitation:pilotToken};
+assert.equal((await pilotAuth.handler(authRequest('sign-up/email',{...invitedPilotBody,role:'coach'},{'cf-connecting-ip':'192.0.2.202'}))).status,403);
+assert.equal((await pilotAuth.handler(authRequest('sign-up/email',{...invitedPilotBody,email:'other-pilot@example.test'},{'cf-connecting-ip':'192.0.2.203'}))).status,403);
+assert.equal((await pilotAuth.handler(authRequest('sign-up/email',invitedPilotBody,{origin:'https://untrusted.example.test','cf-connecting-ip':'192.0.2.204'}))).status,403);
+const shortPilotPassword=await pilotAuth.handler(authRequest('sign-up/email',{...invitedPilotBody,password:'short'},{'cf-connecting-ip':'192.0.2.211'}));assert.equal(shortPilotPassword.status,400);
+assert.equal(database.database.prepare('SELECT value FROM app_meta WHERE key=?').get(pilotUsedKey(pilotEntry)),undefined);
+check('anonymous invitation checks disclose only the token holder email/role, do not consume the link, enforce origin/size limits and do not allow email or role substitution');
 const pilotFetch=globalThis.fetch;let pilotExternalCalls=0;
 try{
   globalThis.fetch=async()=>{pilotExternalCalls++;throw new Error('Pilot must not send email');};
-  const pilotCreated=await pilotAuth.handler(authRequest('sign-up/email',pilotBody,{'cf-connecting-ip':'192.0.2.205'}));
-  assert.equal(pilotCreated.status,200,await pilotCreated.clone().text());const pilotUser=(await pilotCreated.json()).user;
+  const pilotCreated=await pilotAuth.handler(authRequest('sign-up/email',invitedPilotBody,{'cf-connecting-ip':'192.0.2.205'}));
+  assert.equal(pilotCreated.status,200,await pilotCreated.clone().text());assert.equal(pilotCreated.headers.get('X-HSC-Registration-Mode'),'pilot');const pilotUser=(await pilotCreated.json()).user;
   assert.equal(pilotUser.emailVerified,false);
   assert.equal(database.database.prepare('SELECT email_verified FROM hsc_auth_user WHERE id=?').get(pilotUser.id).email_verified,0);
+  const usedInvitation=database.database.prepare('SELECT value FROM app_meta WHERE key=?').get(pilotUsedKey(pilotEntry));assert.equal(JSON.parse(usedInvitation.value).userId,pilotUser.id);assert.ok(!usedInvitation.value.includes(pilotToken));
+  assert.equal((await pilotAuth.handler(invitationRequest(pilotToken))).status,409);
+  assert.equal((await pilotAuth.handler(authRequest('sign-up/email',{...invitedPilotBody,password:'Different-Pilot-Password-2026!'},{'cf-connecting-ip':'192.0.2.212'}))).status,409);
   const pilotStoredPassword=database.database.prepare('SELECT password FROM hsc_auth_account WHERE user_id=?').get(pilotUser.id).password;assert.notEqual(pilotStoredPassword,testPassword);
   const pilotLogin=await pilotAuth.handler(authRequest('sign-in/email',{email:pilotEmail,password:testPassword},{'cf-connecting-ip':'192.0.2.206'}));assert.equal(pilotLogin.status,200);
   assert.equal((await pilotAuth.handler(authRequest('sign-in/username',{username:'pilot.parent',password:testPassword},{'cf-connecting-ip':'192.0.2.207'}))).status,200);
@@ -686,11 +706,26 @@ try{
   assert.equal(database.database.prepare('SELECT count(*) AS count FROM hsc_relations WHERE member_id=?').get(pilotMe.member.id).count,0);
   assert.equal((await pilotAuth.handler(authRequest('send-verification-email',{email:pilotEmail},{'cf-connecting-ip':'192.0.2.208'}))).status,503);
   assert.equal(pilotExternalCalls,0);
+  const coachSignup=await pilotAuth.handler(authRequest('sign-up/email',{...pilotBody,email:coachPilotEntry.email,username:'pilot.coach',role:'coach',pilotInvitation:coachPilotToken},{'cf-connecting-ip':'192.0.2.213'}));assert.equal(coachSignup.status,200);
+  const coachUser=(await coachSignup.json()).user;const coachMember=database.database.prepare('SELECT role,requested_role,status FROM hsc_members WHERE id=?').get('password:'+coachUser.id);assert.equal(coachMember.role,null);assert.equal(coachMember.requested_role,'coach');assert.equal(coachMember.status,'club-viewer');
+  assert.equal(database.database.prepare('SELECT role FROM hsc_members WHERE id=?').get(users.owner.identity.userId).role,'admin');
   globalThis.hscTestPilotConfiguration=undefined;
-  assert.equal((await pilotGetConfig()).pilotRegistrationAllowed,false);
-  assert.equal((await pilotAuth.handler(authRequest('sign-up/email',{...pilotBody,email:'other-pilot@example.test',username:'other.pilot'},{'cf-connecting-ip':'192.0.2.209'}))).status,503);
-  check('invited users create their own hashed-password accounts and sign in by email or username without HSC verification mail; email stays unverified, private roles remain blocked and closing the pilot restores the registration gate');
+  assert.equal((await pilotAuth.handler(invitationRequest(coachPilotToken))).status,403);
+  assert.equal((await pilotAuth.handler(authRequest('sign-up/email',{...invitedPilotBody,email:'other-pilot@example.test',username:'other.pilot'},{'cf-connecting-ip':'192.0.2.209'}))).status,403);
+  check('personal links create hashed-password accounts without platform login or email mail; links become single-use, email stays unverified, parent/coach requests grant no private role and the original administrator survives');
+  const publicProtectedChecks=[
+    ['club',()=>clubAPI.GET(new Request('https://hsc-coach-roster.sherrylikeke.chatgpt.site/api/club'))],
+    ['mobile',()=>mobileAPI.GET(new Request('https://hsc-coach-roster.sherrylikeke.chatgpt.site/api/mobile'))],
+    ['coaches',()=>coachAPI.GET(new Request('https://hsc-coach-roster.sherrylikeke.chatgpt.site/api/coaches'))],
+    ['members',()=>memberAPI.GET(new Request('https://hsc-coach-roster.sherrylikeke.chatgpt.site/api/member?action=admin'))],
+    ['plans',()=>planAPI.POST(new Request('https://hsc-coach-roster.sherrylikeke.chatgpt.site/api/plans',{method:'POST',headers:{Origin:'https://hsc-coach-roster.sherrylikeke.chatgpt.site','Content-Type':'application/json'},body:'{}'}))],
+    ['sync',()=>syncAPI.POST(new Request('https://hsc-coach-roster.sherrylikeke.chatgpt.site/api/sync',{method:'POST',headers:{Origin:'https://hsc-coach-roster.sherrylikeke.chatgpt.site','Content-Type':'application/json'},body:'{}'}))],
+    ['mcp',()=>mcpAPI.POST(new Request('https://hsc-coach-roster.sherrylikeke.chatgpt.site/mcp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({method:'tools/list'})}))],
+  ];
+  for(const [name,read] of publicProtectedChecks){const response=await read();assert.equal(response.status,401,name);assert.ok(!/keep this note|Private shared-event note|pilot-parent@example/.test(await response.text()),name);}
+  check('opening the public page does not expose club/mobile/member/coach data, plan writes, official sync or MCP to anonymous requests');
 }finally{globalThis.fetch=pilotFetch;globalThis.hscTestHeaders=new Headers();globalThis.hscTestPilotConfiguration=undefined;globalThis.hscTestAuthSecret=undefined;}
+
 const result = {passed: checks.length, checks, migrations, fixtureOnly: true, externalMessagesSent: 0, legacyDataPreserved: true};
 fs.mkdirSync('work', {recursive: true});
 fs.writeFileSync('work/phase2-test-results.json', JSON.stringify(result, null, 2));
