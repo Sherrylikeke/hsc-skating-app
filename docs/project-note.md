@@ -194,6 +194,9 @@
 - 原工作区存在七个未提交 PDF 删除项，保留原状；发布改用独立干净 checkout，不把既有删除纳入提交。
 - 用户已自行购买 memberportal.dev，明确要求 hamiltonskatingclub.memberportal.dev。已通过 Sites 添加该唯一子域名，域名 ID appgdom_6aea04ea577c819193b05c859edd413e；当前 pending，DNS／证书待验证。已提供 CNAME 与两条 TXT 的准确记录，当前无 Cloudflare DNS 或浏览器专用操作接口，未操作整机、未更改 DNS／续费或购买设置。登录来源只新增该确切 HTTPS origin，保留旧网址、本机与严格同源保护；实际 Worker 验证包括新域名密码登录、原管理员身份保留与跨站拒绝。2026-11-03 11:08 Toronto 刷新状态为 pending／pending_validation；公开 DNS 查询三条记录尚不存在，不能宣称已启用新网址。已提供三条记录的 Cloudflare BIND 导入文件及取消代理的官方步骤。未发现 Cloudflare 专用连接器，未安装其他云端浏览器或要求用户交出密码。
 
+- V27（运行源码 4d4276a3ff6317009e51138f6a1a8708fc68427a，保存版本 appgprj_6ad76ca2dba481919ba883865cbd5a0d~appgver_f23291bfbe3c8191b07dbd8b60cfe5be）部署 appgdep_6aea0919ca548191be0ec679332853ad，于 2026-11-03 11:17 Toronto 返回 succeeded、env_set_revision=5。原 public 范围及邀请／邮件运行配置保留。匿名线上检查 workspace 与样式 200，手机选择器／有界列表／系统字体／排名表样式已送达，club 与 results API 均 401；记录在会话 outputs/results-mobile-http.json。TypeScript、语言、核心 25 组、成绩 10 组、历史趋势、教练日表／筛选和实际 Worker 回归均通过；未做真实手机视觉或用户账号登录验收。
+- 运行源码已正常推送原私人 GitHub main，原主工作区快进到同源码，七个既有 PDF 删除项保留未提交。原 keswick-release 工作副本保留本轮编辑及其既有删除，干净发布 checkout 为 work/results-release；不将旧工作副本的未提交删除带入发布。原生 APK 未重建。域名 CNAME 截至 11:17 Toronto 公开查询仍 NXDOMAIN，需用户导入已提供的三条 DNS 后继续刷新 SSL 状态。
+
 ## 更新规则
 
 - 修改完成后更新事实、验收范围、日期与下一步；已知、待确认、历史快照分开。
