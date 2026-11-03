@@ -13,7 +13,7 @@ export function passwordAuth(request: Request) {
   const runtime = env as unknown as MailEnvironment & {BETTER_AUTH_SECRET?:string;HSC_PILOT_REGISTRATIONS?:string};
   if (!runtime.BETTER_AUTH_SECRET) return null;
   const url = new URL(request.url);
-  const origin = ['http://127.0.0.1:5173','http://localhost:5173'].includes(url.origin) ? url.origin : productionOrigin;
+  const origin = [productionOrigin,'https://hamiltonskatingclub.memberportal.dev','http://127.0.0.1:5173','http://localhost:5173'].includes(url.origin) ? url.origin : productionOrigin;
   return createPasswordAuth(db(),runtime.BETTER_AUTH_SECRET,origin,async(incoming,email)=>{
     const identity=await getChatGPTUser();
     if(!identity||identity.email.toLowerCase()!==email)return null;

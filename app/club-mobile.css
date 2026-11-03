@@ -1,3 +1,4 @@
+@import "./competition-results.css";
 @import "./coach-daily-schedule.css";
 .club-nav-short{display:none}
 .club-filter-toggle{display:none!important}

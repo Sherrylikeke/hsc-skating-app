@@ -11,10 +11,13 @@ const files=fs.readdirSync(root,{recursive:true}).filter(file=>/\.(m?js)$/.test(
 const modules=['index.js',...files].map(file=>({type:'ESModule',path:path.join(root,file)}));
 const pilotToken='a'.repeat(64),password='Fixture-only-Password-2026!';
 const hash=value=>createHash('sha256').update(value).digest('hex');
+const markFixture=JSON.parse(fs.readFileSync('tests/fixtures/results-skate-canada-marks.json','utf8'));
+const fixtureHost='sc-css-public-api-cmh9d3htgxfpdkb7.canadacentral-01.azurewebsites.net';
+let officialRequests=0;
 const mf=new Miniflare({modules,modulesRoot:root,compatibilityDate:'2026-05-15',compatibilityFlags:['nodejs_compat'],d1Databases:['DB'],bindings:{
   BETTER_AUTH_SECRET:'isolated-tests-only-secret-0123456789-abcdef',
   HSC_PILOT_REGISTRATIONS:JSON.stringify([{email:'pilot-fixture@example.test',role:'parent',invitationHash:hash(pilotToken),expiresAt:new Date(Date.now()+3600000).toISOString()}]),
-},serviceBindings:{ASSETS:()=>new Response('Missing',{status:404})}});
+},outboundService:request=>{const url=new URL(request.url);if(url.hostname==='www.skateontario.org'){if(url.pathname.endsWith('CR.pdf'))return new Response(fs.readFileSync('tests/fixtures/results-provincials-2026-u10-category.pdf'),{headers:{'Content-Type':'application/pdf'}});if(url.pathname.endsWith('DRO.pdf'))return new Response(fs.readFileSync('tests/fixtures/results-provincials-2026-u10-detail.pdf'),{headers:{'Content-Type':'application/pdf'}});return new Response('<a href="26PROVSTAR5WomenU10FP2DRO.pdf">Detailed classification</a>');}if(url.hostname!==fixtureHost)return new Response('Unavailable fixture',{status:404});officialRequests++;if(url.pathname.endsWith('/elements'))return Response.json(markFixture.elements);if(url.pathname.endsWith('/components'))return Response.json(markFixture.components);return Response.json({CompetitorEntries:[{competitorEntryId:'fixture-entry-a',competitorName:'Fixture Alpha',competitorClub:'Fixture Club',segmentRank:1,categoryRank:1,tes:16.66,pcs:13.67,score:30.33,competitorStatus:'SCORED'},{competitorEntryId:'fixture-entry-b',competitorName:'Fixture Beta',competitorClub:'Other Fixture Club',segmentRank:2,categoryRank:2,tes:15,pcs:13,score:28,competitorStatus:'SCORED'}]});},serviceBindings:{ASSETS:()=>new Response('Missing',{status:404})}});
 const post=(route,body,headers={})=>mf.dispatchFetch(origin+route,{method:'POST',headers:{origin,'Content-Type':'application/json',...headers},body:JSON.stringify(body)});
 const cookies=response=>response.headers.getSetCookie().map(value=>value.split(';')[0]).join('; ');
 try {
@@ -44,6 +47,23 @@ try {
   const restored=await post('/api/member?action=session',{role:'parent'},{cookie:passwordCookie});
   assert.equal(restored.status,200,await restored.clone().text());
   const member=(await restored.json()).member;assert.equal(member.id,id);assert.equal(member.role,'admin');assert.equal(member.status,'active');
+  assert.equal((await mf.dispatchFetch(origin+'/api/results?record=fixture-result')).status,401);
+  assert.equal(officialRequests,0,'Anonymous requests must not fetch official sources');
+  const resultRecord={record_id:'fixture-result',name:'Fixture Alpha',club:'Fixture Club',section:'ON',event_name:'Fixture Event',event_url:'https://example.test/official',event_key:'fixture-history',start_date:'2026-11-03',category:'STAR 5 Women U10',result_level:'category',rank:1,total_score:30.33,status:'result',source_url:'https://'+fixtureHost+'/segment/fixture/entries',skater_ids:[],entity_type:'individual'};
+  await database.prepare('INSERT INTO history_records (id,event_id,payload) VALUES (?,?,?)').bind(resultRecord.record_id,resultRecord.event_key,JSON.stringify(resultRecord)).run();
+  const resultsResponse=await mf.dispatchFetch(origin+'/api/results?record=fixture-result',{headers:platformHeaders});assert.equal(resultsResponse.status,200,await resultsResponse.clone().text());const results=await resultsResponse.json();assert.equal(results.boards[0].rows.length,2);assert.equal(results.boards[0].rows[0].tes,16.66);
+  const detailUrl=origin+'/api/results?record=fixture-result&board='+encodeURIComponent(results.boards[0].id)+'&entry=fixture-entry-a';
+  const detailResponse=await mf.dispatchFetch(detailUrl,{headers:platformHeaders});assert.equal(detailResponse.status,200,await detailResponse.clone().text());const marks=await detailResponse.json();assert.ok(marks.elements.length>0);assert.ok(marks.components.some(c=>c.label==='Presentation'));
+  const countBefore=officialRequests;assert.equal((await mf.dispatchFetch(origin+'/api/results?record=fixture-result&board=evil&entry=https://evil.test/',{headers:platformHeaders})).status,502);assert.equal(officialRequests,countBefore,'Arbitrary board or entry cannot create an outbound request');
+  assert.equal((await mf.dispatchFetch(origin+'/api/results?record=missing',{headers:platformHeaders})).status,404);
+  const pdfRecord={...resultRecord,record_id:'fixture-pdf-result',name:'Fiora Dong',category:'STAR 5 Women (U10)',event_url:'https://www.skateontario.org/results/26PROVS/',source_url:'https://www.skateontario.org/results/26PROVS/26PROVSTAR5WomenU10CR.pdf',total_score:25.08};
+  await database.prepare('INSERT INTO history_records (id,event_id,payload) VALUES (?,?,?)').bind(pdfRecord.record_id,pdfRecord.event_key,JSON.stringify(pdfRecord)).run();
+  const pdfResponse=await mf.dispatchFetch(origin+'/api/results?record=fixture-pdf-result',{headers:platformHeaders});assert.equal(pdfResponse.status,200,await pdfResponse.clone().text());const pdfResults=await pdfResponse.json();assert.equal(pdfResults.boards.length,2);assert.equal(pdfResults.boards[0].rows.length,18);assert.equal(pdfResults.boards[0].rows[0].tes,13.23);assert.ok(pdfResults.boards[0].rows[0].elements.length>=8);
+  const customOrigin='https://hamiltonskatingclub.memberportal.dev';
+  const customSignIn=await mf.dispatchFetch(customOrigin+'/api/auth/sign-in/email',{method:'POST',headers:{origin:customOrigin,'Content-Type':'application/json'},body:JSON.stringify({email,password})});assert.equal(customSignIn.status,200,await customSignIn.clone().text());const customPasswordCookie=cookies(customSignIn);
+  const customSession=await mf.dispatchFetch(customOrigin+'/api/member?action=session',{method:'POST',headers:{origin:customOrigin,'Content-Type':'application/json',cookie:customPasswordCookie},body:JSON.stringify({role:'parent'})});assert.equal(customSession.status,200,await customSession.clone().text());assert.equal((await customSession.json()).member.role,'admin');
+  const customCookie=customPasswordCookie+'; '+cookies(customSession);assert.equal((await mf.dispatchFetch(customOrigin+'/api/results?record=fixture-result',{headers:{cookie:customCookie}})).status,200);
+  const crossOrigin=await mf.dispatchFetch(customOrigin+'/api/auth/sign-in/email',{method:'POST',headers:{origin:'https://attacker.example.test','Content-Type':'application/json'},body:JSON.stringify({email,password})});assert.equal(crossOrigin.status,403);
   const usernameSignin=await post('/api/auth/sign-in/username',{username:'owner.fixture',password});assert.equal(usernameSignin.status,200);
   assert.equal((await post('/api/link-password',{}, {cookie:passwordCookie})).status,401);
   const pilotBody={name:'pilot.fixture',username:'pilot.fixture',email:'pilot-fixture@example.test',password,role:'parent',skaterName:'Carson Wang',pilotInvitation:pilotToken};
@@ -53,5 +73,5 @@ try {
   const pilotMember=await database.prepare('SELECT role,status FROM hsc_members WHERE id=?').bind('password:'+pilotUser.id).first();
   assert.equal(pilotMember.role,null);assert.equal(pilotMember.status,'club-viewer');
   assert.equal((await post('/api/auth/sign-up/email',pilotBody)).status,409);
-  console.log('Worker registration: anonymous blocked; administrator signup, same-identity linking, email/username login and role preserved; pilot signup and single use passed.');
+  console.log('Worker registration: anonymous blocked; administrator signup, same-identity linking, email/username login and role preserved; pilot signup and single use passed; authenticated results, all opponents, detailed marks and arbitrary-source rejection and custom-domain login/same-origin protection passed.');
 }finally{await mf.dispose();}

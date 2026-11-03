@@ -15,6 +15,7 @@
 - `.openai/hosting.json` 的 D1 绑定为 `DB`，R2 未启用。构建配置中的全零 database_id 是本地占位值，不是生产数据库标识。
 - 手机端：`capacitor/` 为本地静态打包的 Capacitor 8 客户端，复用 Web 组件；`mobile/` 原 Expo 工程保留对照。原生端令牌存系统安全存储，Worker/D1 不打入手机；配置见 `docs/capacitor.md`。
 - 原私人站点：https://hsc-coach-roster.sherrylikeke.chatgpt.site/
+- 自定义域名：`hamiltonskatingclub.memberportal.dev`，用户于 2026-11-03 购买父域并授权绑定；Sites 已添加，DNS／HTTPS 验证状态以原生工具重新读取为准。应用密码登录仅允许该确切 HTTPS origin 与既有域名／开发入口，不使用任意 Host 放宽校验。
 - Sites project：`appgprj_6ad76ca2dba481919ba883865cbd5a0d`。复用既有项目、数据库和访问范围，不新建替代站点或云账号。
 - 原私人 GitHub：`https://github.com/Sherrylikeke/hsc-skating-app.git`，remote 为 `github`。Sites 源仓库与 GitHub 是两个远端，不要混称。
 - 当前由 Sites 管理托管；不能断言已迁入用户个人 Cloudflare 账号，也不能从公开价推断用户实际账单或数据库固定地域。
