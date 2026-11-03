@@ -127,6 +127,8 @@ try {
   assert.equal((await post('/api/auth/sign-up/email',pilotBody)).status,409);
   const viewerLogin=await post('/api/auth/sign-in/email',{email:pilotBody.email,password});assert.equal(viewerLogin.status,200);const viewerPassword=cookies(viewerLogin);
   const viewerSession=await post('/api/member?action=session',{role:'parent'},{cookie:viewerPassword});assert.equal(viewerSession.status,200);const viewerHeaders={cookie:viewerPassword+'; '+cookies(viewerSession)};
+  // Signup pinned Carson; explicitly replace that preference to exercise viewing another skater.
+  assert.equal((await post('/api/member?action=home-skater',{skaterId:fixtureCarson.id,pinned:false},viewerHeaders)).status,200);
   assert.equal((await post('/api/member?action=home-skater',{skaterId:created.id,pinned:true},viewerHeaders)).status,200);
   await database.prepare('INSERT INTO coach_plans (id,skater_id,event_id,meeting_time,note,revision) VALUES (?,?,?,?,?,1)').bind(fixtureCarson.id+'|'+syncEvent.id+'|fixture-private',fixtureCarson.id,syncEvent.id,'2026-11-05T10:15','Fixture private coach note').run();
   const viewerClubResponse=await mf.dispatchFetch(origin+'/api/club',{headers:viewerHeaders});assert.equal(viewerClubResponse.status,200);const viewerClub=await viewerClubResponse.json();
