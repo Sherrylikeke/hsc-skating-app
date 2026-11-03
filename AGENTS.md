@@ -49,6 +49,7 @@
 - 未支持的 PDF/扫描件和失败来源须标待核对，不承诺实时或全量成功。Skate Canada 自动同步尚未实施。
 - 普通用户页面不显示 PDF 文件名、批次进度和原始解析错误；保留简短不确定提示及官方来源链接。详细诊断仅有效管理员在页面末尾默认收起的 Reference 查看，回归 `node scripts/check-source-reference.mjs`。
 - Carson 的 SHORT/FREE 是两项；序号区间为候选时段，不能显示成四项。没有对应官方 Starting Order 时显示待定。
+- 官方动态 Starting Order 支持赛事页链接的 skatingresults.ca 同源公开接口，只读取关联类别；比赛赛程选择排除 Awards Schedule。已公布序号可匹配官方编号区间，教练综合表直接显示序号／热身组链接；自由滑顺序缺失时不可沿用短节目序号。
 - 个人时间、出场顺序与 Warm-up Group 只取官方明确资料，不由名单顺序或人数推算。
 - 到场至少提前 60 分钟；未确认时段不生成确定提醒。官网修订、消息与提醒保留持久 outbox、去重、版本和重试机制。
 
@@ -60,6 +61,7 @@
 - 手机类型：`node mobile/node_modules/typescript/bin/tsc --noEmit --project mobile/tsconfig.json`。
 - Capacitor：在 `capacitor/` 运行 `npm.cmd run build`、`node scripts/check.mjs`、`node node_modules/@capacitor/cli/bin/capacitor sync`；Android/iOS 原生编译与真机结果另外记录，不以 sync 冒充。
 - Android 便携构建：`capacitor/scripts/build-android.ps1 -ToolchainRoot <工具目录> -OutputDirectory <交付目录>`；用户已于 2026-10-22 批准精简工具下载及 SDK 许可。只使用 `ANDROID_USER_HOME`，避免与旧目录变量冲突，不将 SDK、缓存和调试密钥提交 Git。配置见 `docs/android-build.md`。
+- 手机网页布局用 `scripts/check-mobile-layout.mjs` 进行 Chromium／WebKit 手机浏览器模拟，复用忽略目录 `work/browser-qa` 的 Playwright 1.64.1 与 WebKit 缓存；说明见 `docs/mobile-web-install.md`。隔离 API 测试数据不能冒称生产账号登录或真机验收；当前可做实际浏览器渲染，不再仅以静态 CSS 检查替代手机复核。
 - 核心回归：`node scripts/check-members.mjs`；语言：`node scripts/check-locales.mjs`。
 - 相关解析/编辑回归：`check-paste.mjs`、`check-athlete-history.mjs`、`check-official-source.mjs`、`check-starting-order.mjs`，均位于 `scripts/`。
 - 报名 PDF / 多日期赛程回归：`node scripts/check-official-import.mjs`；真实样本来源、人数校验、分批轮转和格式边界见 `docs/official-import-formats.md`。目录每轮最多四份，未完成不能报全量成功；同步后保留嵌套 PDF 来源修订。

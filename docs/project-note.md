@@ -211,6 +211,10 @@
 - 通过真实 Chromium 与 WebKit 手机参数模拟检查 320/375/390/430px、1280px 对照、中英文家长页面 40 例，加管理员窄屏 16 例，均无顶部交互控件重叠或越界。针对真实截图显示的品牌四行挤压、返回入口压缩、Reload saved data 竖排，改为两行顶部和独立标题操作行；手机保留短返回入口，桌面完整标签保留。教练综合日表直接显示出场序号／热身组及官方链接，无需展开详情。使用隔离 API 测试数据，不读取用户个人浏览器配置、不接管桌面、不冒称真实用户登录或 iPhone 真机。测试脚本和报告说明见 docs/mobile-web-install.md；截图在会话 outputs/mobile-header-*。
 - 已验证 Windows 项目内独立安装 playwright-core 1.64.1 与 WebKit 27.2，Chrome 使用已有程序。依赖、浏览器缓存、截图均未进入 Git；只保留可复现脚本。当前手机端为浏览器主屏幕网页应用，iPhone 可用 Safari 分享→添加到主屏幕；App Store 原生版未发布，未构建 iOS 安装包。
 
+- V28（运行源码 88c30c4103a75c4f0b6d7094175f1e818d61cfaa；保存版本 appgprj_6ad76ca2dba481919ba883865cbd5a0d~appgver_dbd9fb138ebc81919282fc7c52f901f8）部署 appgdep_6aea196ed86c81918fbd85a8209e8ece 于 2026-11-03 12:27 Toronto 返回 succeeded、env_set_revision=5、MCP ready。原 public、密码／邀请／邮件配置和自定义域名保留。最终构建与实际 Worker 验证通过；核心权限 25 组、Starting Order API 6 组、教练日表 7 组、导入 11 组、同步客户端 7 组、诊断隔离、类型与语言通过。
+- 发布后通过原 HSC 工具同步 SO-325444：290 位参赛者、10 位关联选手、86 个已识别时段；生产返回 Carson Short #19、Warm-up 4、2026-11-05 MOLSON RINK 11:15–12:15、uncertain=false、individualTime=null，官方跳转链接指向对应项目的 Starting Order。仅第 3/4 页缺少完整时间的其他类别保留待核对提示，不能把这次同步冒称全场无错误。同步核验在会话 outputs/carson-live-sync.json。Free 当前未公布序号，继续待确认。
+- 正式自定义域名首页／工作区 200，匿名 club/results API 401；WebKit iPhone 尺寸、中英管理员页面再验 4 例，顶部、导航及无需展开即可见的 #19／热身组链接通过。加本地 56 例共 60 个浏览器视图，API 均为隔离测试数据，不代表生产账号登录／iPhone 真机验收。截图与报告位于会话 outputs/mobile-header-production-webkit。开发预览已停止；源码正常推送原私人 GitHub、原主工作区已快进，七个既有 PDF 删除项保留未提交。
+
 ## 更新规则
 
 - 修改完成后更新事实、验收范围、日期与下一步；已知、待确认、历史快照分开。
