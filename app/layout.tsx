@@ -3,6 +3,7 @@ import "./globals.css";
 import "./club.css";
 import "./i18n.css";
 import "./club-mobile.css";
+import "./mobile-header.css";
 
 export const metadata: Metadata = {
   title: "HSC · Club Portal",

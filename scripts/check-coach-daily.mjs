@@ -59,4 +59,7 @@ checks.push('an empty filtered view explains how to change filters');
 const practice=renderToStaticMarkup(createElement(CoachDailySchedule,{rows:[row('practice','2026-11-20','11:00',{activity:'practice'})],conflicts:new Set(),onSkater:()=>{},renderDetails:()=>null}));
 assert.ok(practice.includes('Practice · STAR 5'));
 checks.push('official practice remains identifiable in the compact overview');
+const published=renderToStaticMarkup(createElement(CoachDailySchedule,{rows:[row('ordered','2026-11-05','11:15',{startingOrder:{startNumber:19,warmupGroup:4,individualTime:null,sourceUrl:'https://skatingresults.ca/fixture/#/seg/test/start',page:0}})],conflicts:new Set(),onSkater:()=>{},renderDetails:()=>null}));
+assert.ok(published.includes('Start #19'));assert.ok(published.includes('Warm-up <!-- -->4')||published.includes('Warm-up 4'));assert.ok(published.includes('https://skatingresults.ca/fixture/#/seg/test/start'));assert.ok(published.includes('aria-expanded="false"'));
+checks.push('published starting order and warm-up group link are visible before expanding a row');
 console.log(JSON.stringify({passed:checks.length,checks,fixtureOnly:true,productionWrites:0},null,2));

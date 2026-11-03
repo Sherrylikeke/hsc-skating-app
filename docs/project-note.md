@@ -203,6 +203,14 @@
 - 11:25 Toronto 通过正常 TLS 校验访问 https://hamiltonskatingclub.memberportal.dev：首页与工作区 200、auth/config 200；匿名 club/results API 401；manifest 200，HSC Club Portal、standalone 与 start_url=/ 正常。记录在会话 outputs/custom-domain-http.json。此前短暂 404 为路由更新阶段，最终检查已恢复 200。
 - 复用原 V27、原数据库和原 public／会员权限；无代码／环境变量更改，无新账号、重置密码或真实邮件。新域名的真实用户密码登录及手机安装仍由用户本人验收；本轮 HTTP 检查不能冒充实际账号已登录。原网址继续保留，新域名浏览器会话需独立登录。仅文档记账，不为此重复部署网站。
 
+## 2026-11-03 Carson Starting Order 与手机顶部
+
+- 用户报告 11 月 5 日 Carson 仍为 TBC。核对官网：Start Orders & Results 为 skatingresults.ca 动态页面，旧 HTML/PDF 解析器无法读取；赛事页新增 Awards Schedule 排在实际比赛赛程前，旧逻辑误将颁奖 PDF 当比赛赛程，保留了上次有效资料。
+- 新增经过 HTTPS 同源／UUID 验证的动态出场接口读取；只选已有官方报名名单关联选手的类别，最多 12 类／24 项／每项 500 行，读取失败保留相应项目旧数据并标待核对，未公布的序号不自行补齐。保存可直接打开的官方 Starting Order 链接；同步结果新增最多 40 行共享官方赛程预览供核对，不含私人备注或教练文本。赛程选择排除 Awards，解析版本升为 schedule-bands-3，清理此前误导入 Awards 所留下的诊断。
+- 真实样本已确认 Carson Short #19、Warm-up Group 4，对应 2026-11-05 MOLSON RINK 11:15–12:15 的官方 (16–25) 时段；个人具体分钟未发布。Free 的 sortOrder / warmUpGroup 当前为空，保持待确认，不将 Short 的顺序用于 Free，也不由节目长度或人数推算个人时间。新回归 6 组、原 Starting Order、官网导入 11 组、同步客户端 7 组、诊断隔离 4 组和类型／语言已通过；实际 Worker 的官网同步／临时 D1 回归已通过，确认不抓取 Awards PDF，保存 Carson 的 #19／热身组4，并解析为 11:15–12:15；官方只读现场预检成功读取报名 290 人、关联 10 人、16 个项目和 144 条已公布顺序，错误为 0。生产同步结果在发布后补记。
+- 通过真实 Chromium 与 WebKit 手机参数模拟检查 320/375/390/430px、1280px 对照、中英文家长页面 40 例，加管理员窄屏 16 例，均无顶部交互控件重叠或越界。针对真实截图显示的品牌四行挤压、返回入口压缩、Reload saved data 竖排，改为两行顶部和独立标题操作行；手机保留短返回入口，桌面完整标签保留。教练综合日表直接显示出场序号／热身组及官方链接，无需展开详情。使用隔离 API 测试数据，不读取用户个人浏览器配置、不接管桌面、不冒称真实用户登录或 iPhone 真机。测试脚本和报告说明见 docs/mobile-web-install.md；截图在会话 outputs/mobile-header-*。
+- 已验证 Windows 项目内独立安装 playwright-core 1.64.1 与 WebKit 27.2，Chrome 使用已有程序。依赖、浏览器缓存、截图均未进入 Git；只保留可复现脚本。当前手机端为浏览器主屏幕网页应用，iPhone 可用 Safari 分享→添加到主屏幕；App Store 原生版未发布，未构建 iOS 安装包。
+
 ## 更新规则
 
 - 修改完成后更新事实、验收范围、日期与下一步；已知、待确认、历史快照分开。

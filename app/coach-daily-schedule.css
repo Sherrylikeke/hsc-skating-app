@@ -48,3 +48,5 @@
   .coach-day-action button{min-width:34px;min-height:44px}
   .coach-day-table .coach-day-details>td{padding:6px}
 }
+
+.coach-day-order{display:block;width:fit-content;max-width:100%;margin-top:4px;font-size:11px;line-height:1.5;color:#245489;text-decoration:underline;overflow-wrap:anywhere}

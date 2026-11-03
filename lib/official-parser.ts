@@ -27,6 +27,7 @@ export function discoverDocuments(html:string,base:string):OfficialDocument[]{
   }
   return [...found.values()];
 }
+export function competitionSchedule(documents:OfficialDocument[]){return documents.find(document=>document.kind==='schedule'&&!/\bAWARDS?\b|AWARDS?[-_ ]SCHEDULE/i.test(document.label+' '+new URL(document.url).pathname));}
 export function calendarEvent(raw:Record<string,unknown>,checkedAt:string):LiveEvent{
   const venue=raw.venue as Record<string,string>|undefined;
   return {id:`SO-${raw.id}`,name:plain(String(raw.title||'')),url:String(raw.url||''),start:String(raw.start_date||'').slice(0,10),end:String(raw.end_date||'').slice(0,10),timezone:String(raw.timezone||'America/Toronto'),venue:venue?.venue||'',city:venue?.city||'',updateText:plain(String(raw.description||'')).slice(0,450),officialModified:String(raw.modified||''),checkedAt,documents:[],participants:[],blocks:[],entryStatus:'尚未读取名单',scheduleStatus:'尚未读取赛程',source:'Skate Ontario'};

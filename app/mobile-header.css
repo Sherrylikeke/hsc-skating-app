@@ -1,0 +1,27 @@
+.club-topbar-home-short{display:none}
+@media(max-width:760px){
+ .member-app{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+ .member-app .member-header{display:grid;grid-template-columns:minmax(0,1fr) 106px;gap:10px 12px;align-items:center;padding:calc(12px + env(safe-area-inset-top)) 14px 12px}
+ .member-app .member-header>div{display:contents}
+ .member-app .member-header .member-brand{grid-column:1;grid-row:1;min-width:0;gap:8px;font-size:25px;line-height:1.2}
+ .member-app .member-header .member-brand span{min-width:0;font-size:12px;line-height:1.35}
+ .member-app .member-header .member-brand small{font-size:10px;margin-top:3px}
+ .member-app .member-header .hsc-language{grid-column:2;grid-row:1;justify-self:end}
+ .member-app .member-header .hsc-language select{width:106px;min-width:106px;min-height:40px;padding:7px 8px!important;font-size:15px}
+ .member-app .member-header .member-account-summary{grid-column:1;grid-row:2;min-width:0;overflow-wrap:anywhere;font-size:12px;line-height:1.5;color:#435971}
+ .member-app .member-header .member-signout{grid-column:2;grid-row:2;justify-self:end;min-height:40px;padding:7px 10px;font-size:13px}
+}
+@media(max-width:720px){
+ .club-topbar{display:grid;grid-template-columns:minmax(0,1fr) 106px;gap:6px 12px;height:auto;min-height:92px;padding:calc(10px + env(safe-area-inset-top)) 14px 8px}
+ .club-topbar>span{grid-column:1;grid-row:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:#435971}
+ .club-topbar>div{display:contents}
+ .club-topbar .hsc-language{grid-column:2;grid-row:1;justify-self:end}
+ .club-topbar .hsc-language select{width:106px;min-width:106px;min-height:40px;padding:7px 8px!important;font-size:15px}
+ .club-topbar .club-topbar-home{grid-column:1/-1;grid-row:2;justify-self:start;min-height:32px;padding:5px 0;font-size:13px;color:#245489;white-space:nowrap}
+ .club-topbar-home-full{display:none}.club-topbar-home-short{display:inline}
+ .club-topbar .club-avatar,.club-topbar .club-local-date,.club-topbar .club-maintain{display:none}
+ .club-page-heading{flex-direction:column;align-items:stretch;gap:12px;margin-bottom:18px}
+ .club-page-heading>div:first-child{width:100%;min-width:0}
+ .club-app .club-data-controls{display:flex;flex-direction:row;justify-content:flex-start;flex-wrap:wrap;align-items:center;gap:8px 12px;width:100%;max-width:none}
+ .club-app .club-data-controls>button{min-height:40px;padding:7px 10px;white-space:nowrap;font-size:12px}
+}

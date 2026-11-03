@@ -1,8 +1,9 @@
 import {extractTextItems,getDocumentProxy} from 'unpdf';
 import {db,putLiveEvent,readLiveEvents,readLiveEvent,putSyncStatus,readSyncStatus,profiles} from './club-store';
-import {calendarEvent,discoverDocuments,parseScheduleDocument} from './official-parser';
+import {calendarEvent,discoverDocuments,parseScheduleDocument,competitionSchedule,scheduleRows} from './official-parser';
 import {importEntries} from './entry-import';
 import {parseStartingOrderPdf,parseStartingOrderHtml} from './starting-order';
+import {importStartingOrderApp,startingOrderApp} from './starting-order-api';
 import {todayToronto,ENTRY_PDF_VERSION} from './club-types';
 import type {LiveEvent} from './club-types';
 import {drainOutbox} from './member-messages';
@@ -23,7 +24,7 @@ async function source(url:string,maxBytes=3_000_000):Promise<Uint8Array>{
 }
 const hashBytes=async(bytes:Uint8Array)=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes as BufferSource))).map(n=>n.toString(16).padStart(2,'0')).join('');
 const message=(error:unknown)=>error instanceof Error?error.message:'官网读取失败';
-const SCHEDULE_VERSION='schedule-bands-2';
+const SCHEDULE_VERSION='schedule-bands-3';
 async function readPdfItems(bytes:Uint8Array){const pdf=await getDocumentProxy(bytes,{maxImageSize:1_000_000,disableFontFace:true});if(pdf.numPages>20)throw new Error('文件页数超出已验证范围，保留原始链接');return (await extractTextItems(pdf)).items;}
 function entryProgress(event:LiveEvent){const files=event.documents.flatMap(document=>(document.entryFiles||[]).map(file=>({file,rosterHash:document.matchingRosterHash})));const verified=files.filter(({file,rosterHash})=>file.checkedAt&&!file.error&&file.parserVersion===ENTRY_PDF_VERSION&&file.matchingRosterHash===rosterHash).length;return {total:files.length,verified,pending:files.length-verified};}
 async function syncCalendarBody(){
@@ -55,8 +56,9 @@ async function syncEventBody(id:string){
       try{const linked=discoverDocuments(new TextDecoder().decode(await source(hub.url)),hub.url);for(const doc of linked.filter(d=>d.kind==='start-order'))if(!discovered.some(d=>d.url===doc.url))discovered.push(doc);}catch(error){errors.push('出场资料页面：'+message(error));}
     }
     const documents=discovered.map(document=>({...existing.documents.find(old=>old.url===document.url),...document}));
+    for(const document of documents)if(document.kind==='schedule'&&/AWARDS?/i.test(document.label+document.url))delete document.error;
     event={...event,documents};
-    const entries=documents.find(document=>document.kind==='entries');const schedule=documents.find(document=>document.kind==='schedule');
+    const entries=documents.find(document=>document.kind==='entries');const schedule=competitionSchedule(documents);
     if(entries){
       try{
         const imported=await importEntries(entries,existing.participants,roster,matchingRosterHash,now,source,readPdfItems);
@@ -81,6 +83,17 @@ async function syncEventBody(id:string){
     if(orderDocs.length){
       const selected=[...orderDocs].sort((a,b)=>(a.checkedAt||'').localeCompare(b.checkedAt||'')).slice(0,4);let orders=[...(existing.startingOrders||[])];
       for(const doc of selected){try{const bytes=await source(doc.url,8_000_000);const hash=await hashBytes(bytes);const previous=existing.documents.find(d=>d.url===doc.url);
+        const html=/\.pdf(?:$|\?)/i.test(doc.url)?'':new TextDecoder().decode(bytes);
+        if(startingOrderApp(html,doc.url)){
+          const previousOrders=orders.filter(o=>(o.sourceDocumentUrl||o.sourceUrl)===doc.url);
+          const imported=await importStartingOrderApp(html,doc.url,roster,event.participants,previousOrders,source);
+          if(!imported)throw Error('动态出场资料待核对');
+          if(JSON.stringify(imported.orders)!==JSON.stringify(previousOrders))changed++;
+          orders=[...orders.filter(o=>(o.sourceDocumentUrl||o.sourceUrl)!==doc.url),...imported.orders];
+          doc.hash=await hashBytes(new TextEncoder().encode(JSON.stringify(imported.orders)));doc.parserVersion='starting-api-1';doc.matchingRosterHash=matchingRosterHash;doc.checkedAt=now;doc.entryCount=imported.orders.length;
+          if(imported.errors.length){doc.error=imported.errors.join('；');errors.push(doc.error);}else delete doc.error;
+          continue;
+        }
         if(previous?.hash!==hash||!orders.some(o=>o.sourceUrl===doc.url)||previous.matchingRosterHash!==matchingRosterHash){
           let parsed;if(/\.pdf(?:$|\?)/i.test(doc.url)){const pdf=await getDocumentProxy(bytes,{maxImageSize:1_000_000,disableFontFace:true});if(pdf.numPages>20)throw new Error('出场顺序页数超出已验证格式');const {items}=await extractTextItems(pdf);parsed=parseStartingOrderPdf(items,doc.url,roster);}else parsed=parseStartingOrderHtml(new TextDecoder().decode(bytes),doc.url,roster);
           if(!parsed.length)throw new Error('出场顺序格式待核对，保留上次有效资料');if(previous?.hash!==hash||JSON.stringify(parsed)!==JSON.stringify(orders.filter(order=>order.sourceUrl===doc.url)))changed++;orders=[...orders.filter(o=>o.sourceUrl!==doc.url),...parsed];
@@ -89,7 +102,7 @@ async function syncEventBody(id:string){
       event.startingOrders=orders;const pending=orderDocs.filter(d=>!d.checkedAt||d.error).length;event.startingOrderStatus=pending?`已读取 ${orders.length} 条出场信息，${pending} 份文件待核对`:`已读取 ${orders.length} 条官方出场信息`;
     }else event.startingOrderStatus=existing.startingOrders?.length?'官网当前未列出出场链接，保留已读取版本':'官网尚未发现 Starting Order 链接';
     event.detailError=errors.join('；')||undefined;await putLiveEvent(event);await putSyncStatus({lastAttempt:now,lastSuccess:errors.length?undefined:now,error:errors.join('；')||null,entries:event.participants.filter(row=>row.skaterIds.length).length,blocks:event.blocks.length});
-    return {id:event.id,name:event.name,changed,participants:event.participants.length,matchedSkaters:new Set(event.participants.flatMap(row=>row.skaterIds)).size,blocks:event.blocks.length,entryFiles:entryProgress(event),entryStatus:event.entryStatus,scheduleStatus:event.scheduleStatus,checkedAt:now,errors};
+    return {id:event.id,name:event.name,changed,participants:event.participants.length,matchedSkaters:new Set(event.participants.flatMap(row=>row.skaterIds)).size,blocks:event.blocks.length,entryFiles:entryProgress(event),entryStatus:event.entryStatus,scheduleStatus:event.scheduleStatus,schedulePreview:scheduleRows([event],roster).filter(row=>row.activity==='competition'&&row.startingOrder).slice(0,40).map(row=>({name:row.skaterName,category:row.category,date:row.date,start:row.start,end:row.end,rink:row.rink,uncertain:row.uncertain,startNumber:row.startingOrder!.startNumber,warmupGroup:row.startingOrder!.warmupGroup,individualTime:row.startingOrder!.individualTime,sourceUrl:row.startingOrder!.sourceUrl})),checkedAt:now,errors};
   }catch(error){event.detailError=message(error);await putLiveEvent(event);await putSyncStatus({lastAttempt:now,error:message(error)});throw error;}
 }
 export async function syncStatus(){return {status:await readSyncStatus(),events:(await readLiveEvents()).map(event=>({id:event.id,name:event.name,start:event.start,end:event.end,detailCheckedAt:event.detailCheckedAt,error:event.detailError,matched:event.participants.filter(row=>row.skaterIds.length).length,participants:event.participants.length,blocks:event.blocks.length,entryFiles:entryProgress(event),entryStatus:event.entryStatus,scheduleStatus:event.scheduleStatus})),scope:'Skate Ontario 官方日历；DSTools HTML 名单；同源目录内 Name/Club/Section 与总人数可核对的报名 PDF，每场每轮最多四份；明确日期分区、START/END 与 RINK 表头的赛程 PDF。其他格式或未完成批次保留链接并提示核对。',instructions:'先同步日历，再逐个检查未来45天内最近三场比赛。PDF 名单分批轮转，待处理不等于全量成功。读取失败不删除旧数据。官方时段是组别时间，不推算个人时间；教练集合与备注独立保存。'};}
