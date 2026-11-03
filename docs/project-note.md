@@ -236,7 +236,8 @@
 - 用户反馈 Allison 添加 Sydney Mitchell 后看不到 Coach 页面，要求普通用户能查看其他孩子赛程。只读核对 Allison 为已注册 role=null、status=club-viewer；共享 /api/club 已允许读取官方全队资料，实际阻碍是 ClubApp 导航仅显示 admin/coach 的前端条件。
 - 移除 Coach 导航的角色筛选，并在有效会员／赛程账号首页添加直达 /workspace?view=coach 的链接。私人教练安排、备注、编辑、管理员入口仍由原服务端角色和批准关系控制，无会员角色、关系或数据库修改。
 - 类型、语言及会员入口 11 组通过；WebKit 的 role=null / club-viewer、Sydney 置顶而查看 Carson 官方总表，390/1280px 中英文首页与总表 8 个视图通过；Chromium 有效家长 390px 中英 4 个视图通过，共 12 例，导航与手机布局均无越界。报告在会话 outputs/shared-coach-viewer 与 outputs/shared-coach-parent；均为隔离测试数据，未代登真实家长账号。
-- 新增真实 Worker/D1 回归：测试账号置顶一位选手后读取另一位选手的官方赛程，私人 coach_plans 不返回，写入、名单编辑与手动官网同步仍拒绝。最终构建、回归及部署结果完成后补记。
+- 真实 Worker/D1 回归通过：测试账号置顶一位选手后读取另一位选手的官方赛程，私人 coach_plans 不返回，写入、名单编辑与手动官网同步仍拒绝。初次隔离用例遗漏取消注册时默认置顶的 Carson，已明确替换主页偏好后通过，应用构建输入未改变。类型、语言、会员入口 11 组及最终构建通过。
+- V30（源码 666e20a1f1dda3bf5c0f4c53ec23e645176a1c63；保存版本 appgprj_6ad76ca2dba481919ba883865cbd5a0d~appgver_3d84d8c8f75c8191b52d4ed10f37f416）部署 appgdep_6aea6618e74c8191b9adb6552e423c02 于 2026-11-03T22:54:26.411545Z（Toronto 17:54）返回 succeeded、env_set_revision=6、MCP ready。正式自定义域名 coach 页面 200、匿名 club API 401，记录在会话 outputs/shared-coach-live-http.json。public 范围、域名、数据库权限、邮件、邀请与自动任务均未更改；原私人 GitHub 正常提交推送，本机开发预览已停止，七个既有 PDF 删除项继续保留。
 
 ## 更新规则
 
