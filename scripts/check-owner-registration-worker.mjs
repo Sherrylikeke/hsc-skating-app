@@ -73,6 +73,44 @@ try {
   await database.prepare('INSERT INTO live_events (id,payload,updated_at) VALUES (?,?,?)').bind(syncEvent.id,JSON.stringify(syncEvent),new Date().toISOString()).run();
   const syncResponse=await post('/api/sync',{eventId:syncEvent.id},platformHeaders);assert.equal(syncResponse.status,200,await syncResponse.clone().text());const synced=await syncResponse.json();const resolved=synced.schedulePreview.find(row=>row.name==='Carson Wang');assert.ok(resolved);assert.equal(resolved.startNumber,19);assert.equal(resolved.warmupGroup,4);assert.equal(resolved.start,'11:15');assert.equal(resolved.end,'12:15');assert.equal(resolved.uncertain,false);assert.equal(resolved.individualTime,null);assert.equal(awardsFetches,0);
   const savedSync=JSON.parse((await database.prepare('SELECT payload FROM live_events WHERE id=?').bind(syncEvent.id).first()).payload);assert.ok(savedSync.startingOrders.some(row=>row.skaterIds.includes(fixtureCarson.id)));assert.ok(savedSync.blocks.some(block=>block.category.includes('SHORT (16-25)')));
+  // Admin roster writes use the real Worker routes and isolated D1; no production data is changed.
+  const newSkater={name:'Fixture Added Skater',coach:'Jen Jackson/Bryce Davidson',training:true,identityPending:false,profileRevision:null,coachRevision:0};
+  assert.equal((await post('/api/skaters',newSkater)).status,401);
+  for(const role of ['parent','coach']){
+    const memberId='roster-'+role,memberEmail=memberId+'@example.test',token='isolated-'+memberId;
+    await database.prepare("INSERT INTO hsc_members (id,email,name,role,requested_role,status,auth_version,created_at) VALUES (?,?,?,?,?,'active',1,?)").bind(memberId,memberEmail,memberId,role,role,new Date().toISOString()).run();
+    await database.prepare('INSERT INTO hsc_sessions (hash,member_id,auth_version,expires_at,created_at) VALUES (?,?,1,?,?)').bind(hash(token),memberId,new Date(Date.now()+3600000).toISOString(),new Date().toISOString()).run();
+    const restricted={'oai-authenticated-user-id':memberId,'oai-authenticated-user-email':memberEmail,cookie:'__Host-hsc_session='+token};
+    assert.equal((await post('/api/skaters',newSkater,restricted)).status,403);
+    assert.equal((await mf.dispatchFetch(origin+'/api/skaters?id='+fixtureCarson.id,{headers:restricted})).status,403);
+    assert.equal((await post('/api/coaches',{changes:[{id:fixtureCarson.id,coach:'No access',revision:0}]},restricted)).status,403);
+  }
+  const crossWrite=await post('/api/skaters',newSkater,{...platformHeaders,origin:'https://attacker.example.test'});assert.equal(crossWrite.status,403);
+  const createdResponse=await post('/api/skaters',newSkater,platformHeaders);assert.equal(createdResponse.status,201,await createdResponse.clone().text());const created=(await createdResponse.json()).skater;
+  assert.match(created.id,/^HSC-NEW-/);assert.equal(created.coach,newSkater.coach);assert.equal(created.coachRevision,1);
+  assert.equal((await database.prepare('SELECT admitted FROM hsc_admissions WHERE skater_id=?').bind(created.id).first()).admitted,0);
+  assert.equal((await database.prepare('SELECT count(*) AS count FROM hsc_relations WHERE skater_id=?').bind(created.id).first()).count,0);
+  assert.equal((await post('/api/skaters',{...newSkater,name:' fixture   added skater '},platformHeaders)).status,409);
+  assert.equal((await post('/api/skaters',{...newSkater,name:'carson wang'},platformHeaders)).status,409);
+  assert.equal((await post('/api/skaters',{...newSkater,name:'Bad\nName'},platformHeaders)).status,400);
+  const existingAdmission=await database.prepare('SELECT payload FROM hsc_admissions WHERE skater_id=?').bind(created.id).first();
+  await database.prepare('UPDATE hsc_admissions SET admitted=1,payload=? WHERE skater_id=?').bind(JSON.stringify({...JSON.parse(existingAdmission.payload),representedClubs:'Official Fixture Club',retainedField:'keep'}),created.id).run();
+  const editable=(await (await mf.dispatchFetch(origin+'/api/skaters?id='+created.id,{headers:platformHeaders})).json()).skater;
+  const editBody={...editable,name:'Fixture Updated Skater',coach:'Updated Coach/Second Coach',training:false,identityPending:true};
+  const editedResponse=await post('/api/skaters',editBody,platformHeaders);assert.equal(editedResponse.status,200,await editedResponse.clone().text());const edited=(await editedResponse.json()).skater;
+  assert.equal(edited.id,created.id);assert.equal(edited.name,editBody.name);assert.equal(edited.coach,editBody.coach);assert.equal(edited.training,false);assert.equal(edited.identityPending,true);
+  const retained=await database.prepare('SELECT admitted,payload FROM hsc_admissions WHERE skater_id=?').bind(created.id).first();assert.equal(retained.admitted,1);assert.equal(JSON.parse(retained.payload).representedClubs,'Official Fixture Club');assert.equal(JSON.parse(retained.payload).retainedField,'keep');
+  assert.equal((await post('/api/skaters',{...editBody,coach:'Stale editor'},platformHeaders)).status,409);
+  const bulkList=await mf.dispatchFetch(origin+'/api/coaches',{headers:platformHeaders});assert.equal(bulkList.status,200);const bulkSkater=(await bulkList.json()).rows.find(row=>row.id===created.id);assert.ok(bulkSkater);assert.equal(bulkSkater.name,editBody.name);assert.equal(bulkSkater.coach,editBody.coach);
+  const bulkSave=await post('/api/coaches',{changes:[{id:created.id,coach:'Bulk Coach',revision:bulkSkater.revision}]},platformHeaders);assert.equal(bulkSave.status,200);assert.equal((await bulkSave.json()).saved.length,1);
+  assert.equal((await post('/api/skaters',{...edited,coach:'Stale after bulk'},platformHeaders)).status,409);
+  const latest=(await (await mf.dispatchFetch(origin+'/api/skaters?id='+created.id,{headers:platformHeaders})).json()).skater;assert.equal(latest.coach,'Bulk Coach');
+  const raced=await Promise.all(['Race One','Race Two'].map(coach=>post('/api/skaters',{...latest,coach},platformHeaders)));assert.deepEqual(raced.map(r=>r.status).sort(),[200,409]);
+  const duplicateRace=await Promise.all([1,2].map(()=>post('/api/skaters',{...newSkater,name:'Concurrent Added Fixture'},platformHeaders)));assert.deepEqual(duplicateRace.map(r=>r.status).sort(),[201,409]);
+  const clubAfter=(await (await mf.dispatchFetch(origin+'/api/club',{headers:platformHeaders})).json()).skaters;assert.ok(clubAfter.some(row=>row.id===created.id&&row.name===editBody.name));assert.equal(clubAfter.find(row=>row.id===fixtureCarson.id).name,fixtureCarson.name);
+  assert.ok((await database.prepare("SELECT count(*) AS count FROM hsc_audit WHERE action='skater-save'").first()).count>=4);
+  console.log('Admin roster: create/edit, new skaters in bulk coaches, duplicate and stale-write rejection, concurrent writes, retained admission/club data and audit; anonymous, parent, coach and cross-origin writes blocked.');
+
   const customOrigin='https://hamiltonskatingclub.memberportal.dev';
   const customSignIn=await mf.dispatchFetch(customOrigin+'/api/auth/sign-in/email',{method:'POST',headers:{origin:customOrigin,'Content-Type':'application/json'},body:JSON.stringify({email,password})});assert.equal(customSignIn.status,200,await customSignIn.clone().text());const customPasswordCookie=cookies(customSignIn);
   const customSession=await mf.dispatchFetch(customOrigin+'/api/member?action=session',{method:'POST',headers:{origin:customOrigin,'Content-Type':'application/json',cookie:customPasswordCookie},body:JSON.stringify({role:'parent'})});assert.equal(customSession.status,200,await customSession.clone().text());assert.equal((await customSession.json()).member.role,'admin');
