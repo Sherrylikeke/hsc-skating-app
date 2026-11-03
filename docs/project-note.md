@@ -231,6 +231,13 @@
 - V29（运行源码 43f68d60a722068bf880a143e30f451c7bd10d22，保存版本 appgprj_6ad76ca2dba481919ba883865cbd5a0d~appgver_2d72e4a6bd40819195e533a5b0061cab）部署 appgdep_6aea42b71dbc81918900275047c72c0e 于 2026-11-03T20:23:29.084601Z（Toronto 15:23）返回 succeeded、env_set_revision=6、MCP ready。最终构建及真实 Worker 回归通过；正式自定义域名选手档案页 200，匿名新 skaters／既有 club API 均 401；编辑表单、手机姓名布局和弹窗层级样式已送达，记录在会话 outputs/admin-roster-live-http.json。
 - 测试过程中原源码凭证到期，首次打包自动审批拒绝旧打开提交编号；已先提交核验后的当前源码，重新取得有效凭证及对应打开结果，再按官方助手正常构建／保存／发布成功，没有绕过拒绝或使用旧源码发布。本轮不变更域名、public 范围、邮件、邀请配置或每小时任务。运行源码已正常推送原私人 GitHub，原主工作区七个既有 PDF 删除项继续保留，不纳入本轮提交；本机开发预览已停止。
 
+## 2026-11-03 家长与测试账号的教练总表入口
+
+- 用户反馈 Allison 添加 Sydney Mitchell 后看不到 Coach 页面，要求普通用户能查看其他孩子赛程。只读核对 Allison 为已注册 role=null、status=club-viewer；共享 /api/club 已允许读取官方全队资料，实际阻碍是 ClubApp 导航仅显示 admin/coach 的前端条件。
+- 移除 Coach 导航的角色筛选，并在有效会员／赛程账号首页添加直达 /workspace?view=coach 的链接。私人教练安排、备注、编辑、管理员入口仍由原服务端角色和批准关系控制，无会员角色、关系或数据库修改。
+- 类型、语言及会员入口 11 组通过；WebKit 的 role=null / club-viewer、Sydney 置顶而查看 Carson 官方总表，390/1280px 中英文首页与总表 8 个视图通过；Chromium 有效家长 390px 中英 4 个视图通过，共 12 例，导航与手机布局均无越界。报告在会话 outputs/shared-coach-viewer 与 outputs/shared-coach-parent；均为隔离测试数据，未代登真实家长账号。
+- 新增真实 Worker/D1 回归：测试账号置顶一位选手后读取另一位选手的官方赛程，私人 coach_plans 不返回，写入、名单编辑与手动官网同步仍拒绝。最终构建、回归及部署结果完成后补记。
+
 ## 更新规则
 
 - 修改完成后更新事实、验收范围、日期与下一步；已知、待确认、历史快照分开。

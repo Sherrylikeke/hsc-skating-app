@@ -125,5 +125,16 @@ try {
   const pilotMember=await database.prepare('SELECT role,status FROM hsc_members WHERE id=?').bind('password:'+pilotUser.id).first();
   assert.equal(pilotMember.role,null);assert.equal(pilotMember.status,'club-viewer');
   assert.equal((await post('/api/auth/sign-up/email',pilotBody)).status,409);
+  const viewerLogin=await post('/api/auth/sign-in/email',{email:pilotBody.email,password});assert.equal(viewerLogin.status,200);const viewerPassword=cookies(viewerLogin);
+  const viewerSession=await post('/api/member?action=session',{role:'parent'},{cookie:viewerPassword});assert.equal(viewerSession.status,200);const viewerHeaders={cookie:viewerPassword+'; '+cookies(viewerSession)};
+  assert.equal((await post('/api/member?action=home-skater',{skaterId:created.id,pinned:true},viewerHeaders)).status,200);
+  await database.prepare('INSERT INTO coach_plans (id,skater_id,event_id,meeting_time,note,revision) VALUES (?,?,?,?,?,1)').bind(fixtureCarson.id+'|'+syncEvent.id+'|fixture-private',fixtureCarson.id,syncEvent.id,'2026-11-05T10:15','Fixture private coach note').run();
+  const viewerClubResponse=await mf.dispatchFetch(origin+'/api/club',{headers:viewerHeaders});assert.equal(viewerClubResponse.status,200);const viewerClub=await viewerClubResponse.json();
+  assert.equal(viewerClub.member.role,null);assert.equal(viewerClub.member.status,'club-viewer');assert.ok(viewerClub.ownSkaterIds.includes(created.id));assert.ok(!viewerClub.ownSkaterIds.includes(fixtureCarson.id));
+  assert.ok(viewerClub.events.some(event=>event.participants.some(entry=>entry.skaterIds.includes(fixtureCarson.id))&&event.blocks.length>0),'A viewer sees another skater official schedule');assert.equal(viewerClub.plans.length,0);assert.equal(viewerClub.writableSkaterIds.length,0);assert.ok(!JSON.stringify(viewerClub).includes('Fixture private coach note'));
+  assert.equal((await post('/api/plans',{skaterId:fixtureCarson.id,eventId:syncEvent.id,slotKey:'fixture',meetingTime:'',note:'Not permitted',revision:0},viewerHeaders)).status,403);
+  assert.equal((await post('/api/skaters',newSkater,viewerHeaders)).status,403);assert.equal((await post('/api/sync',{eventId:syncEvent.id},viewerHeaders)).status,403);
+  console.log('Shared coach schedule: role-null club viewer pins one skater and reads another skater official event, while private notes, roster edits, plan writes and official sync remain blocked.');
+
   console.log('Worker registration: anonymous blocked; administrator signup, same-identity linking, email/username login and role preserved; pilot signup and single use passed; authenticated results, all opponents, detailed marks and arbitrary-source rejection and custom-domain login/same-origin protection passed; real Worker sync resolves Carson #19 / warm-up 4 to 11:15–12:15 and excludes awards.');
 }finally{await mf.dispose();}
