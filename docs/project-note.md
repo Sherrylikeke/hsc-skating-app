@@ -197,6 +197,12 @@
 - V27（运行源码 4d4276a3ff6317009e51138f6a1a8708fc68427a，保存版本 appgprj_6ad76ca2dba481919ba883865cbd5a0d~appgver_f23291bfbe3c8191b07dbd8b60cfe5be）部署 appgdep_6aea0919ca548191be0ec679332853ad，于 2026-11-03 11:17 Toronto 返回 succeeded、env_set_revision=5。原 public 范围及邀请／邮件运行配置保留。匿名线上检查 workspace 与样式 200，手机选择器／有界列表／系统字体／排名表样式已送达，club 与 results API 均 401；记录在会话 outputs/results-mobile-http.json。TypeScript、语言、核心 25 组、成绩 10 组、历史趋势、教练日表／筛选和实际 Worker 回归均通过；未做真实手机视觉或用户账号登录验收。
 - 运行源码已正常推送原私人 GitHub main，原主工作区快进到同源码，七个既有 PDF 删除项保留未提交。原 keswick-release 工作副本保留本轮编辑及其既有删除，干净发布 checkout 为 work/results-release；不将旧工作副本的未提交删除带入发布。原生 APK 未重建。域名 CNAME 截至 11:17 Toronto 公开查询仍 NXDOMAIN，需用户导入已提供的三条 DNS 后继续刷新 SSL 状态。
 
+## 2026-11-03 自定义域名接通
+
+- 用户确认已导入 Cloudflare DNS。只读核对 hamiltonskatingclub.memberportal.dev 的 CNAME、OpenAI 所有权 TXT 与 Cloudflare 所有权 TXT 均与原生工具要求一致。首次刷新为 pending／active_redeploying、证书 active；2026-11-03 11:24 Toronto 再刷新，域名、provider 与 SSL 均 active，last_error 为空。未重复新增域名，也未修改 DNS、代理、续费或购买设置。
+- 11:25 Toronto 通过正常 TLS 校验访问 https://hamiltonskatingclub.memberportal.dev：首页与工作区 200、auth/config 200；匿名 club/results API 401；manifest 200，HSC Club Portal、standalone 与 start_url=/ 正常。记录在会话 outputs/custom-domain-http.json。此前短暂 404 为路由更新阶段，最终检查已恢复 200。
+- 复用原 V27、原数据库和原 public／会员权限；无代码／环境变量更改，无新账号、重置密码或真实邮件。新域名的真实用户密码登录及手机安装仍由用户本人验收；本轮 HTTP 检查不能冒充实际账号已登录。原网址继续保留，新域名浏览器会话需独立登录。仅文档记账，不为此重复部署网站。
+
 ## 更新规则
 
 - 修改完成后更新事实、验收范围、日期与下一步；已知、待确认、历史快照分开。
