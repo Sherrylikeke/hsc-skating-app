@@ -215,6 +215,13 @@
 - 发布后通过原 HSC 工具同步 SO-325444：290 位参赛者、10 位关联选手、86 个已识别时段；生产返回 Carson Short #19、Warm-up 4、2026-11-05 MOLSON RINK 11:15–12:15、uncertain=false、individualTime=null，官方跳转链接指向对应项目的 Starting Order。仅第 3/4 页缺少完整时间的其他类别保留待核对提示，不能把这次同步冒称全场无错误。同步核验在会话 outputs/carson-live-sync.json。Free 当前未公布序号，继续待确认。
 - 正式自定义域名首页／工作区 200，匿名 club/results API 401；WebKit iPhone 尺寸、中英管理员页面再验 4 例，顶部、导航及无需展开即可见的 #19／热身组链接通过。加本地 56 例共 60 个浏览器视图，API 均为隔离测试数据，不代表生产账号登录／iPhone 真机验收。截图与报告位于会话 outputs/mobile-header-production-webkit。开发预览已停止；源码正常推送原私人 GitHub、原主工作区已快进，七个既有 PDF 删除项保留未提交。
 
+## 2026-11-03 更新私人注册测试邀请
+
+- 用户要求解释 Sites 托管与个人 Cloudflare 托管的区别，并提供新测试链接；未授权迁移。当前仍复用 Sites 管理的 Worker/D1，个人 Cloudflare 只管理已购域名与 DNS。站点 public 范围、原数据库、登录与私人授权规则不变。
+- 只读核对 hsc_auth_user，四位既有测试者均尚未注册。为原四个邮箱生成新的独立邀请，绑定原 parent/coach 申请角色，有效期至 2026-11-10T17:51:39.644Z（Toronto 12:51）。仅更新秘密运行配置 HSC_PILOT_REGISTRATIONS 为 revision 6，旧邀请已替换；不创建账号、不重置密码、不授予私人关系，不修改邮件开关。
+- 复用 V28 保存版本，部署 appgdep_6aea1f429ea48191923d9f4f8dbe199d 于 2026-11-03T17:52:11.079074Z 返回 succeeded、env_set_revision=6、MCP ready。正式自定义域名的四次邀请验证均为 200、邮箱匹配、emailVerificationRequired=false；验证不消费邀请。未发送真实邮件。私人交付文件位于会话 outputs/新注册链接-*，原始令牌不入 Git 或本 Note。
+- 待办：测试者自行设置 HSC 密码并注册；管理员审核私人关系。面向任意用户的普通注册仍需先完成真实邮件发送域名配置。此次仅配置发布和文档记账，无代码改动、无手机安装包重建。
+
 ## 更新规则
 
 - 修改完成后更新事实、验收范围、日期与下一步；已知、待确认、历史快照分开。
