@@ -245,8 +245,9 @@
 - 官网日历已有 STAR 1–4，但固定最近三场会长期不读取较远赛事；保留每轮三场上限，将第三个名额改为未来45天内按上次检查时间轮换，最近两场保持优先。原每小时任务不重复创建，返回 nextEvents 含轮换目标。Niagara 2026 官方页面 https://skateontario.org/event/star-1-4-niagara-2/ 当前仅公告与邀请说明，尚未公开报名／赛程，不能生成具体孩子参赛或个人时间。
 - 用户指出成绩趋势选 PreJu 后赛事列表仍有 STAR5/7。原趋势序列选择只改变曲线；现在选择序列同时更新类别／成绩口径筛选，曲线、计数和下方记录使用同一筛选，保留可切换到其他序列的完整选项。原 Fiora 17 条成绩不删除，PreJu 切换后列表为 3 条，STAR5 为 9 条。
 - 排名表取消手机固定窄列及隐藏技术／节目内容名次，姓名不强制折行，表格自身横向滚动。评分细分拆成 J1…Jn 各裁判列，保留基础分、GOE、各裁判分与总分，动作／分项名不折叠，支持触摸与键盘聚焦的横向滚动区域。
-- 类型、语言、官网导入 11 组、同步客户端 7 组、原 Starting Order、历史趋势筛选及新 STAR1–4 真实 PDF 回归通过。Chrome/WebKit、390/1280px、中英文共 8 个浏览器视图验证筛选后的表格只剩 PreJu、姓名不折行及 J1–J7 横向滚动；使用隔离 API，不代表用户真实账号登录。报告／截图位于会话 outputs/results-usability-*；PDF 渲染核对在 outputs/star1-4-pdf。新增实际 Worker STAR1–4 PDF 回归，最终构建和上线结果完成后补记。
+- 类型、语言、官网导入 11 组、同步客户端 7 组、原 Starting Order、历史趋势筛选及新 STAR1–4 真实 PDF 回归通过。Chrome/WebKit、390/1280px、中英文共 8 个浏览器视图验证筛选后的表格只剩 PreJu、姓名不折行及 J1–J7 横向滚动；另验证带 J1/J3/Ref 的实际裁判编号与缺失 J2 保持对应空格，不按数组位置错误重编号。使用隔离 API，不代表用户真实账号登录。报告／截图位于会话 outputs/results-usability-*；PDF 渲染核对在 outputs/star1-4-pdf。最终真实 Worker 回归通过：STAR1–4 旋转赛程 78 时段／7 位参赛者、共享热身／PAD、原账号与私人授权、家长共享总表、Carson 官方顺序均通过。样本使用原名单已有 Fiona Villella，移除隔离用例重复创建的同名候选；没有修改生产名单。
 - Sites 收费只读核对官方 https://learn.chatgpt.com/docs/sites#pricing：截至 2026-12-31 托管免费，2027-01-01 拟启用按流量和存储计量、套餐额度以上的超额费用；有数据库站点基础约25credits/月，自定义域约25credits/月，流量每10万请求约16credits，数据库每GiB/月约150credits。建站／修改计入 Codex，域名注册另付；无账户实际账单或套餐托管额度读取入口，不据此推断用户美元账单，没有修改任何计费设置。
+- 2026-11-03 最后发布步骤因 Codex 用量上限导致自动审批无法完成，未执行该次操作；11-04 正常审批恢复后完成最终构建／验证。V31 源码 6477101f59dac15d96346aa4d3b619449416309b（应用代码 6718a20 与其相比仅隔离测试修正），保存版本 appgprj_6ad76ca2dba481919ba883865cbd5a0d~appgver_e9b59aa5da948191aa60f1e9554b1d7a，部署 appgdep_6aeb75dc2ab081919b16df063f9f7be2 于 2026-11-04T18:13:58.390558Z（Toronto 13:13）返回 succeeded、env_set_revision=6、MCP ready。正式自定义域名选手／教练页 200，匿名 club/results API 401，850px 横向排名表样式已送达；记录在会话 outputs/low-star-history-live-http.json。原 public、数据库、密码／邀请／邮件配置不变，无新定时任务。源码正常推送原私人 GitHub；七个既有 PDF 删除项保留未提交，本机开发预览已停止。
 
 ## 更新规则
 
