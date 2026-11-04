@@ -2,6 +2,7 @@
 import {apiFetch as fetch} from '../lib/client-platform';
 import {useEffect,useState} from 'react';
 import EmailVerificationPanel from './email-verification-panel';
+import PasswordResetPanel from './password-reset-panel';
 import {translate,text,useLanguage} from '../lib/i18n';
 import type {Role} from '../lib/member-access';
 export default function PasswordPanel({role,onComplete,allowAdminLink=false}:{role:Role;onComplete:()=>Promise<void>;allowAdminLink?:boolean}) {
@@ -12,7 +13,7 @@ export default function PasswordPanel({role,onComplete,allowAdminLink=false}:{ro
   const [pilotToken,setPilotToken]=useState('');
   const [deliveryConfigured,setDeliveryConfigured]=useState(false);
   useEffect(()=>{
-    void fetch('/api/auth/config',{cache:'no-store'}).then(async response=>{if(response.ok)setDeliveryConfigured((await response.json() as {deliveryConfigured?:boolean}).deliveryConfigured===true);}).catch(()=>{});
+    void fetch('/api/auth/config',{cache:'no-store'}).then(async response=>{if(response.ok)setDeliveryConfigured((await response.json() as {registrationConfigured?:boolean}).registrationConfigured===true);}).catch(()=>{});
     const fragment=new URLSearchParams(location.hash.slice(1)),token=fragment.get('invite');if(!token)return;
     fragment.delete('invite');history.replaceState(null,'',location.pathname+location.search+(fragment.size?'#'+fragment.toString():''));
     void fetch('/api/auth/pilot-invitation',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})}).then(async response=>{
@@ -32,7 +33,7 @@ export default function PasswordPanel({role,onComplete,allowAdminLink=false}:{ro
       const response=await fetch('/api/auth/'+endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
       const result=await response.json() as {message?:string;token?:string|null;user?:{email:string};error?:{message?:string}};
       setPassword('');setConfirm('');
-      if(!response.ok)throw new Error(result.message||result.error?.message||text('Unable to sign in. Please try again.','无法登录，请重试。'));
+      if(!response.ok){if(!register&&response.status===403&&result.message==='Verify your email before signing in.')setPendingEmail(emailLogin?identifier:'');throw new Error(result.message||result.error?.message||text('Unable to sign in. Please try again.','无法登录，请重试。'));}
       if(register&&result.user&&!result.token){
         const config=await fetch('/api/auth/config').then(response=>response.json()) as {deliveryConfigured:boolean};
         if((!adminLink&&response.headers.get('X-HSC-Registration-Mode')!=='pilot')||config.deliveryConfigured){setPendingEmail(email);return;}
@@ -71,6 +72,7 @@ export default function PasswordPanel({role,onComplete,allowAdminLink=false}:{ro
     </form>}
     {invitationRequired&&error&&<p role="alert" className="password-error">{translate(error)}</p>}
     {!pilotRole&&<details><summary>{text('Need to verify your email?','需要验证邮箱？')}</summary><EmailVerificationPanel/></details>}
+    {!register&&<details><summary>{text('Forgot your password?','忘记密码？')}</summary><PasswordResetPanel/></details>}
     <p className="member-muted">{pilotRole?text('Pilot accounts can view shared official schedules. Private relationships and coach editing still require administrator approval.','内测账号可查看共享官方赛程。私人关系和教练编辑权限仍需管理员批准。'):text('New accounts require a listed skater name and email verification. When mail service setup is pending, existing accounts can still sign in. Homepage choices do not grant private coach, message or administration permissions.','新账号须填写名单内选手姓名并验证邮箱。邮件服务配置期间，现有账号仍可登录；主页选择不会授予教练、私人消息或管理员权限。')}</p>
   </section>;
 }

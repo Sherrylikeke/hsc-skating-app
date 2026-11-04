@@ -6,7 +6,7 @@ import {env} from 'cloudflare:workers';
 import {createPasswordAuth, productionOrigin} from './password-auth';
 import {verificationDelivery} from './verification-mail';
 import type {MailEnvironment} from './verification-mail';
-import {pilotInvitationFor} from './pilot-registration';
+import {isRegisteredPilot,pilotInvitationFor} from './pilot-registration';
 
 export const ownerEmail = 'sherrylikeke@gmail.com';
 export function passwordAuth(request: Request) {
@@ -25,7 +25,7 @@ export async function requestIdentity(request: Request) {
   const session = auth ? await auth.api.getSession({headers:request.headers}) : null;
   if (!session) return await getChatGPTUser();
   const link = await db().prepare('SELECT member_id FROM hsc_auth_links WHERE auth_user_id=?').bind(session.user.id).first<{member_id:string}>();
-  return {userId:link?.member_id || 'password:'+session.user.id,email:session.user.email,displayName:session.user.name,provider:'password' as const,authToken:session.session.token,authVerified:session.user.emailVerified,emailVerificationRequired:verificationDelivery(env as unknown as MailEnvironment).enabled};
+  return {userId:link?.member_id || 'password:'+session.user.id,email:session.user.email,displayName:session.user.name,provider:'password' as const,authToken:session.session.token,authVerified:session.user.emailVerified,emailVerificationRequired:verificationDelivery(env as unknown as MailEnvironment).enabled&&!await isRegisteredPilot(db(),session.user.id)};
 }
 export async function requestMember(request: Request, roles?: Role[]): Promise<Member> {
   const member = await actor(db(), await requestIdentity(request), request);

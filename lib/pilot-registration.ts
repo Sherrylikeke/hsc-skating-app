@@ -2,6 +2,10 @@ import {digest} from './member-access';
 
 export type PilotRegistration={email:string;role:'parent'|'coach'|'skater';invitationHash:string;expiresAt:string};
 export const pilotUsedKey=(pilot:PilotRegistration)=>'hsc-pilot-used:'+pilot.invitationHash;
+export async function isRegisteredPilot(database:D1Database,userId:string):Promise<boolean> {
+  const record=await database.prepare("SELECT key FROM app_meta WHERE key LIKE 'hsc-pilot-used:%' AND json_valid(value) AND json_extract(value,'$.userId')=? LIMIT 1").bind(userId).first();
+  return !!record;
+}
 export async function pilotInvitationFor(configuration:string|undefined,token:string,email='',time=Date.now()):Promise<PilotRegistration|null> {
   if(!configuration||!/^[a-f0-9]{64}$/.test(token))return null;
   let entries:unknown;try{entries=JSON.parse(configuration);}catch{return null;}

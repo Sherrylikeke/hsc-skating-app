@@ -9,7 +9,7 @@ import type {Role} from './member-access';
 import {recordRegistration,registrationEligibility} from './registration';
 import type {VerificationDelivery} from './verification-mail';
 import type {PilotRegistration} from './pilot-registration';
-import {pilotUsedKey} from './pilot-registration';
+import {isRegisteredPilot,pilotUsedKey} from './pilot-registration';
 
 export const productionOrigin = 'https://hsc-coach-roster.sherrylikeke.chatgpt.site';
 export function createPasswordAuth(database: D1Database, secret: string, origin = productionOrigin, existingMembership?: (request:Request,email:string)=>Promise<Role|null>, delivery:VerificationDelivery={enabled:false}, pilotRegistration?: (request:Request,email:string,token:string)=>Promise<PilotRegistration|null>) {
@@ -19,7 +19,9 @@ export function createPasswordAuth(database: D1Database, secret: string, origin 
   const auth = betterAuth({
     appName:'HSC Skating', baseURL:origin, basePath:'/api/auth', secret,
     database:drizzleAdapter(drizzle(database,{schema}),{provider:'sqlite',schema,transaction:false}),
-    emailAndPassword:{enabled:true,minPasswordLength:12,maxPasswordLength:128,autoSignIn:false},
+    emailAndPassword:{enabled:true,minPasswordLength:12,maxPasswordLength:128,autoSignIn:false,resetPasswordTokenExpiresIn:3600,revokeSessionsOnPasswordReset:true,
+      ...(delivery.enabled&&delivery.sendReset?{async sendResetPassword({user,url}:{user:{email:string};url:string}){await delivery.sendReset!(user.email,url);}}:{}),
+    },
     emailVerification:{sendOnSignUp:delivery.enabled,sendOnSignIn:false,expiresIn:3600,autoSignInAfterVerification:false,
       ...(delivery.enabled?{async sendVerificationEmail({user,url}:{user:{email:string};url:string}){if(!delivery.send)throw new Error('Email delivery is unavailable.');await delivery.send(user.email,url);}}:{}),
     },
@@ -27,17 +29,18 @@ export function createPasswordAuth(database: D1Database, secret: string, origin 
       if(!delivery.enabled)return;
       const user=await database.prepare('SELECT email_verified FROM hsc_auth_user WHERE id=?').bind(session.userId).first<{email_verified:number}>();
       if(user?.email_verified)return;
+      if(await isRegisteredPilot(database,session.userId))return;
       const legacyAdmin=await database.prepare("SELECT m.id FROM hsc_members m JOIN hsc_auth_links l ON l.member_id=m.id WHERE l.auth_user_id=? AND m.role='admin' AND m.status='active'").bind(session.userId).first();
       if(!legacyAdmin)throw new APIError('FORBIDDEN',{code:'EMAIL_NOT_VERIFIED',message:'Verify your email before signing in.'});
     }}}},
     session:{expiresIn:28800,updateAge:3600,cookieCache:{enabled:false}},
     account:{accountLinking:{enabled:false}},
-    disabledPaths:['/is-username-available','/request-password-reset','/reset-password','/delete-user'],
+    disabledPaths:['/is-username-available','/delete-user'],
     trustedOrigins:[origin,'hscskating://'],
     advanced:{useSecureCookies:!local,ipAddress:{ipAddressHeaders:['cf-connecting-ip']}},
     rateLimit:{
       enabled:true,window:60,max:60,
-      customRules:{'/sign-in/username':{window:60,max:8},'/sign-in/email':{window:60,max:8},'/sign-up/email':{window:3600,max:5},'/send-verification-email':{window:60,max:1}},
+      customRules:{'/sign-in/username':{window:60,max:8},'/sign-in/email':{window:60,max:8},'/sign-up/email':{window:3600,max:5},'/send-verification-email':{window:60,max:1},'/request-password-reset':{window:60,max:1},'/reset-password':{window:60,max:5}},
       customStorage:{async consume(key,rule){
         const windowMs=rule.window*1000, time=Date.now();
         const id=`auth:${key}:${Math.floor(time/windowMs)}`;
@@ -50,10 +53,21 @@ export function createPasswordAuth(database: D1Database, secret: string, origin 
   return {...auth,handler:async(request:Request)=>{
     const pathname=new URL(request.url).pathname.replace(/\/$/,'');
     if(request.method==='GET'&&pathname==='/api/auth/config'){
-      return Response.json({emailVerificationRequired:true,deliveryConfigured:delivery.enabled,pilotRegistrationAllowed:false},{headers:{'Cache-Control':'no-store'}});
+      return Response.json({emailVerificationRequired:true,deliveryConfigured:delivery.enabled,registrationConfigured:delivery.enabled&&delivery.registrationEnabled===true,pilotRegistrationAllowed:false},{headers:{'Cache-Control':'no-store'}});
     }
     if(request.method==='POST'&&(request.headers.get('origin')!==origin||request.headers.get('sec-fetch-site')==='cross-site'))return Response.json({message:'Invalid request origin.'},{status:403});
     if(request.method==='POST'&&!request.headers.get('content-type')?.startsWith('application/json'))return Response.json({message:'Use application/json.'},{status:415});
+    if(request.method==='POST'&&['/api/auth/request-password-reset','/api/auth/reset-password','/api/auth/send-verification-email'].includes(pathname)){
+      if(!delivery.enabled)return Response.json({message:'Email service setup is pending. Existing accounts can still sign in.'},{status:503});
+      try{
+        const raw=await request.clone().text();
+        if(new TextEncoder().encode(raw).length>8192)return Response.json({message:'Request is too large.'},{status:413});
+        const body=JSON.parse(raw);
+        if(!body||typeof body!=='object'||Array.isArray(body))return Response.json({message:'Invalid request.'},{status:400});
+        if(pathname==='/api/auth/request-password-reset'&&body.redirectTo!==origin+'/reset-password')return Response.json({message:'Invalid password reset return URL.'},{status:400});
+        if(pathname==='/api/auth/send-verification-email'&&body.callbackURL!==origin+'/verify-email?verified=1')return Response.json({message:'Invalid verification return URL.'},{status:400});
+      }catch{return Response.json({message:'Invalid request.'},{status:400});}
+    }
     if(request.method==='POST'&&pathname==='/api/auth/pilot-invitation'){
       try{
         await rateLimit(database,'pilot-invitation:'+(request.headers.get('cf-connecting-ip')||'unknown'),20);
@@ -80,6 +94,7 @@ export function createPasswordAuth(database: D1Database, secret: string, origin 
         if(invitationToken&&!pilot)return Response.json({message:'This invitation is invalid or expired.'},{status:403});
         if(pilot&&await database.prepare('SELECT value FROM app_meta WHERE key=?').bind(pilotUsedKey(pilot)).first())return Response.json({message:'This invitation has already been used. Sign in with your account.'},{status:409});
         const existingRole=body.linkExisting===true&&existingMembership?await existingMembership(request,email):null;
+        if(delivery.enabled&&delivery.registrationEnabled!==true&&existingRole!=='admin')return Response.json({message:'Public registration is not open yet. Existing accounts can still sign in.'},{status:503});
         if(!delivery.enabled&&!pilot&&existingRole!=='admin')return Response.json({message:'New accounts require email verification. Mail service setup is pending; please try again after setup. Existing accounts can still sign in.'},{status:503});
         const registration=existingRole==='admin'?null:await registrationEligibility(database,body,request.headers.get('cf-connecting-ip')||'unknown');
         if(pilot&&registration?.role!==pilot.role)return Response.json({message:'Use the role assigned to your pilot invitation.'},{status:403});

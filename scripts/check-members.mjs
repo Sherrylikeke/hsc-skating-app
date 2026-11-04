@@ -391,7 +391,7 @@ try{
 }finally{globalThis.fetch=originalFetch;}
 check('real PDF batches persist progress and nested source revisions; unchanged schedules reparse after parser upgrades, failed revisions preserve records, and repeated sync deduplicates changes/outbox');
 const verificationLinks=[];
-const testDelivery={enabled:true,async send(email,url){verificationLinks.push({email,url});}};
+const testDelivery={enabled:true,registrationEnabled:true,async send(email,url){verificationLinks.push({email,url});}};
 const auth=createPasswordAuth(database,'isolated-tests-only-secret-0123456789-abcdef','http://127.0.0.1:5173',undefined,testDelivery);
 const authRequest=(path,body,headers={})=>new Request('http://127.0.0.1:5173/api/auth/'+path,{method:'POST',headers:{origin:'http://127.0.0.1:5173','Content-Type':'application/json','cf-connecting-ip':'192.0.2.71',...headers},body:JSON.stringify(body)});
 const testPassword='Isolated-Fixture-Password-2026!';
@@ -445,7 +445,7 @@ const expiredResponse=await auth.handler(new Request('http://127.0.0.1:5173/api/
 assert.notEqual(expiredResponse.status,200);
 assert.equal(database.database.prepare('SELECT email_verified FROM hsc_auth_user WHERE id=?').get(signupValue.user.id).email_verified,0);
 assert.equal((await auth.handler(authRequest('send-verification-email',{email:registrationBody.email,callbackURL:'http://127.0.0.1:5173/verify-email?verified=1'}))).status,200);
-assert.equal((await auth.handler(authRequest('send-verification-email',{email:registrationBody.email}))).status,429);
+assert.equal((await auth.handler(authRequest('send-verification-email',{email:registrationBody.email,callbackURL:'http://127.0.0.1:5173/verify-email?verified=1'}))).status,429);
 const verificationResponse=await auth.handler(new Request(verificationURL));
 assert.ok([200,302].includes(verificationResponse.status));
 assert.equal(database.database.prepare('SELECT email_verified FROM hsc_auth_user WHERE id=?').get(signupValue.user.id).email_verified,1);
@@ -588,7 +588,7 @@ try{
   globalThis.fetch=async()=>{throw new DOMException('fixture timeout','TimeoutError');};
   await assert.rejects(()=>verificationDelivery(mailConfig).send('recipient@example.test','https://hsc.example.test/verify'),error=>error.name==='TimeoutError');
 }finally{globalThis.fetch=providerFetch;}
-const failedDeliveryAuth=createPasswordAuth(registrationDatabase,'isolated-tests-only-secret-0123456789-abcdef','http://127.0.0.1:5173',undefined,{enabled:true,async send(){throw new Error('fixture-only mail failure');}});
+const failedDeliveryAuth=createPasswordAuth(registrationDatabase,'isolated-tests-only-secret-0123456789-abcdef','http://127.0.0.1:5173',undefined,{enabled:true,registrationEnabled:true,async send(){throw new Error('fixture-only mail failure');}});
 const failedDeliveryResponse=await failedDeliveryAuth.handler(authRequest('sign-up/email',{...registrationBody,email:'mail-failure@example.test',username:'mail.failure',skaterName:'Club Skater'},{'cf-connecting-ip':'192.0.2.185'}));
 assert.equal(failedDeliveryResponse.status,200);
 assert.equal(failedDeliveryResponse.headers.get('set-auth-token'),null);
@@ -728,6 +728,47 @@ try{
   check('opening the public page does not expose club/mobile/member/coach data, plan writes, official sync or MCP to anonymous requests');
 }finally{globalThis.fetch=pilotFetch;globalThis.hscTestHeaders=new Headers();globalThis.hscTestPilotConfiguration=undefined;globalThis.hscTestAuthSecret=undefined;}
 
+const resetLinks=[];
+const mailOnlyAuth=createPasswordAuth(database,'isolated-tests-only-secret-0123456789-abcdef','http://127.0.0.1:5173',undefined,{...testDelivery,registrationEnabled:false});
+assert.equal((await mailOnlyAuth.handler(authRequest('sign-up/email',{...registrationBody,email:'not-open@example.test',username:'not.open'},{'cf-connecting-ip':'192.0.2.240'}))).status,503);
+assert.equal(database.database.prepare('SELECT id FROM hsc_auth_user WHERE email=?').get('not-open@example.test'),undefined);
+const recoveryAuth=createPasswordAuth(database,'isolated-tests-only-secret-0123456789-abcdef','http://127.0.0.1:5173',undefined,{...testDelivery,async sendReset(email,url){resetLinks.push({email,url});}});
+const resetRequest=(email,ip)=>authRequest('request-password-reset',{email,redirectTo:'http://127.0.0.1:5173/reset-password'},{'cf-connecting-ip':ip});
+assert.equal((await noMailAuth.handler(resetRequest(pilotEmail,'192.0.2.230'))).status,503);
+assert.equal((await recoveryAuth.handler(authRequest('request-password-reset',{email:pilotEmail,redirectTo:'https://untrusted.example.test/reset-password'}))).status,400);
+assert.equal((await recoveryAuth.handler(authRequest('send-verification-email',{email:pilotEmail,callbackURL:'https://untrusted.example.test/verify-email'}))).status,400);
+const pilotActivated=await recoveryAuth.handler(authRequest('sign-in/email',{email:pilotEmail,password:testPassword},{'cf-connecting-ip':'192.0.2.231'}));
+assert.equal(pilotActivated.status,200);
+assert.equal((await recoveryAuth.handler(authRequest('sign-in/username',{username:'pilot.parent',password:testPassword},{'cf-connecting-ip':'192.0.2.232'}))).status,200);
+const activatedSession=await recoveryAuth.api.getSession({headers:new Headers({authorization:'Bearer '+pilotActivated.headers.get('set-auth-token')})});
+assert.equal(activatedSession.user.emailVerified,false);
+const {isRegisteredPilot}=await import('../lib/pilot-registration.ts');
+assert.equal(await isRegisteredPilot(database,activatedSession.user.id),true);
+assert.equal(await isRegisteredPilot(database,signupValue.user.id),false);
+assert.equal((await recoveryAuth.handler(resetRequest(pilotEmail,'192.0.2.233'))).status,200);
+assert.equal((await recoveryAuth.handler(resetRequest(pilotEmail,'192.0.2.233'))).status,429);
+const unknownReset=await recoveryAuth.handler(resetRequest('unknown@example.test','192.0.2.234'));
+assert.equal(unknownReset.status,200);assert.equal(resetLinks.length,1);
+const resetLink=new URL(resetLinks[0].url);
+assert.equal(resetLink.searchParams.get('callbackURL'),'http://127.0.0.1:5173/reset-password');
+const resetCallback=await recoveryAuth.handler(new Request(resetLink));
+assert.equal(resetCallback.status,302);
+const resetToken=new URL(resetCallback.headers.get('location')).searchParams.get('token');assert.ok(resetToken);
+const resetPassword='New-Isolated-Password-2026!';
+assert.equal((await recoveryAuth.handler(authRequest('reset-password',{token:resetToken,newPassword:resetPassword},{origin:'https://untrusted.example.test'}))).status,403);
+assert.equal((await recoveryAuth.handler(authRequest('reset-password',{token:resetToken,newPassword:'short'}))).status,400);
+database.database.prepare('UPDATE hsc_auth_verification SET expires_at=? WHERE identifier=?').run(Date.now()-1000,'reset-password:'+resetToken);
+assert.equal((await recoveryAuth.handler(authRequest('reset-password',{token:resetToken,newPassword:resetPassword}))).status,400);
+assert.equal((await recoveryAuth.handler(resetRequest(pilotEmail,'192.0.2.235'))).status,200);
+const freshToken=new URL(resetLinks[1].url).pathname.split('/').pop();
+assert.equal((await recoveryAuth.handler(authRequest('reset-password',{token:freshToken,newPassword:resetPassword},{'cf-connecting-ip':'192.0.2.236'}))).status,200);
+assert.equal((await recoveryAuth.handler(authRequest('reset-password',{token:freshToken,newPassword:resetPassword},{'cf-connecting-ip':'192.0.2.237'}))).status,400);
+assert.equal(await recoveryAuth.api.getSession({headers:new Headers({authorization:'Bearer '+pilotActivated.headers.get('set-auth-token')})}),null);
+assert.notEqual((await recoveryAuth.handler(authRequest('sign-in/email',{email:pilotEmail,password:testPassword},{'cf-connecting-ip':'192.0.2.238'}))).status,200);
+assert.equal((await recoveryAuth.handler(authRequest('sign-in/email',{email:pilotEmail,password:resetPassword},{'cf-connecting-ip':'192.0.2.239'}))).status,200);
+assert.equal(database.database.prepare('SELECT email_verified FROM hsc_auth_user WHERE id=?').get(activatedSession.user.id).email_verified,0);
+assert.equal(database.database.prepare('SELECT count(*) AS count FROM hsc_relations WHERE member_id=?').get('password:'+activatedSession.user.id).count,0);
+check('registered pilots retain unverified sign-in after mail activation; reset links are private, throttled, expiring and single-use, revoke sessions, reject old passwords and never verify email or grant relationships');
 const result = {passed: checks.length, checks, migrations, fixtureOnly: true, externalMessagesSent: 0, legacyDataPreserved: true};
 fs.mkdirSync('work', {recursive: true});
 fs.writeFileSync('work/phase2-test-results.json', JSON.stringify(result, null, 2));
