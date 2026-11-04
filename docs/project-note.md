@@ -261,6 +261,7 @@
 - 新增 HSC_PUBLIC_REGISTRATION_ENABLED，只有邮件完整且此键明确 true 才开放普通注册；默认缺失/false 允许先做受控测信。原管理员恢复路径、Worker/D1、数据与每小时任务保留，无迁移、DNS/运行变量变更或真实邮件发送。
 - Web 类型、语言、会员入口 11 组和官方生产构建通过。核心套件有既有解析器期望版本 3/实际 4 的断言失败；忽略目录 work/check-mail-regression.mjs 只在内存纠正该断言后 26 组通过，含密码找回和测试账号过渡，非真实邮件送达。Chrome 本地预览调用超时，本轮新界面未完成浏览器显示验收；发布结果待完成后补记。
 - 可审核的发信子域、发件地址、DNS要求、双开关启用与回退步骤及备份/资源用量读取限制已写入 docs/email-verification.md。下一步需用户在已打开 Resend 浏览器登录，核对真实域名记录，再按明确授权发送一封受控邮件和正式开放注册。
+- V32（运行源码 0570d3e395ae26c707365de5e583e529a2ef4646；保存版本 appgprj_6ad76ca2dba481919ba883865cbd5a0d~appgver_4183cc2af7d8819182bfa0d431eb03f2）部署 appgdep_6aeba744a65481919bc94f8a30e35e29 于 2026-11-04 16:44 Toronto 返回 succeeded、env_set_revision=6、MCP ready。正式自定义域名匿名读取 config：deliveryConfigured=false、registrationConfigured=false；reset-password 页面 200、club API 401。本地预览已停止。原私人 GitHub 推送首次被自动审批要求核验；通过既有 Git 凭据只读确认仓库 private、owner=Sherrylikeke、admin/push=true 后，按原授权正常推送 0570d3e 成功，没有强推或可见性修改。
 
 ## 更新规则
 

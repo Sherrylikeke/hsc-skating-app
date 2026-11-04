@@ -4,6 +4,14 @@
 
 ## 目前线上状态
 
+### 本轮续做更新（2026-11-04 16:44 Toronto）
+
+- 当前已部署 V32：运行源码 `0570d3e395ae26c707365de5e583e529a2ef4646`，保存版本 `appgprj_6ad76ca2dba481919ba883865cbd5a0d~appgver_4183cc2af7d8819182bfa0d431eb03f2`，部署 `appgdep_6aeba744a65481919bc94f8a30e35e29` succeeded、env revision 6、MCP ready。下方 V31 内容是上一轮基线。
+- 已补齐网页密码找回（1小时、一次性、撤销旧认证会话），已消费专属邀请的现有测试账号在开启邮件后保留未验证登录与共享赛程，私人权限仍按原规则控制。
+- 新增 `HSC_PUBLIC_REGISTRATION_ENABLED`，缺失/false 默认关闭。邮件启用与开放普通注册已分开；线上 config 重新读取 deliveryConfigured=false、registrationConfigured=false，重设页 200、匿名 club 401。没有真实邮件、DNS或运行配置更改。
+- 类型、生产构建、语言、会员入口11组通过。核心原脚本因既有解析器版本断言3/4失败；忽略目录内存断言覆盖后26组通过，包含实际 Better Auth 密码/过渡流程。浏览器预览调用超时，新界面未完成视觉验收。Resend 浏览器停在登录页，需用户登录后才能读真实发信域名记录；建议方案与后续双开关步骤见 `docs/email-verification.md`。
+- 原私人 GitHub 推送首次被自动审批要求核验私人性/所有权；已用既有 Git 凭据只读确认 private、owner=Sherrylikeke、admin/push=true，重试正常推送 0570d3e 成功，Sites 源码已同步。不要把原主仓库七个 PDF 删除纳入任何提交。
+
 - 正式网址：https://hamiltonskatingclub.memberportal.dev/ 。原 Sites 网址继续保留。
 - 网站访问范围已为 public，登录页可公开访问；**普通自助注册仍未正式开放**。现有账号可登录，指定测试者通过邮箱绑定的专属邀请注册；不可把 public 误解为匿名读取会员资料或任意邮箱免验证注册。
 - Sites 项目：`appgprj_6ad76ca2dba481919ba883865cbd5a0d`，复用原 Worker、D1 数据库与既有权限，不新建替代站点。
