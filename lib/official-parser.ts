@@ -7,10 +7,11 @@ const attribute=(text:string,name:string)=>{const m=text.match(new RegExp(`\\b${
 export function categoryKey(value:string){
   const text=plain(value).toUpperCase().replace(/PRE[ -]?NOVICE/g,'PRENOVICE').replace(/PRE[ -]?JUVENILE/g,'PREJUVENILE');
   const level=text.match(/\b(PREJUVENILE|JUVENILE|PRENOVICE|NOVICE|JUNIOR|SENIOR|GOLD|ADULT|STAR\s*\d+)\b/)?.[1]||'';
-  let discipline='';if(/\bPAIR(S)?\b/.test(text))discipline='PAIR';else if(/S[YW]N?CHRO|SYNCHRO/.test(text))discipline='SYNCHRO';else if(/\bSOLO\b/.test(text))discipline='SOLO';else if(/DANCE/.test(text))discipline='DANCE';else if(/\bWOMEN\b|\bGIRLS\b/.test(text))discipline='WOMEN';else if(/\bMEN\b|\bBOYS\b/.test(text))discipline='MEN';
+  let discipline='';if(/\bTEAM\s+ELEMENTS\b/.test(text))discipline='TEAM-ELEMENTS';else if(/\bELEMENTS\b/.test(text))discipline='ELEMENTS';else if(/\bPAIR(S)?\b/.test(text))discipline='PAIR';else if(/S[YW]N?CHRO|SYNCHRO/.test(text))discipline='SYNCHRO';else if(/\bSOLO\b/.test(text))discipline='SOLO';else if(/DANCE/.test(text))discipline='DANCE';else if(/\bWOMEN\b|\bGIRLS\b/.test(text))discipline='WOMEN';else if(/\bMEN\b|\bBOYS\b/.test(text))discipline='MEN';else if(/^STAR\s*[1-3]$/.test(level))discipline='FREESKATE';
   return level&&discipline?`${level}:${discipline}`:'';
 }
 export const groupOf=(value:string)=>{const m=value.match(/\bGROUP\s*([0-9]+)/i);return m?Number(m[1]):null;};
+export function categoryKeys(value:string){const shared=value.match(/\bSTAR\s*([1-4])\s*\/\s*([1-4])\b/i);return shared?[...new Set([shared[1],shared[2]].map(level=>categoryKey(value.replace(shared[0],'STAR '+level))))]:[categoryKey(value)];}
 export function discoverDocuments(html:string,base:string):OfficialDocument[]{
   const found=new Map<string,OfficialDocument>();
   for(const match of html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)){
@@ -69,21 +70,27 @@ export function parseScheduleDocument(pages:PdfItem[][],sourceUrl:string):{block
       const neighbors=starts.filter(item=>Math.abs(item.y-header.y)<3).sort((first,second)=>first.x-second.x),index=neighbors.indexOf(header);
       const left=header.x-25,right=neighbors[index+1]?neighbors[index+1].x-25:Infinity;
       const endHeader=items.find(item=>item.str.trim()==='END'&&Math.abs(item.y-header.y)<3&&item.x>header.x&&item.x<right);
-      const rink=items.filter(item=>Math.abs(item.y-header.y)<3&&item.x>header.x+40&&item.x<right&&/RINK/i.test(item.str)).map(item=>item.str).join(' ');
+      const rink=items.filter(item=>Math.abs(item.y-header.y)<3&&item.x>header.x+40&&item.x<right&&/\b(?:RINK|PAD)\b/i.test(item.str)).map(item=>item.str).join(' ');
       if(!endHeader||!rink){warnings.add('第 '+(page+1)+' 页有未明确标注 END 或冰场的表格，暂不导入');continue;}
       const lowerDate=anchors.find(anchor=>anchor.y<header.y-3)?.y??0;
       const lowerHeader=starts.find(item=>item.y<header.y-3)?.y??0;
       const bottom=Math.max(lowerDate,lowerHeader);
       const content=items.filter(item=>item.y<header.y-3&&item.y>bottom+3&&item.x>=left&&item.x<right);
+      let shared:ScheduleBlock|undefined;
       for(const line of pdfLines(content)){
         const text=line.items.sort((first,second)=>first.x-second.x).map(item=>item.str).join(' ').replace(/\s+/g,' ').trim();
         const match=text.match(/^(\d{1,2}:\d{2}\s*[AP]M)\s+(\d{1,2}:\d{2}\s*[AP]M)\s+(.+)$/i);
-        if(!match){if(categoryKey(text))warnings.add('第 '+(page+1)+' 页有未明确列出完整起止时间的类别，暂不导入');continue;}
+        if(!match){
+          if(shared&&/^STAR\s*[1-4]\b/i.test(text)&&categoryKey(text)===shared.categoryKey&&/shared warm[ -]?up/i.test(shared.category)&&text!==shared.category){blocks.push({...shared,id:date+'|'+rink+'|'+shared.start+'|'+text,category:text,group:groupOf(text)});shared=undefined;continue;}
+          shared=undefined;if(categoryKey(text))warnings.add('第 '+(page+1)+' 页有未明确列出完整起止时间的类别，暂不导入');continue;
+        }
+        shared=undefined;
         const category=match[3].trim(),key=categoryKey(category);if(/FLOOD|GOOD NIGHT|GOODNIGHT|DRIVE SAFE|THANK YOU/i.test(category))continue;
         if(!key){warnings.add('第 '+(page+1)+' 页有尚未支持的类别，暂不导入');continue;}
         const start=time24(match[1]),end=time24(match[2]);if(!start||!end||start>=end){warnings.add('第 '+(page+1)+' 页有无效或倒序时间，暂不导入');continue;}
         const range=category.match(/\((\d+)\s*[-–]\s*(\d+)\)/);
-        blocks.push({id:date+'|'+rink+'|'+start+'|'+category,date,start,end,rink,category,categoryKey:key,group:groupOf(category),range:range?[Number(range[1]),Number(range[2])]:null,activity:/PRACTICE/i.test(category)?'practice':'competition',page:page+1,sourceUrl});
+        const block:ScheduleBlock={id:date+'|'+rink+'|'+start+'|'+category,date,start,end,rink,category,categoryKey:key,group:groupOf(category),range:range?[Number(range[1]),Number(range[2])]:null,activity:/PRACTICE/i.test(category)?'practice':'competition',page:page+1,sourceUrl};
+        blocks.push(block);if(/shared warm[ -]?up/i.test(category))shared=block;
       }
     }
   }
@@ -100,14 +107,14 @@ function categoryVariants(value:string){
 export function categoryCompatible(first:string,second:string){
   return categoryVariants(first).some(entryCategory=>categoryVariants(second).some(blockCategory=>{
     const entry=categoryDetails(entryCategory),block=categoryDetails(blockCategory);
-    return categoryKey(entryCategory)===categoryKey(blockCategory)&&entry.nonqualifying===block.nonqualifying&&(entry.program==='artistic')===(block.program==='artistic')&&(!entry.ages.length||!block.ages.length||entry.ages.some(age=>block.ages.includes(age)))&&(!entry.band||!block.band||entry.band===block.band)&&(!entry.program||!block.program||entry.program===block.program);
+    return categoryKeys(entryCategory).some(key=>categoryKeys(blockCategory).includes(key))&&entry.nonqualifying===block.nonqualifying&&(entry.program==='artistic')===(block.program==='artistic')&&(!entry.ages.length||!block.ages.length||entry.ages.some(age=>block.ages.includes(age)))&&(!entry.band||!block.band||entry.band===block.band)&&(!entry.program||!block.program||entry.program===block.program);
   }));
 }
 export function scheduleRows(events:Array<Pick<LiveEvent,'id'|'name'|'url'|'timezone'|'participants'|'blocks'|'startingOrders'>>,skaters:ClubSkater[]):ScheduleRow[]{
   const skaterMap=new Map(skaters.map(row=>[row.id,row]));const output=new Map<string,ScheduleRow>();
   for(const event of events)for(const entry of event.participants){
     const key=categoryKey(entry.category),group=groupOf(entry.category);if(!key)continue;
-    const matching=event.blocks.filter(block=>block.categoryKey===key&&categoryCompatible(entry.category,block.category)&&(group===null||block.group===null||group===block.group));
+    const matching=event.blocks.filter(block=>categoryCompatible(entry.category,block.category)&&(group===null||block.group===null||group===block.group));
     for(const id of entry.skaterIds){const skater=skaterMap.get(id);if(!skater)continue;
       for(const block of matching){const startingOrder=block.activity==='competition'?orderFor(event.startingOrders||[],id,block.category):undefined;if(block.range&&startingOrder&&(startingOrder.startNumber<block.range[0]||startingOrder.startNumber>block.range[1]))continue;const entryDetails=categoryDetails(entry.category),blockDetails=categoryDetails(block.category);const uncertain=(block.group!==null&&group===null)||(block.range!==null&&!startingOrder)||!!(blockDetails.ages.length&&!entryDetails.ages.length)||!!(blockDetails.band&&!entryDetails.band);const rowId=`${event.id}|${id}|${block.id}`;
         const normalized=block.category.toUpperCase().replace(/\s+/g,' ').trim();

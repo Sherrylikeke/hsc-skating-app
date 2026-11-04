@@ -24,6 +24,10 @@ const mf=new Miniflare({modules,modulesRoot:root,compatibilityDate:'2026-05-15',
 },outboundService:request=>{const url=new URL(request.url);
 if(url.hostname==='skatingresults.ca'){if(url.pathname.endsWith('/categories'))return Response.json({Categories:[startingFixture.category]});if(url.pathname.endsWith('/segments'))return Response.json({Segments:startingFixture.segments});const id=url.pathname.match(/segment\/([^/]+)\/entries$/)?.[1];if(id)return Response.json(startingFixture.entries[id]);return new Response(startingHtml);}
 if(url.hostname==='www.skateontario.org'){
+if(url.pathname==='/fixture-low-star/')return new Response('<a href="https://www.skateontario.org/fixture-low-star-schedule.pdf">Schedule</a><a href="https://www.skateontario.org/fixture-low-star-entry.pdf">Entry List</a>');
+if(url.pathname==='/fixture-low-star-schedule.pdf')return new Response(fs.readFileSync('tests/fixtures/star1-4-east-gwillimbury-2026-schedule.pdf'));
+if(url.pathname==='/fixture-low-star-entry.pdf')return new Response(fs.readFileSync('tests/fixtures/star3-niagara-2025-entry.pdf'));
+
 if(url.pathname==='/fixture-event/')return new Response('<a href="https://www.skateontario.org/Awards-Schedule.pdf">Awards Schedule</a><a href="https://www.skateontario.org/competition-schedule.pdf">Competition Schedule</a><a href="https://www.skateontario.org/fixture-entries.html">Entry List</a><a href="'+startingFixture.documentUrl+'">Start Orders &amp; Results</a>');
 if(url.pathname==='/Awards-Schedule.pdf'){awardsFetches++;return new Response('Must not import awards as competition times',{status:500});}
 if(url.pathname==='/competition-schedule.pdf')return new Response(fs.readFileSync('tests/fixtures/sectionals-2026-oct26-schedule.pdf'),{headers:{'Content-Type':'application/pdf'}});
@@ -111,6 +115,10 @@ try {
   assert.ok((await database.prepare("SELECT count(*) AS count FROM hsc_audit WHERE action='skater-save'").first()).count>=4);
   console.log('Admin roster: create/edit, new skaters in bulk coaches, duplicate and stale-write rejection, concurrent writes, retained admission/club data and audit; anonymous, parent, coach and cross-origin writes blocked.');
 
+  await database.prepare('INSERT INTO hsc_admissions (skater_id,admitted,payload,updated_by,updated_at) VALUES (?,0,?,?,?)').bind('fixture-low-fiona',JSON.stringify({name:'Fiona Villella',training:true,identityPending:false}),'fixture',new Date().toISOString()).run();
+  const lowEvent={...syncEvent,id:'SO-999992',name:'Isolated STAR 1-4 Fixture',url:'https://www.skateontario.org/fixture-low-star/',start:'2026-01-16',end:'2026-01-18'};await database.prepare('INSERT INTO live_events (id,payload,updated_at) VALUES (?,?,?)').bind(lowEvent.id,JSON.stringify(lowEvent),new Date().toISOString()).run();
+  const lowResponse=await post('/api/sync',{eventId:lowEvent.id},platformHeaders);assert.equal(lowResponse.status,200,await lowResponse.clone().text());const lowResult=await lowResponse.json();assert.equal(lowResult.participants,7);assert.equal(lowResult.matchedSkaters,1);assert.equal(lowResult.blocks,78);const lowSaved=JSON.parse((await database.prepare('SELECT payload FROM live_events WHERE id=?').bind(lowEvent.id).first()).payload);assert.ok(lowSaved.blocks.some(row=>row.category==='STAR 1 - Group 2'&&row.rink==='WEST PAD'&&row.start==='08:30'));
+  console.log('Worker STAR 1-4: real rotated schedule PDF and STAR3 entry PDF import 78 blocks / 7 entrants, explicit shared time and PAD preserved.');
   const customOrigin='https://hamiltonskatingclub.memberportal.dev';
   const customSignIn=await mf.dispatchFetch(customOrigin+'/api/auth/sign-in/email',{method:'POST',headers:{origin:customOrigin,'Content-Type':'application/json'},body:JSON.stringify({email,password})});assert.equal(customSignIn.status,200,await customSignIn.clone().text());const customPasswordCookie=cookies(customSignIn);
   const customSession=await mf.dispatchFetch(customOrigin+'/api/member?action=session',{method:'POST',headers:{origin:customOrigin,'Content-Type':'application/json',cookie:customPasswordCookie},body:JSON.stringify({role:'parent'})});assert.equal(customSession.status,200,await customSession.clone().text());assert.equal((await customSession.json()).member.role,'admin');

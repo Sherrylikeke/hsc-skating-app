@@ -1,4 +1,5 @@
-import {extractTextItems,getDocumentProxy} from 'unpdf';
+import {readOfficialPdfItems} from './official-pdf';
+import {selectDetailEvents} from './sync-selection';
 import {db,putLiveEvent,readLiveEvents,readLiveEvent,putSyncStatus,readSyncStatus,profiles} from './club-store';
 import {calendarEvent,discoverDocuments,parseScheduleDocument,competitionSchedule,scheduleRows} from './official-parser';
 import {importEntries} from './entry-import';
@@ -24,8 +25,8 @@ async function source(url:string,maxBytes=3_000_000):Promise<Uint8Array>{
 }
 const hashBytes=async(bytes:Uint8Array)=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes as BufferSource))).map(n=>n.toString(16).padStart(2,'0')).join('');
 const message=(error:unknown)=>error instanceof Error?error.message:'官网读取失败';
-const SCHEDULE_VERSION='schedule-bands-3';
-async function readPdfItems(bytes:Uint8Array){const pdf=await getDocumentProxy(bytes,{maxImageSize:1_000_000,disableFontFace:true});if(pdf.numPages>20)throw new Error('文件页数超出已验证范围，保留原始链接');return (await extractTextItems(pdf)).items;}
+const SCHEDULE_VERSION='schedule-bands-4';
+const readPdfItems=readOfficialPdfItems;
 function entryProgress(event:LiveEvent){const files=event.documents.flatMap(document=>(document.entryFiles||[]).map(file=>({file,rosterHash:document.matchingRosterHash})));const verified=files.filter(({file,rosterHash})=>file.checkedAt&&!file.error&&file.parserVersion===ENTRY_PDF_VERSION&&file.matchingRosterHash===rosterHash).length;return {total:files.length,verified,pending:files.length-verified};}
 async function syncCalendarBody(){
   const now=new Date().toISOString();await putSyncStatus({lastAttempt:now,error:null});
@@ -42,7 +43,7 @@ async function syncCalendarBody(){
     }
     for(const event of incoming)await putLiveEvent(event);
     await putSyncStatus({lastSuccess:now,lastCalendarSuccess:now,events:incoming.length,error:null});
-    return {events:incoming.length,checkedAt:now,source:'https://skateontario.org/events/',nextEvents:incoming.sort((a,b)=>a.start.localeCompare(b.start)).slice(0,3).map(event=>({id:event.id,name:event.name,start:event.start}))};
+    return {events:incoming.length,checkedAt:now,source:'https://skateontario.org/events/',nextEvents:selectDetailEvents(incoming,start).map(event=>({id:event.id,name:event.name,start:event.start}))};
   }catch(error){await putSyncStatus({error:message(error)});throw error;}
 }
 async function syncEventBody(id:string){
@@ -95,7 +96,7 @@ async function syncEventBody(id:string){
           continue;
         }
         if(previous?.hash!==hash||!orders.some(o=>o.sourceUrl===doc.url)||previous.matchingRosterHash!==matchingRosterHash){
-          let parsed;if(/\.pdf(?:$|\?)/i.test(doc.url)){const pdf=await getDocumentProxy(bytes,{maxImageSize:1_000_000,disableFontFace:true});if(pdf.numPages>20)throw new Error('出场顺序页数超出已验证格式');const {items}=await extractTextItems(pdf);parsed=parseStartingOrderPdf(items,doc.url,roster);}else parsed=parseStartingOrderHtml(new TextDecoder().decode(bytes),doc.url,roster);
+          let parsed;if(/\.pdf(?:$|\?)/i.test(doc.url)){parsed=parseStartingOrderPdf(await readPdfItems(bytes),doc.url,roster);}else parsed=parseStartingOrderHtml(new TextDecoder().decode(bytes),doc.url,roster);
           if(!parsed.length)throw new Error('出场顺序格式待核对，保留上次有效资料');if(previous?.hash!==hash||JSON.stringify(parsed)!==JSON.stringify(orders.filter(order=>order.sourceUrl===doc.url)))changed++;orders=[...orders.filter(o=>o.sourceUrl!==doc.url),...parsed];
         }doc.hash=hash;doc.matchingRosterHash=matchingRosterHash;doc.checkedAt=now;delete doc.error;
       }catch(error){doc.error=message(error);errors.push(doc.error);}}
@@ -105,7 +106,7 @@ async function syncEventBody(id:string){
     return {id:event.id,name:event.name,changed,participants:event.participants.length,matchedSkaters:new Set(event.participants.flatMap(row=>row.skaterIds)).size,blocks:event.blocks.length,entryFiles:entryProgress(event),entryStatus:event.entryStatus,scheduleStatus:event.scheduleStatus,schedulePreview:scheduleRows([event],roster).filter(row=>row.activity==='competition'&&row.startingOrder).slice(0,40).map(row=>({name:row.skaterName,category:row.category,date:row.date,start:row.start,end:row.end,rink:row.rink,uncertain:row.uncertain,startNumber:row.startingOrder!.startNumber,warmupGroup:row.startingOrder!.warmupGroup,individualTime:row.startingOrder!.individualTime,sourceUrl:row.startingOrder!.sourceUrl})),checkedAt:now,errors};
   }catch(error){event.detailError=message(error);await putLiveEvent(event);await putSyncStatus({lastAttempt:now,error:message(error)});throw error;}
 }
-export async function syncStatus(){return {status:await readSyncStatus(),events:(await readLiveEvents()).map(event=>({id:event.id,name:event.name,start:event.start,end:event.end,detailCheckedAt:event.detailCheckedAt,error:event.detailError,matched:event.participants.filter(row=>row.skaterIds.length).length,participants:event.participants.length,blocks:event.blocks.length,entryFiles:entryProgress(event),entryStatus:event.entryStatus,scheduleStatus:event.scheduleStatus})),scope:'Skate Ontario 官方日历；DSTools HTML 名单；同源目录内 Name/Club/Section 与总人数可核对的报名 PDF，每场每轮最多四份；明确日期分区、START/END 与 RINK 表头的赛程 PDF。其他格式或未完成批次保留链接并提示核对。',instructions:'先同步日历，再逐个检查未来45天内最近三场比赛。PDF 名单分批轮转，待处理不等于全量成功。读取失败不删除旧数据。官方时段是组别时间，不推算个人时间；教练集合与备注独立保存。'};}
+export async function syncStatus(){return {status:await readSyncStatus(),events:(await readLiveEvents()).map(event=>({id:event.id,name:event.name,start:event.start,end:event.end,detailCheckedAt:event.detailCheckedAt,error:event.detailError,matched:event.participants.filter(row=>row.skaterIds.length).length,participants:event.participants.length,blocks:event.blocks.length,entryFiles:entryProgress(event),entryStatus:event.entryStatus,scheduleStatus:event.scheduleStatus})),scope:'Skate Ontario 官方日历；DSTools HTML 名单；同源目录内 Name/Club/Section 与总人数可核对的报名 PDF，每场每轮最多四份；明确日期分区、START/END 与 RINK 表头的赛程 PDF。其他格式或未完成批次保留链接并提示核对。',instructions:'先同步日历，再依次检查返回的 nextEvents（未来45天，最近两场加一场按上次检查时间轮换，最多三场，包含 STAR 1–4）。PDF 名单分批轮转，待处理不等于全量成功。读取失败不删除旧数据。官方时段是组别时间，不推算个人时间；教练集合与备注独立保存。'};}
 async function withSyncLock<T>(operation:()=>Promise<T>):Promise<T>{
   const lock=JSON.stringify({token:crypto.randomUUID(),expiresAt:Date.now()+300000});
   const acquired=await db().prepare("INSERT INTO app_meta (key,value) VALUES ('official-source-lock',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value WHERE CAST(json_extract(app_meta.value,'$.expiresAt') AS INTEGER) <= ? RETURNING value").bind(lock,Date.now()).first();

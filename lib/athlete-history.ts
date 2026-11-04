@@ -34,3 +34,7 @@ export function scoreTrend(rows:HistoryRecord[],requestedSeries='',context:Histo
   const series=scoreSeries(rows,context),active=series.find(group=>group.label===requestedSeries)||series[0];
   return {series,active,points:active?.records||[]};
 }
+export function filtersForScoreSeries(rows:HistoryRecord[],filters:HistoryFilters,label:string):HistoryFilters{
+  const available=filterAthleteHistory(rows,{...filters,category:'',level:''}),group=scoreSeries(available,rows).find(series=>series.label===label);
+  const first=group?.records[0];return first?{...filters,category:historyCategoryResolver(rows)(first),level:first.result_level}:filters;
+}

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {filterAthleteHistory,scoreSeries,scoreTrend,emptyHistoryFilters,historyCategory,historyCategories,historyCategoryResolver,historyRecordCategories} from '../lib/athlete-history.ts';
+import {filterAthleteHistory,scoreSeries,scoreTrend,filtersForScoreSeries,emptyHistoryFilters,historyCategory,historyCategories,historyCategoryResolver,historyRecordCategories} from '../lib/athlete-history.ts';
 import {registerHooks} from 'node:module';
 import ts from 'typescript';
 const rows=JSON.parse(fs.readFileSync('data/history-records.json','utf8'));
@@ -27,6 +27,8 @@ const fiora=rows.filter(record=>record.skater_ids.includes('HSC-84710E9259'));
 assert.ok(scoreTrend(fiora).series.length>1);assert.equal(new Set(scoreTrend(fiora).points.map(record=>historyCategory(record.category)+'|'+record.result_level)).size,1);
 const originalFiora=structuredClone(fiora),fioraGroups=scoreSeries(fiora);
 assert.equal(fioraGroups.length,3);
+const preJuFilters=filtersForScoreSeries(fiora,{...emptyHistoryFilters},'Pre-Juvenile U11 · 类别总分');const preJuTable=filterAthleteHistory(fiora,preJuFilters);assert.equal(preJuTable.length,3);assert.ok(preJuTable.every(row=>!/^STAR/i.test(row.category)));const star5Filters=filtersForScoreSeries(fiora,preJuFilters,'STAR 5 U10 · 类别总分');assert.equal(filterAthleteHistory(fiora,star5Filters).length,9);assert.equal(filterAthleteHistory(fiora,{...emptyHistoryFilters}).filter(row=>row.status==='result'&&row.total_score!==null).length,17);
+
 assert.equal(fioraGroups.find(group=>group.label==='Pre-Juvenile U11 · 类别总分').records.length,3);
 assert.equal(fioraGroups.find(group=>group.label==='STAR 5 U10 · 类别总分').records.length,9);
 assert.equal(fioraGroups.find(group=>group.label==='STAR 7 U12 · 类别总分').records.length,5);
