@@ -249,6 +249,11 @@
 - Sites 收费只读核对官方 https://learn.chatgpt.com/docs/sites#pricing：截至 2026-12-31 托管免费，2027-01-01 拟启用按流量和存储计量、套餐额度以上的超额费用；有数据库站点基础约25credits/月，自定义域约25credits/月，流量每10万请求约16credits，数据库每GiB/月约150credits。建站／修改计入 Codex，域名注册另付；无账户实际账单或套餐托管额度读取入口，不据此推断用户美元账单，没有修改任何计费设置。
 - 2026-11-03 最后发布步骤因 Codex 用量上限导致自动审批无法完成，未执行该次操作；11-04 正常审批恢复后完成最终构建／验证。V31 源码 6477101f59dac15d96346aa4d3b619449416309b（应用代码 6718a20 与其相比仅隔离测试修正），保存版本 appgprj_6ad76ca2dba481919ba883865cbd5a0d~appgver_e9b59aa5da948191aa60f1e9554b1d7a，部署 appgdep_6aeb75dc2ab081919b16df063f9f7be2 于 2026-11-04T18:13:58.390558Z（Toronto 13:13）返回 succeeded、env_set_revision=6、MCP ready。正式自定义域名选手／教练页 200，匿名 club/results API 401，850px 横向排名表样式已送达；记录在会话 outputs/low-star-history-live-http.json。原 public、数据库、密码／邀请／邮件配置不变，无新定时任务。源码正常推送原私人 GitHub；七个既有 PDF 删除项保留未提交，本机开发预览已停止。
 
+## 2026-11-04 公开上线准备交接
+
+- 用户要求准备新会话继续公开上线，并完成后提交。已整理 docs/public-launch-handoff.md，包含 V31 基线、权限边界、发信域名待办、现有未验证测试账号的兼容要求、干净发布副本和原有删除项保护。
+- 本轮只读重新核对最新保存版本 V31、public、env revision 6；RESEND_API_KEY 已配置，HSC_EMAIL_FROM 缺失，邮箱验证开关 false。没有修改注册、邮件、域名、权限或部署，没有发送真实邮件。本轮仅文档提交，不单独重部署。
+
 ## 更新规则
 
 - 修改完成后更新事实、验收范围、日期与下一步；已知、待确认、历史快照分开。
