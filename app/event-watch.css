@@ -3,6 +3,8 @@
   color:#245779; font:inherit; font-weight:650; background:none; border:0; text-decoration:underline; text-underline-offset:3px;
 }
 .member-heading .watch-entry {justify-self:start}
+.club-app .cal-entry,.member-app .cal-entry{display:inline-flex;align-items:center;min-height:44px;padding:4px 8px;background:none;border:0;color:#245779;font:inherit;font-weight:650;text-decoration:underline;text-underline-offset:3px}
+.member-schedule-links{display:flex;align-items:center;gap:4px 12px;flex-wrap:wrap}
 .club-panel.watch-panel {padding:16px; color:#29445c; overflow:visible}
 .watch-panel :is(h2,p,ol) {margin:0}
 .watch-panel .watch-event-name {font-size:1.15rem; overflow-wrap:anywhere}

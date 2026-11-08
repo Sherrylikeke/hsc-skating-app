@@ -10,6 +10,7 @@ import './personal-schedule.css';
 
 type Props = {
   onWatch:()=>void;
+  onCalendar:()=>void;
   rows:ScheduleRow[];
   skaters:ClubSkater[];
   ownIds:string[];
@@ -19,7 +20,7 @@ type Props = {
   renderRows:(rows:ScheduleRow[], showArrival?:boolean)=>ReactNode;
 };
 
-export default function PersonalSchedule({rows,skaters,ownIds,scope,onScope,onChange,renderRows,onWatch}:Props) {
+export default function PersonalSchedule({rows,skaters,ownIds,scope,onScope,onChange,renderRows,onWatch,onCalendar}:Props) {
   const [now,setNow] = useState(Date.now);
   useEffect(() => {
     const update = () => setNow(Date.now());
@@ -50,6 +51,7 @@ export default function PersonalSchedule({rows,skaters,ownIds,scope,onScope,onCh
         </CompactSelect>
       </div>
       <HomeSkaters skaters={skaters} ownIds={ownIds} onChange={onChange}/>
+      <button type="button" className="cal-entry" onClick={onCalendar}>{text('Schedule calendar','赛程日历')}</button>
       <button type="button" className="watch-entry" onClick={onWatch}>{text('Cheer from now','从现在看 · 给朋友加油')}</button>
     </section>
     <section className="club-panel family-upcoming">

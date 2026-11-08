@@ -2,7 +2,14 @@ import type {ClubEvent, ClubSkater, Participant, ScheduleRow} from './club-types
 import {categoryCompatible, groupOf, normalizeName, scheduleRows} from './official-parser.ts';
 import {scheduleInstant} from './schedule-time.ts';
 
-type Choice = {id:string; name:string; details:string[]};
+type Choice = {id:string; name:string; details:string[]; entries:Participant[]};
+export const friendStorageKey=(memberId:string,eventId:string)=>'hsc-watch-friends:'+JSON.stringify([memberId,eventId]);
+export function readFriends(key:string):string[] {
+  try {
+    const ids:unknown=JSON.parse(sessionStorage.getItem(key) ?? '[]');
+    return Array.isArray(ids) ? ids.filter((id):id is string=>typeof id==='string') : [];
+  } catch { return []; }
+}
 // When the source omits the club, keep separate entry records distinct.
 const entryKey = (p:Participant) => 'entry:' + JSON.stringify([normalizeName(p.name),p.club,p.section,p.club?'':p.id]);
 
@@ -12,9 +19,10 @@ export function watchChoices(event:ClubEvent, skaters:ClubSkater[]) {
   for (const p of event.participants) {
     const ids = p.skaterIds.filter(id => roster.has(id));
     for (const id of ids.length ? ids : [entryKey(p)]) {
-      const choice = choices.get(id) ?? {id,name:roster.get(id) ?? p.name,details:[]};
+      const choice = choices.get(id) ?? {id,name:roster.get(id) ?? p.name,details:[],entries:[]};
       const detail = [p.category,p.club].filter(Boolean).join(' · ');
       if (!choice.details.includes(detail)) choice.details.push(detail);
+      choice.entries.push(p);
       choices.set(id,choice);
     }
   }
@@ -39,10 +47,23 @@ export function guestSchedule(event:ClubEvent, followed:Set<string>) {
   return scheduleRows([{...event,participants,startingOrders}],guests.map(p => ({id:entryKey(p),name:p.name,coach:''})));
 }
 
-export function watchTiming(row:ScheduleRow, now:number) {
+export function watchedRows(event:ClubEvent,skaters:ClubSkater[],selected:Set<string>) {
+  return [
+    ...scheduleRows([{...event,participants:event.participants.filter(p=>p.skaterIds.some(id=>selected.has(id)))}],skaters.filter(s=>selected.has(s.id))),
+    ...guestSchedule(event,selected),
+  ];
+}
+
+export function confirmedGroupInterval(row:ScheduleRow) {
   const start = !row.uncertain && row.timezone ? scheduleInstant(row.date,row.start,row.timezone) : null;
   const end = start !== null ? scheduleInstant(row.date,row.end,row.timezone) : null;
-  if (start === null || end === null || end <= start) return 'pending';
+  return start!==null && end!==null && end>start ? {start,end} : null;
+}
+
+export function watchTiming(row:ScheduleRow, now:number) {
+  const interval=confirmedGroupInterval(row);
+  if(!interval) return 'pending';
+  const {start,end}=interval;
   if (end <= now) return 'ended';
   return start <= now ? 'ongoing' : 'upcoming';
 }

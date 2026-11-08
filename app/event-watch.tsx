@@ -1,20 +1,13 @@
 'use client';
 import {useEffect,useMemo,useState} from 'react';
 import type {ClubEvent,ClubSkater} from '../lib/club-types';
-import {watchChoices,guestSchedule,watchTiming} from '../lib/event-watch';
+import {friendStorageKey,readFriends,watchChoices,watchedRows,watchTiming} from '../lib/event-watch';
 import {text} from '../lib/i18n';
-import {scheduleRows} from '../lib/official-parser';
 import CompactSelect from './compact-select';
 
 type Props = {events:ClubEvent[]; eventId:string; memberId:string; ownIds:string[]; skaters:ClubSkater[]; onEvent:(id:string,replace?:boolean)=>void};
 function readValue(key:string) {
   try { return sessionStorage.getItem(key); } catch { return null; }
-}
-function readFriends(key:string):string[] {
-  try {
-    const ids:unknown=JSON.parse(readValue(key) ?? '[]');
-    return Array.isArray(ids) ? ids.filter((id):id is string=>typeof id==='string') : [];
-  } catch { return []; }
 }
 function localDate(now:number,timezone:string) {
   try { return new Intl.DateTimeFormat('en-CA',{timeZone:timezone,year:'numeric',month:'2-digit',day:'2-digit'}).format(now); }
@@ -52,7 +45,7 @@ export default function EventWatch({events,eventId,memberId,ownIds,skaters,onEve
         {available.map(e=><option value={e.id} key={e.id}>{e.name} · {e.start}</option>)}
       </CompactSelect></label> : <h2 className="watch-event-name">{event.name}</h2>}
     {event ? <EventTimeline key={JSON.stringify([memberId,event.id])} event={event} ownIds={ownIds} skaters={skaters} now={now} refreshClock={()=>setNow(Date.now())}
-      storageKey={'hsc-watch-friends:'+JSON.stringify([memberId,event.id])}/> :
+      storageKey={friendStorageKey(memberId,event.id)}/> :
       <p>{text('No competition available here. Check the competition calendar.','当前没有可查看的比赛，可到比赛中心查看日历。')}</p>}
   </section>;
 }
@@ -68,10 +61,7 @@ function EventTimeline({event,ownIds,skaters,now,refreshClock,storageKey}:Pick<P
   const search=query.trim().toLocaleLowerCase();
   const visibleChoices=choosing ? choices.filter(c=>!own.has(c.id)&&[c.name,...c.details].some(s=>s.toLocaleLowerCase().includes(search))) : [];
   const selected=useMemo(()=>new Set([...ownIds,...friends]),[ownIds,friends]);
-  const watched=useMemo(()=>[
-    ...scheduleRows([{...event,participants:event.participants.filter(p=>p.skaterIds.some(id=>selected.has(id)))}],skaters.filter(s=>selected.has(s.id))),
-    ...guestSchedule(event,selected),
-  ],[event,skaters,selected]);
+  const watched=useMemo(()=>watchedRows(event,skaters,selected),[event,skaters,selected]);
   const today=localDate(now,event.timezone);
   const day=today<event.start?event.start:today;
   const rinks=[...new Set(event.blocks.map(b=>b.rink).filter(Boolean))].sort();
@@ -118,5 +108,6 @@ function EventTimeline({event,ownIds,skaters,now,refreshClock,storageKey}:Pick<P
     {missing.length>0&&<p>{text('Awaiting a matched group time: ','尚待匹配组别时段：')}{missing.map(c=>c.name).join('、')}</p>}
     {event.needsReview&&<p>{text('Some official details are awaiting confirmation.','部分官方资料待核对。')}</p>}
     <a className="club-source" href={event.url} target="_blank" rel="noreferrer">{text('Official event details ↗','赛事官网 ↗')}</a>
+    <a className="cal-entry" href="/workspace?view=calendar">{text('Schedule calendar','赛程日历')}</a>
   </>;
 }
