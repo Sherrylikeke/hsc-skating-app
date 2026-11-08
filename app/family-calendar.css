@@ -9,6 +9,8 @@
 .cal-month-back{border:0;padding:2px;color:#246767}
 .cal-month{padding:0 8px 6px}
 .cal-month .cal-cell-top,.cal-month .cal-cell-inner{padding:0;display:block;width:100%;text-align:center}
+.cal-month .cal-cell-inner{height:auto;min-height:44px;background:transparent;border-radius:0}
+.cal-month [aria-current=date] .cal-date>span{color:#174c47;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
 .cal-date{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;min-height:50px;width:100%;padding:2px;border:0;background:transparent;color:var(--cal-ink);font:inherit;line-height:1.1;font-variant-numeric:tabular-nums;cursor:pointer}
 .cal-date>span{font-size:15px;font-weight:600}
 .cal-date small,.cal-date i{display:inline-flex;align-items:center;gap:2px}

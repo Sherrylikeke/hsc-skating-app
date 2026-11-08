@@ -40,7 +40,11 @@ function groupClock(value:number,zone:string) {
 function shift(date:string,delta:number,byDay:boolean) {
   const d=utcDay(date);
   if(byDay) d.setUTCDate(d.getUTCDate()+delta);
-  else {d.setUTCDate(1);d.setUTCMonth(d.getUTCMonth()+delta);}
+  else {
+    const originalDay=d.getUTCDate();
+    d.setUTCDate(1);d.setUTCMonth(d.getUTCMonth()+delta+1);d.setUTCDate(0);
+    d.setUTCDate(Math.min(originalDay,d.getUTCDate()));
+  }
   return isoDay(d);
 }
 

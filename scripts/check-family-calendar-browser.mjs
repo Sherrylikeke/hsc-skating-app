@@ -56,7 +56,7 @@ async function walk(browser,profile,language,orientation,folder) {
     await saturday.waitFor();
     if(orientation==='portrait') {
       const box=await saturday.boundingBox(),nav=await page.locator('.club-sidebar').boundingBox();
-      assert.ok(box.y+box.height<=nav.y,'next Saturday should be visible on first screen');
+      assert.ok(box.height>=44 && box.y+box.height<=nav.y,'next Saturday needs a full touch target on the first screen');
     } else await saturday.scrollIntoViewIfNeeded();
     await shot('month');await saturday.click();
     const conflict=page.locator('.cal-overlaps');
