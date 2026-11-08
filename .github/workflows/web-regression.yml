@@ -41,3 +41,30 @@ jobs:
           node-version: 24
       - name: Audit the full Web lockfile including Worker build dependencies
         run: npm audit --package-lock-only
+
+  mobile-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm run install:ci
+      - name: Install the device profiles and browser engines
+        run: |
+          npm install --prefix work/browser-qa --no-save --package-lock=false --ignore-scripts playwright-core@1.64.1
+          node work/browser-qa/node_modules/playwright-core/cli.js install --with-deps chromium webkit
+      - name: Check phone navigation, layout and picker interactions
+        env:
+          HSC_PREVIEW_ORIGIN: http://127.0.0.1:5173
+        run: |
+          npm run dev -- --host 127.0.0.1 --port 5173 --strictPort > "$RUNNER_TEMP/hsc-preview.log" 2>&1 &
+          preview=$!
+          trap 'kill "$preview" 2>/dev/null || true' EXIT
+          curl --fail --silent --show-error --retry 45 --retry-delay 1 --retry-all-errors "$HSC_PREVIEW_ORIGIN/favicon.svg" -o /dev/null || { cat "$RUNNER_TEMP/hsc-preview.log"; exit 1; }
+          node scripts/check-device-interactions-browser.mjs
+          HSC_MOBILE_WIDTHS=390 node scripts/check-family-schedule-browser.mjs

@@ -20,7 +20,9 @@ const browser=await browserType.launch({headless:true,...(browserType===chromium
 const report=[];
 try{for(const width of (process.env.HSC_MOBILE_WIDTHS||'320,375,390,430,1280').split(',').map(Number))for(const language of ['en','zh']){
   const context=await browser.newContext({...devices[width===1280?(browserType===webkit?'Desktop Safari':'Desktop Chrome'):(browserType===webkit?'iPhone 13':'Pixel 7')],viewport:{width,height:width===1280?900:844},deviceScaleFactor:1});
-  const page=await context.newPage();page.setDefaultNavigationTimeout(90000);await page.addInitScript(locale=>{localStorage.setItem('hsc-language',locale);},language);
+  const page=await context.newPage();page.setDefaultNavigationTimeout(90000);
+  await page.clock.setFixedTime(new Date('2026-11-05T14:00:00Z'));
+  await page.addInitScript(locale=>{localStorage.setItem('hsc-language',locale);},language);
   await page.route('**/api/**',async route=>{const url=new URL(route.request().url());let payload={};
     if(url.pathname==='/api/club')payload=club;
     else if(url.pathname==='/api/member'){const action=url.searchParams.get('action');payload=action==='identity'?{identity:{name:member.name,email:member.email,provider:'password'}}:action==='me'?{member,skaterIds:testStatus==='club-viewer'?[]:[carson.id],preferredSkaterIds:ownIds,claims:[]}:action==='notifications'?{notifications:[]}:action==='requirements'?{requirements:[]}:action==='admin'?{members:[],candidates:[carson],admissions:[],relations:[],invites:[],claims:[],logs:[],coachCandidates:[],outbox:[]}:{};}

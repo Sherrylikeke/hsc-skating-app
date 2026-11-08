@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import {MemberAPIError,activeMemberRole,readMemberResponse,recoverMemberSession} from '../lib/member-client.ts';
 import {homeSkaterChoices} from '../lib/home-skater-choices.ts';
+import {groupHomeSchedule} from '../lib/home-schedule.ts';
+import {arrivalReference} from '../lib/schedule-time.ts';
 
 const checks=[];
 assert.equal(activeMemberRole({role:'admin',status:'active'},'admin'),true);
@@ -62,4 +64,27 @@ assert.deepEqual(homeSkaterChoices(skaters,skaters.map(skater=>skater.id),''),[]
 assert.deepEqual(skaters,before);
 checks.push('name/ID search handles no results, empty queries and all-selected lists without mutating roster data');
 
+const session = {date:'2026-11-08',start:'11:15',end:'12:00',timezone:'America/Toronto',uncertain:false};
+const pending = {...session,uncertain:true,start:'',end:''};
+const past = {...session,date:'2026-11-07'};
+const next = {...session,start:'13:00',end:'13:30'};
+const familyRows = [past,pending,session,next];
+assert.deepEqual(groupHomeSchedule(familyRows, Date.parse('2026-11-08T16:30Z')), {upcoming:[session,next],pending:[pending],past:[past]});
+assert.deepEqual(groupHomeSchedule(familyRows, Date.parse('2026-11-08T17:00Z')), {upcoming:[next],pending:[pending],past:[past,session]});
+assert.deepEqual(groupHomeSchedule([pending], Date.parse('2026-11-09T00:01Z')).pending,[pending]);
+assert.deepEqual(groupHomeSchedule([pending], Date.parse('2026-11-09T05:01Z')).past,[pending]);
+const unknownZone = {...session,timezone:'Unspecified'};
+assert.deepEqual(groupHomeSchedule([unknownZone],Date.parse('2026-11-08T17:00Z')).upcoming,[unknownZone]);
+assert.equal(arrivalReference(unknownZone),null);
+checks.push('current, pending and past sessions use the rink clock and keep in-progress groups visible');
+
+assert.equal(arrivalReference(session),'10:15');
+assert.equal(arrivalReference(session,'2026-11-08T10:00'),null);
+assert.equal(arrivalReference(session,'2026-11-08T10:40'),'10:15');
+assert.equal(arrivalReference({...session,start:'00:30'}),'2026-11-07 23:30');
+assert.equal(arrivalReference({...session,uncertain:true}),null);
+assert.equal(arrivalReference({...session,date:'2026-03-08',start:'02:30'}),null);
+assert.equal(arrivalReference({...session,date:'2026-11-01',start:'01:30'}),null);
+assert.equal(arrivalReference({...session,date:'2026-11-01',start:'02:30'}),'01:30 -05:00');
+checks.push('60-minute arrival guidance distinguishes dates, uncertain slots and DST transitions');
 console.log(JSON.stringify({passed:checks.length,checks,fixtureOnly:true,productionWrites:0,realEmailsSent:0},null,2));

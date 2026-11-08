@@ -1,0 +1,92 @@
+/* On touch screens the coach table keeps its columns; long labels grow the row. */
+@media (max-width:720px), (pointer:coarse) and (max-height:500px) {
+  .coach-day-skater > button,
+  .coach-day-category,
+  .coach-day-coach,
+  .coach-day-event {
+    max-width:100%;
+    white-space:normal;
+    overflow:visible;
+    overflow-wrap:anywhere;
+    text-overflow:clip;
+  }
+  .coach-day-category,
+  .coach-day-coach,
+  .coach-day-event { font-size:12px; line-height:1.5; }
+  .coach-day-table th.coach-day-action { width:44px; }
+  .coach-day-action button { min-width:44px; }
+  .coach-day-skater > button,
+  .coach-day-order,
+  .club-app .club-back,
+  .club-app .club-segmented button,
+  .club-app .club-data-controls > button,
+  .club-app .club-topbar-home,
+  .club-app .club-documents > a,
+  .club-assignment-chips button,
+  .club-filter-actions button,
+  .home-skaters li button,
+  .home-skaters li a,
+  .club-filter-field input,
+  .club-history-filters input,
+  .club-history-filters > button,
+  .club-schedule-help summary { min-height:44px; }
+  .coach-day-order,
+  .home-skaters li a,
+  .club-app .club-documents > a { display:inline-flex; align-items:center; }
+  .club-assignment-chips button,
+  .home-skaters li a { min-width:0; max-width:100%; overflow-wrap:anywhere; white-space:normal; }
+  .club-app .club-back { margin-bottom:10px; font-size:13px; }
+  .club-app .club-search { height:44px; }
+  .club-app .club-search input,
+  .member-app input:not([type=checkbox],[type=radio]),
+  .member-app textarea { font-size:16px; }
+
+  .club-app :is(h1,h2,h3),
+  .member-app :is(h1,h2,h3),
+  .member-heading > div,
+  .member-skater-list a { overflow-wrap:anywhere; min-width:0; }
+  .club-app .club-topbar > span { overflow:visible; white-space:normal; text-overflow:clip; }
+  .club-app .club-detail-tabs button { white-space:normal; line-height:1.35; min-width:0; }
+  .member-app .member-header .member-brand,
+  .member-app .member-header .member-signout,
+  .member-app .member-header .hsc-language select,
+  .club-app .club-topbar .hsc-language select { min-height:44px; }
+}
+
+/* Keep event names and their publication status together on ordinary phones. */
+@media (max-width:480px) {
+  .club-app .club-event-grid { grid-template-columns:minmax(0,1fr); }
+  .club-app .club-event-card { padding:16px; }
+  .club-app .club-event-card h2,
+  .club-app .club-skater-card h2 {
+    min-height:0;
+    font-size:16px;
+    line-height:1.45;
+    font-weight:650;
+    color:#274360;
+    margin:10px 0 6px;
+  }
+  .club-app .club-event-card > p,
+  .club-app .club-event-card-status,
+  .club-app .club-skater-category { color:#50647b; font-size:12px; line-height:1.5; }
+  .club-app .club-event-card-status { margin:10px 0; }
+}
+
+/* Short landscape windows need a scrollable rail; both nav labels used to show. */
+@media (min-width:721px) and (max-width:1050px) and (max-height:500px) and (pointer:coarse) {
+  .club-app .club-sidebar {
+    width:126px;
+    padding:8px;
+    overflow-y:auto;
+    overscroll-behavior-y:contain;
+  }
+  .club-app .club-body { margin-left:126px; }
+  .club-app .club-sidebar > .club-brand { padding:0 2px 8px; }
+  .club-app .club-sidebar .club-nav-label { display:none; }
+  .club-app .club-sidebar nav { gap:2px; }
+  .club-app .club-sidebar nav button { min-height:44px; padding:7px 8px; font-size:13px; }
+  .club-app .club-sidebar nav button .club-nav-full { display:none; }
+  .club-app .club-sidebar nav button .club-nav-short { display:inline; }
+  .club-app .club-sidebar-bottom { padding-top:6px; }
+  .club-app .club-sidebar-bottom > a { min-height:44px; }
+}
