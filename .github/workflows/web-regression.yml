@@ -1,0 +1,43 @@
+name: Web regression
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm run install:ci
+      - name: Check Web types
+        run: node node_modules/typescript/bin/tsc --noEmit
+      - name: Run Web regression suites
+        run: npm test
+      - run: npm run build
+      - name: Test the built Worker with temporary D1
+        run: node scripts/check-owner-registration-worker.mjs
+
+  dependencies:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+      - name: Audit the full Web lockfile including Worker build dependencies
+        run: npm audit --package-lock-only
