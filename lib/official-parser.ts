@@ -110,7 +110,7 @@ export function categoryCompatible(first:string,second:string){
     return categoryKeys(entryCategory).some(key=>categoryKeys(blockCategory).includes(key))&&entry.nonqualifying===block.nonqualifying&&(entry.program==='artistic')===(block.program==='artistic')&&(!entry.ages.length||!block.ages.length||entry.ages.some(age=>block.ages.includes(age)))&&(!entry.band||!block.band||entry.band===block.band)&&(!entry.program||!block.program||entry.program===block.program);
   }));
 }
-export function scheduleRows(events:Array<Pick<LiveEvent,'id'|'name'|'url'|'timezone'|'participants'|'blocks'|'startingOrders'>>,skaters:ClubSkater[]):ScheduleRow[]{
+export function scheduleRows(events:Array<Pick<LiveEvent,'id'|'name'|'url'|'timezone'|'participants'|'blocks'|'startingOrders'>>,skaters:Array<Pick<ClubSkater,'id'|'name'|'coach'>>):ScheduleRow[]{
   const skaterMap=new Map(skaters.map(row=>[row.id,row]));const output=new Map<string,ScheduleRow>();
   for(const event of events)for(const entry of event.participants){
     const key=categoryKey(entry.category),group=groupOf(entry.category);if(!key)continue;

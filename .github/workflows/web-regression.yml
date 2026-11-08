@@ -67,4 +67,5 @@ jobs:
           trap 'kill "$preview" 2>/dev/null || true' EXIT
           curl --fail --silent --show-error --retry 45 --retry-delay 1 --retry-all-errors "$HSC_PREVIEW_ORIGIN/favicon.svg" -o /dev/null || { cat "$RUNNER_TEMP/hsc-preview.log"; exit 1; }
           node scripts/check-device-interactions-browser.mjs
+          node scripts/check-event-watch-browser.mjs
           HSC_MOBILE_WIDTHS=390 node scripts/check-family-schedule-browser.mjs

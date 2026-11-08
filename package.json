@@ -9,7 +9,7 @@
     "install:ci": "node scripts/install-ci.mjs",
     "dev": "node scripts/run-framework.mjs dev",
     "build": "node scripts/run-framework.mjs build",
-    "test": "node --test --test-concurrency=4 scripts/check-athlete-history.mjs scripts/check-category-matching.mjs scripts/check-coach-daily.mjs scripts/check-coach-schedule.mjs scripts/check-competition-results.mjs scripts/check-locales.mjs scripts/check-low-star-schedule.mjs scripts/check-member-client.mjs scripts/check-members.mjs scripts/check-official-import.mjs scripts/check-official-source.mjs scripts/check-official-sync-client.mjs scripts/check-paste.mjs scripts/check-source-reference.mjs scripts/check-starting-order-api.mjs scripts/check-starting-order.mjs",
+    "test": "node --test --test-concurrency=4 scripts/check-athlete-history.mjs scripts/check-category-matching.mjs scripts/check-coach-daily.mjs scripts/check-coach-schedule.mjs scripts/check-competition-results.mjs scripts/check-event-watch.mjs scripts/check-locales.mjs scripts/check-low-star-schedule.mjs scripts/check-member-client.mjs scripts/check-members.mjs scripts/check-official-import.mjs scripts/check-official-source.mjs scripts/check-official-sync-client.mjs scripts/check-paste.mjs scripts/check-source-reference.mjs scripts/check-starting-order-api.mjs scripts/check-starting-order.mjs",
     "start": "node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js dev --config dist/server/wrangler.json --local --persist-to .wrangler/state --ip 127.0.0.1 --inspector-port 0",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate"
