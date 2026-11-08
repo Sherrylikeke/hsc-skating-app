@@ -5,6 +5,7 @@ import "./i18n.css";
 import "./club-mobile.css";
 import "./mobile-header.css";
 import "./skater-editor.css";
+import "./phone-layout.css";
 
 export const metadata: Metadata = {
   title: "HSC · Club Portal",
