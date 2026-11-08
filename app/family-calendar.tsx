@@ -17,7 +17,7 @@ import '@fullcalendar/react/themes/monarch/theme.css';
 import '@fullcalendar/react/themes/monarch/palettes/blue.css';
 import './family-calendar.css';
 
-type Props={events:ClubEvent[];skaters:ClubSkater[];ownIds:string[];memberId:string};
+type Props={onNavigate:(url:string,replace:boolean)=>void;events:ClubEvent[];skaters:ClubSkater[];ownIds:string[];memberId:string};
 type Position={date:string;day:boolean;rink:string};
 const plugins=[monarch,dayGrid,timeGrid], locales=[zhCN];
 const empty:CalendarDay={sessions:[],registrations:[]};
@@ -48,7 +48,7 @@ function shift(date:string,delta:number,byDay:boolean) {
   return isoDay(d);
 }
 
-export default function FamilyCalendar({events,skaters,ownIds,memberId}:Props) {
+export default function FamilyCalendar({events,skaters,ownIds,memberId,onNavigate}:Props) {
   const lang=useLanguage(), locale=lang==='zh'?'zh-CN':'en-CA';
   const [where,setWhere]=useState(position),[details,setDetails]=useState('');
   const [now,setNow]=useState(Date.now);
@@ -70,12 +70,8 @@ export default function FamilyCalendar({events,skaters,ownIds,memberId}:Props) {
     if(day) params.set('mode','day');
     if(rink) params.set('rink',rink);
     const url='/workspace?'+params;
-    if(location.pathname+location.search!==url) {
-      if(replace) history.replaceState({},'',url);
-      else history.pushState({},'',url);
-    }
+    onNavigate(url,replace);
     setWhere({date,day,rink});setDetails('');
-    if(!replace) window.scrollTo({top:0,behavior:'instant'});
   }
   const calendar=useMemo(()=>familyCalendar(events,skaters,ownIds,id=>readFriends(friendStorageKey(memberId,id))),[events,skaters,ownIds,memberId]);
   const {date,day}=where, data=calendar.days.get(date)??empty;

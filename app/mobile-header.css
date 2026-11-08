@@ -1,4 +1,5 @@
 .club-topbar-home-short{display:none}
+.club-topbar .club-member-home{display:inline-flex;align-items:center;min-height:24px;color:#245489;text-decoration:underline;text-underline-offset:3px}
 @media(max-width:760px){
  .member-app{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
  .member-app .member-header{display:grid;grid-template-columns:minmax(0,1fr) 106px;gap:10px 12px;align-items:center;padding:calc(12px + env(safe-area-inset-top)) 14px 12px}

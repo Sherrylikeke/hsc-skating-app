@@ -30,26 +30,41 @@ function Choices({items, selected, onChange, label = translate("接收选手")}:
 export default function MemberApp() {
   useLanguage();
   const [identity, setIdentity] = useState<{name: string; email: string; provider?:string;canRestore?:boolean} | null>(null), [me, setMe] = useState<Me | null>(null), [loading, setLoading] = useState(true);
-  const [role, setRole] = useState<Role>('parent'), [tab, setTab] = useState('home'), [error, setError] = useState(''), [message, setMessage] = useState(''), [busy, setBusy] = useState(false);
+  const [role, setRole] = useState<Role>('parent'), [requestedTab, setRequestedTab] = useState('home'), [error, setError] = useState(''), [message, setMessage] = useState(''), [busy, setBusy] = useState(false);
   const [admin, setAdmin] = useState<AdminData | null>(null), [notices, setNotices] = useState<Notice[]>([]), [requirements, setRequirements] = useState<Requirement[]>([]), [clubSkaters,setClubSkaters]=useState<ClubSkater[]>([]), [skaters, setSkaters] = useState<ClubSkater[]>([]), [events, setEvents] = useState<LiveEvent[]>([]);
   const [name, setName] = useState(''), [matches, setMatches] = useState<Candidate[]>([]), [claimIds, setClaimIds] = useState<string[]>([]), [claimNote, setClaimNote] = useState(''), [inviteCode, setInviteCode] = useState('');
   const [inviteEmail, setInviteEmail] = useState(''), [inviteRole, setInviteRole] = useState<Role>('parent'), [inviteIds, setInviteIds] = useState<string[]>([]), [issued, setIssued] = useState('');
   const [candidateId, setCandidateId] = useState(''), [admitName, setAdmitName] = useState(''), [admitted, setAdmitted] = useState(false), [training, setTraining] = useState(false), [identityPending, setIdentityPending] = useState(false), [clubs, setClubs] = useState('');
   const [relationMember, setRelationMember] = useState(''), [relationSkater, setRelationSkater] = useState('');
   const [editRequirement, setEditRequirement] = useState<Requirement | null>(null), [requirementIds, setRequirementIds] = useState<string[]>([]), [title, setTitle] = useState(''), [content, setContent] = useState(''), [eventId, setEventId] = useState(''), [slotKey, setSlotKey] = useState(''), [dueAt, setDueAt] = useState('');
+  function navigateTab(next:string, replace=false){
+    const url=new URL(location.href);
+    if(next==='home')url.searchParams.delete('tab');
+    else url.searchParams.set('tab',next);
+    if(url.href!==location.href){
+      if(replace)history.replaceState(history.state,'',url);
+      else history.pushState({},'',url);
+    }
+    setRequestedTab(next);
+  }
+  useEffect(()=>{
+    function restore(){setRequestedTab(new URLSearchParams(location.search).get('tab')||'home');}
+    restore();
+    window.addEventListener('popstate',restore);
+    return ()=>window.removeEventListener('popstate',restore);
+  },[]);
   function clearDashboard(){setAdmin(null);setNotices([]);setRequirements([]);setClubSkaters([]);setSkaters([]);setEvents([]);}
   function resetMember(){
-    setMe(null);clearDashboard();setTab('home');setIssued('');setEditRequirement(null);setRequirementIds([]);setTitle('');setContent('');setDueAt('');setSlotKey('');setEventId('');setMatches([]);setClaimIds([]);setClaimNote('');setInviteCode('');setInviteEmail('');setInviteIds([]);setRelationMember('');setRelationSkater('');
+    setMe(null);clearDashboard();navigateTab('home',true);setIssued('');setEditRequirement(null);setRequirementIds([]);setTitle('');setContent('');setDueAt('');setSlotKey('');setEventId('');setMatches([]);setClaimIds([]);setClaimNote('');setInviteCode('');setInviteEmail('');setInviteIds([]);setRelationMember('');setRelationSkater('');
   }
   async function refresh() {
     try{
       const result = await api<Me>('me');setMe(result);clearDashboard();
-      if (result.member.status !== 'active' && result.member.status !== 'club-viewer'){setTab('home');return;}
+      if (result.member.status !== 'active' && result.member.status !== 'club-viewer')return;
       const [notificationData, requirementData, clubResponse] = await Promise.all([result.member.status==='club-viewer'?Promise.resolve({notifications:[]}):api<{notifications: Notice[]}>('notifications'), result.member.status==='club-viewer'?Promise.resolve({requirements:[]}):api<{requirements: Requirement[]}>('requirements'), fetch('/api/club', {cache: 'no-store'})]);
       const club=await readMemberResponse<{skaters:ClubSkater[];events:LiveEvent[]}>(clubResponse,translate("赛程资料暂时无法读取"));
       const nextAdmin=result.member.role==='admin'&&result.member.status==='active'?await api<AdminData>('admin'):null;
       setNotices(notificationData.notifications);setRequirements(requirementData.requirements);setAdmin(nextAdmin);
-      if(result.member.status==='club-viewer'||(result.member.role!=='admin'&&tab==='admin'))setTab('home');
       setClubSkaters(club.skaters);setSkaters(club.skaters.filter(skater=>result.member.role==='admin'||result.skaterIds.includes(skater.id)||result.preferredSkaterIds.includes(skater.id)));setEvents(club.events);
     }catch(failure){if(failure instanceof MemberAPIError&&[401,403].includes(failure.status))resetMember();throw failure;}
   }
@@ -71,6 +86,16 @@ export default function MemberApp() {
     document.getElementById('requirement-form')?.scrollIntoView({behavior: 'smooth'});
   }
   const scheduleOnly=me?.member.status==='club-viewer'; const active=me?.member.status==='active'||scheduleOnly; const adminRole=activeMemberRole(me?.member??null,'admin'); const coachRole=activeMemberRole(me?.member??null,'coach');
+  const tabs=[['home',translate("我的工作区")]];
+  if(active && !scheduleOnly){
+    const unread=notices.filter(item=>!item.read_at).length;
+    tabs.push(['notifications',translate("通知中心{0}",[unread?' · '+unread:''])],['requirements',translate("教练要求")],['reminders',text('Reminders','自动提醒')]);
+    if(adminRole)tabs.push(['admin',translate("会员管理")]);
+  }
+  const tab=tabs.some(([key])=>key===requestedTab)?requestedTab:'home';
+  useEffect(()=>{
+    if(me && tab!==requestedTab)navigateTab('home',true);
+  },[me,tab,requestedTab]);
   const named = (id: string) => skaters.find(item => item.id === id)?.name || admin?.candidates.find(item => item.id === id)?.name || id;
   const admittedCandidates = admin?.candidates.filter(item => admin.admissions.some(row => row.skater_id === item.id && row.admitted === 1)) || [];
   const claimForm = <section className="member-panel"><h2>{coachRole ? translate("申请关联选手") : translate("申请会员准入与身份认领")}</h2><p>{translate("管理员核对监护人或选手身份后建立关系。公开比赛名单中的姓名不会自动获得会员权限。名单外也可以填写姓名和说明申请。")}</p><form onSubmit={event => {event.preventDefault(); void run(async () => {const result = await api<{matches: Candidate[]}>('match&name=' + encodeURIComponent(name)); setMatches(previous => [...previous.filter(row => !result.matches.some(item => item.id === row.id)), ...result.matches]);}, translate("已查找候选姓名；仍需管理员验证"));}}><label>{translate("选手完整姓名")}<input required value={name} onChange={event => setName(event.target.value)} maxLength={120}/></label><button disabled={busy}>{translate("查找姓名")}</button></form><Choices items={matches} selected={claimIds} onChange={setClaimIds} label={translate("申请关联的候选资料（可多次查找）")}/><form onSubmit={event => {event.preventDefault(); void run(() => api('claim', {role: coachRole ? 'coach' : role === 'admin' ? 'parent' : role, name, skaterIds: claimIds, note: claimNote}), translate("申请已提交，等待管理员审核"));}}>{!coachRole && <label>{translate("申请身份")}<select value={role === 'admin' ? 'parent' : role} onChange={event => setRole(event.target.value as Role)}><option value="parent">{translate("Parent · 家长")}</option><option value="skater">{translate("Skater · 选手")}</option><option value="coach">{translate("Coach · 教练")}</option></select></label>}<label>{translate("身份核对说明")}<textarea required value={claimNote} onChange={event => setClaimNote(event.target.value)} maxLength={1000} placeholder={translate("说明选手姓名、与选手的关系，以及方便管理员核对的联系方式。")}/></label><button className="primary" disabled={busy || !name || !claimNote}>{translate("提交管理员审核")}</button></form>{me?.claims.map(claim => <p className="member-muted" key={claim.id}>{translate("申请 ")}{claim.id.slice(0, 8)} · {claim.status} · {JSON.parse(claim.payload).name}</p>)}</section>;
@@ -80,7 +105,7 @@ export default function MemberApp() {
       {active&&identity?.provider!=='password'&&adminRole&&<details><summary>{text("Set up email / username login","设置邮箱 / 用户名登录")}</summary><PasswordPanel allowAdminLink role={me.member.role||'parent'} onComplete={async()=>{location.href='/';}}/></details>}
       <div className="member-heading"><div><p>{active ? 'YOUR CLUB WORKSPACE' : 'MEMBERSHIP REVIEW'}</p><h1>{active ? translate("欢迎，") + me.member.name : translate("身份已验证，等待会员准入")}</h1><p>{me.member.email}</p></div>{active && <a className="member-button" href="/workspace?view=personal">{adminRole ? text("Open club schedules and profiles","查看俱乐部赛程与档案") : text("View my skaters’ schedule","查看我的选手赛程")}</a>}{active&&<div className="member-schedule-links"><a className="cal-entry" href="/workspace?view=calendar">{text("Schedule calendar","赛程日历")}</a><a className="watch-entry" href="/workspace?view=watch">{text('Cheer from now','从现在看 · 给朋友加油')}</a></div>}</div>
       {active&&<HomeSkaters skaters={clubSkaters} ownIds={me.preferredSkaterIds} onChange={ids=>{setMe({...me,preferredSkaterIds:ids});setSkaters(clubSkaters.filter(skater=>me.member.role==='admin'||me.skaterIds.includes(skater.id)||ids.includes(skater.id)));}}/>}
-      {active && <nav className="member-tabs">{[['home', translate("我的工作区")], ...(!scheduleOnly?[['notifications', translate("通知中心{0}",[notices.filter(item => !item.read_at).length ? ' · ' + notices.filter(item => !item.read_at).length : ''])], ['requirements', translate("教练要求")], ['reminders',text('Reminders','自动提醒')], ...(adminRole ? [['admin', translate("会员管理")]] : [])]:[])].map(([key, label]) => <button key={key} className={tab === key ? 'selected' : ''} onClick={() => setTab(key)}>{label}</button>)}<button disabled={busy} onClick={() => void run(refresh, translate("已刷新"))}>{translate("刷新")}</button></nav>}
+      {active && <nav className="member-tabs">{tabs.map(([key, label]) => <button key={key} className={tab === key ? 'selected' : ''} aria-current={tab===key?'page':undefined} onClick={() => navigateTab(key)}>{label}</button>)}<button disabled={busy} onClick={() => void run(refresh, translate("已刷新"))}>{translate("刷新")}</button></nav>}
       {(!active || tab === 'home') && <><div className="member-grid"><section className="member-panel"><h2>{active ? translate("我的选手与安排") : translate("已有管理员邀请？")}</h2>{active ? <><p>{adminRole ? translate("你可以维护会员准入、邀请和账号关系。历史候选名单不代表已批准会员。") : scheduleOnly?text("All skaters added to your homepage appear below.","加入你主页的全部选手显示在下方。"):text("Homepage choices organize schedules. Approved private relationships are managed separately.","主页选择用于整理赛程，已批准的私人关系另行管理。")}</p><div className="member-skater-list">{skaters.filter(item=>me.preferredSkaterIds.includes(item.id)).map(item => <a key={item.id} href={'/workspace?view=skaters&skater=' + encodeURIComponent(item.id)}><strong>{item.name}</strong><small>{item.coach || translate("待分配教练")}{item.identityPending ? translate(" · 全名待确认") : ''}</small></a>)}</div>{!me.preferredSkaterIds.length && <p>{text("No skaters have been added to your homepage yet. Use Manage my skaters above to choose names; private relationships are approved separately.","你的主页尚未添加选手。请在上方“管理我的选手”选择姓名；私人关系另行审批。")}</p>}</> : <p>{translate("使用邀请指定的邮箱登录，再输入邀请代码。邀请有有效期且只能使用一次。")}</p>}<form onSubmit={event => {event.preventDefault(); setBusy(true); setError(''); void api('accept-invite', {token: inviteCode}).then(() => {resetMember(); setMessage(translate("邀请已接受，请点击进入会员入口重新登录。"));}).catch(failure => setError(failure.message)).finally(() => setBusy(false));}}><label>{translate("邀请代码")}<input value={inviteCode} onChange={event => setInviteCode(event.target.value)} autoComplete="off"/></label><button disabled={busy || !inviteCode}>{translate("接受邀请")}</button></form></section><section className="member-panel"><h2>{translate("通知与账号")}</h2><p>{scheduleOnly?text("Your email account is ready. Shared official schedules are available; private messages and coach permissions are separate.","邮箱账号已可使用，可查看共享官方赛程；私人消息和教练权限另行管理。"):translate("站内通知已启用。邮件与 Web Push 尚未配置，也不会向真实会员群发测试消息。")}</p><p>{translate("目前后台按每小时检查官网；实际提醒时间取决于官网可用性和任务运行情况。")}</p><button disabled={busy} onClick={() => {void api('revoke-own-sessions', {}).then(() => {resetMember(); setMessage(translate("所有 HSC 会话已撤销。"));}).catch(failure => setError(failure.message));}}>{translate("撤销我的所有 HSC 会话")}</button></section></div>{(!active || coachRole) && claimForm}</>}
       {active&&tab==='home'&&<section className="member-panel"><h2>{text("Club teammates · Cheer them on","俱乐部队友 · 一起加油")}</h2><p>{text("Your own skaters stay above. You can also view every teammate's official competition schedule.","自己的选手保持置顶，也可以查看所有队友的官方比赛赛程。")}</p><a className="member-button" href="/workspace?view=personal">{text("Open club schedule · My skaters first","打开俱乐部赛程 · 我的选手置顶")}</a><p><a className="member-button" href="/workspace?view=coach">{translate("教练总赛程")}</a></p><div className="member-skater-list">{clubSkaters.filter(skater=>!me.preferredSkaterIds.includes(skater.id)).map(skater=><a key={skater.id} href={'/workspace?view=skaters&skater='+encodeURIComponent(skater.id)}><strong>{skater.name}</strong><small>{text("Official schedule and records","官方赛程与记录")}</small></a>)}</div></section>}
 
