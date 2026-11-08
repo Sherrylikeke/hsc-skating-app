@@ -1,5 +1,38 @@
 import {splitCoaches} from './club-types.ts';
 import type {ScheduleRow} from './club-types.ts';
+import {scheduleInstant} from './schedule-time.ts';
+
+export type CoachOverlap = {peer:ScheduleRow; start:number; end:number; coaches:string[]};
+export function coachOverlaps(rows:ScheduleRow[], onlyCoach='') {
+  const clocks = new Map<string,number|null>();
+  function instant(row:ScheduleRow,clock:string) {
+    const key = [row.date,clock,row.timezone].join('|');
+    if (!clocks.has(key)) clocks.set(key,scheduleInstant(row.date,clock,row.timezone));
+    return clocks.get(key) ?? null;
+  }
+  const intervals = rows.flatMap(row => {
+    const coaches = splitCoaches(row.coach);
+    if (row.uncertain || !row.timezone || !coaches.length || (onlyCoach && !coaches.includes(onlyCoach))) return [];
+    const start = instant(row,row.start), end = instant(row,row.end);
+    return start === null || end === null || end <= start ? [] : [{row,start,end,coaches}];
+  }).sort((a,b) => a.start-b.start);
+  const pairs = new Map<string,CoachOverlap[]>();
+  for (const [i,a] of intervals.entries()) {
+    for (let j=i+1; j<intervals.length && intervals[j].start<a.end; j++) {
+      const b = intervals[j];
+      if (a.row.skaterId === b.row.skaterId) continue;
+      const coaches = a.coaches.filter(name => b.coaches.includes(name) && (!onlyCoach || name===onlyCoach));
+      if (!coaches.length) continue;
+      const overlap = {start:b.start,end:Math.min(a.end,b.end),coaches};
+      for (const [row,peer] of [[a.row,b.row],[b.row,a.row]]) {
+        const list = pairs.get(row.id) ?? [];
+        list.push({...overlap,peer});
+        pairs.set(row.id,list);
+      }
+    }
+  }
+  return pairs;
+}
 
 export type CoachScheduleFilters={event:string;coach:string;date:string;assignedOnly:boolean};
 export function filterCoachSchedule<Row extends {eventId:string;coach:string;date:string}>(rows:Row[],filters:CoachScheduleFilters):Row[]{

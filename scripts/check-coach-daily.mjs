@@ -4,7 +4,7 @@ import {registerHooks} from 'node:module';
 import ts from 'typescript';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {filterCoachSchedule,groupCoachSchedule,orderCoachSchedule} from '../lib/coach-schedule.ts';
+import {coachOverlaps,filterCoachSchedule,groupCoachSchedule,orderCoachSchedule} from '../lib/coach-schedule.ts';
 
 const row=(id,date,start,extra={})=>({id,slotKey:id,eventId:'event-a',eventName:'Fixture Competition',eventUrl:'https://example.test',skaterId:id,skaterName:id,coach:'Jen Jackson',category:'STAR 5',date,start,end:'15:00',rink:'BLUE',activity:'competition',uncertain:false,sourceUrl:'https://example.test/schedule.pdf',page:1,timezone:'America/Toronto',matchStatus:'official',...extra});
 const rows=[
@@ -16,6 +16,18 @@ const rows=[
   row('another-zone','2026-11-20','08:00',{timezone:'America/Winnipeg',eventId:'event-b'}),
 ];
 const before=structuredClone(rows),checks=[];
+const conflicts=coachOverlaps(rows);
+assert.deepEqual(conflicts.get('first').map(c=>c.peer.id),['another-zone','same-name-child']);
+assert.deepEqual(conflicts.get('another-zone').map(c=>c.peer.id),['first','same-name-child','other-program']);
+assert.ok(!conflicts.has('uncertain')&&!conflicts.has('late'));
+const boundary=[row('one','2026-11-20','08:00',{end:'09:00',coach:'A / B'}),row('touch','2026-11-20','09:00',{end:'10:00',coach:'A'})];
+assert.equal(coachOverlaps(boundary).size,0);
+boundary[1].start='08:45';
+assert.equal(coachOverlaps(boundary,'B').size,0);
+const overlap=coachOverlaps(boundary,'A').get('one')[0];
+assert.deepEqual(overlap.coaches,['A']);
+assert.equal(overlap.end-overlap.start,15*60_000);
+checks.push('overlaps identify actual peers, shared coaches and intersecting minutes across zones; adjacent and candidate slots are excluded');
 const days=groupCoachSchedule(rows);
 assert.deepEqual(days.map(day=>day.date),['2026-11-20','2026-11-21']);
 assert.equal(days[0].skaterCount,4);assert.equal(days[0].sessionCount,5);assert.equal(days[0].unconfirmedCount,1);
@@ -44,22 +56,22 @@ registerHooks({
 });
 const {default:CoachDailySchedule}=await import('../app/coach-daily-schedule.tsx');
 let detailsCalls=0;
-const html=renderToStaticMarkup(createElement(CoachDailySchedule,{rows,conflicts:new Set(['late']),onSkater:()=>{},renderDetails:()=>{detailsCalls++;return createElement('p',null,'Expanded details');}}));
+const html=renderToStaticMarkup(createElement(CoachDailySchedule,{rows,conflicts,onSkater:()=>{},renderDetails:()=>{detailsCalls++;return createElement('p',null,'Expanded details');}}));
 assert.ok(html.indexOf('2026.11.20')<html.indexOf('2026.11.21'));
 assert.match(html,/<strong>4<\/strong> skaters/);assert.match(html,/<strong>5<\/strong> sessions/);
 assert.ok(html.includes('Group time'));assert.ok(html.includes('Skater / Category'));assert.ok(html.includes('Rink'));
 assert.ok(html.includes('America/Toronto'));assert.ok(html.includes('America/Winnipeg'));
 assert.ok(!html.includes('08:01'),'Unconfirmed candidate start must not appear as a confirmed time');
 assert.ok(html.includes('TBC'));assert.ok(html.includes('Possible overlap'));assert.equal(detailsCalls,0);
-assert.equal((html.match(/aria-expanded="false"/g)||[]).length,rows.length);
+assert.equal((html.match(/aria-expanded="false"/g)||[]).length,rows.length+conflicts.size);
 checks.push('the overview renders date counts, compact table headers, local clocks and TBC without expanding detailed cards');
-const empty=renderToStaticMarkup(createElement(CoachDailySchedule,{rows:[],conflicts:new Set(),onSkater:()=>{},renderDetails:()=>null}));
+const empty=renderToStaticMarkup(createElement(CoachDailySchedule,{rows:[],conflicts:new Map(),onSkater:()=>{},renderDetails:()=>null}));
 assert.ok(empty.includes('No matching official sessions'));
 checks.push('an empty filtered view explains how to change filters');
-const practice=renderToStaticMarkup(createElement(CoachDailySchedule,{rows:[row('practice','2026-11-20','11:00',{activity:'practice'})],conflicts:new Set(),onSkater:()=>{},renderDetails:()=>null}));
+const practice=renderToStaticMarkup(createElement(CoachDailySchedule,{rows:[row('practice','2026-11-20','11:00',{activity:'practice'})],conflicts:new Map(),onSkater:()=>{},renderDetails:()=>null}));
 assert.ok(practice.includes('Practice · STAR 5'));
 checks.push('official practice remains identifiable in the compact overview');
-const published=renderToStaticMarkup(createElement(CoachDailySchedule,{rows:[row('ordered','2026-11-05','11:15',{startingOrder:{startNumber:19,warmupGroup:4,individualTime:null,sourceUrl:'https://skatingresults.ca/fixture/#/seg/test/start',page:0}})],conflicts:new Set(),onSkater:()=>{},renderDetails:()=>null}));
+const published=renderToStaticMarkup(createElement(CoachDailySchedule,{rows:[row('ordered','2026-11-05','11:15',{startingOrder:{startNumber:19,warmupGroup:4,individualTime:null,sourceUrl:'https://skatingresults.ca/fixture/#/seg/test/start',page:0}})],conflicts:new Map(),onSkater:()=>{},renderDetails:()=>null}));
 assert.ok(published.includes('Start #19'));assert.ok(published.includes('Warm-up <!-- -->4')||published.includes('Warm-up 4'));assert.ok(published.includes('https://skatingresults.ca/fixture/#/seg/test/start'));assert.ok(published.includes('aria-expanded="false"'));
 checks.push('published starting order and warm-up group link are visible before expanding a row');
 console.log(JSON.stringify({passed:checks.length,checks,fixtureOnly:true,productionWrites:0},null,2));

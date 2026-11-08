@@ -1,0 +1,40 @@
+.club-app .watch-entry,.member-app .watch-entry {
+  display:inline-flex; align-items:center; min-height:44px; padding:5px 0;
+  color:#245779; font:inherit; font-weight:650; background:none; border:0; text-decoration:underline; text-underline-offset:3px;
+}
+.member-heading .watch-entry {justify-self:start}
+.club-panel.watch-panel {padding:16px; color:#29445c; overflow:visible}
+.watch-panel :is(h2,p,ol) {margin:0}
+.watch-panel .watch-event-name {font-size:1.15rem; overflow-wrap:anywhere}
+.watch-event-select {display:flex; align-items:center; gap:12px; font-weight:600}
+.watch-event-select .club-compact-select {flex:1; min-width:0}
+.watch-panel select,.watch-panel .club-phone-select>button {width:100%; min-width:0; max-width:100%}
+.watch-friends {margin:6px 0; border-block:1px solid #dae4ec}
+.watch-friends summary {cursor:pointer; font-weight:650; padding:12px 0; min-height:44px}
+.watch-friends p,.watch-date,.watch-empty {font-size:14px; line-height:1.5}
+.watch-friends input[type=search] {display:block; font-size:16px; min-height:44px; width:100%; border:1px solid #9aaec0; border-radius:5px; padding:0 10px; margin-block:8px}
+.watch-choices {max-height:min(42dvh,350px); overflow:auto; overscroll-behavior:contain}
+.watch-choices label {display:flex; align-items:center; gap:12px; min-height:44px; padding:8px 4px; border-top:1px solid #e4ebf1; cursor:pointer}
+.watch-choices strong,.watch-choices small {display:block; overflow-wrap:anywhere}
+.watch-choices input {width:18px; height:18px; flex:none}
+.watch-toolbar {display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-block:10px 6px}
+.watch-mode {display:inline-flex; background:#eaf0f5; border-radius:7px; padding:2px}
+.watch-mode button {border:0; border-radius:5px; padding:6px 10px; min-height:44px; color:#2c4962; font:inherit; font-size:14px; background:transparent}
+.watch-mode button[aria-pressed=true] {background:#264e6b; color:white}
+.watch-toolbar .club-compact-select {flex:1; min-width:min(105px,100%); max-width:280px}
+.watch-panel .watch-date {color:#536b7f; margin-bottom:6px}
+.watch-panel .watch-timeline {list-style:none; padding:0}
+.watch-timeline li {border-top:1px solid #d8e4ed; padding:10px 2px; display:grid; gap:2px; font-size:14px; line-height:1.4; overflow-wrap:anywhere}
+.watch-person {display:flex; gap:6px 16px; align-items:baseline; justify-content:space-between; flex-wrap:wrap}
+.watch-person strong {font-size:17px; color:#173f5f}
+.watch-person b {color:#245b61; font-size:14px}
+.watch-time {font-weight:650; font-variant-numeric:tabular-nums}
+.watch-time.ongoing {color:#15604c}
+.watch-time.pending {color:#785523}
+.watch-panel .club-source {display:inline-flex; align-items:center; min-height:44px}
+.club-app .coach-day-table .coach-overlap-toggle {min-height:44px; width:100%; min-width:0; white-space:normal; border:1px solid #dfc992; border-radius:5px; background:#fff5df; color:#694612; padding:2px; margin-top:6px; font:inherit; font-size:12px; line-height:1.4; overflow-wrap:anywhere}
+.coach-overlap-row[hidden] {display:none}
+.coach-overlap-row h4 {margin:4px 0 8px; font-size:14px}
+.coach-comparison {display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-bottom:10px}
+.coach-compared-session {border-inline-start:3px solid #afc6d7; padding-inline-start:8px; font-size:13px; display:flex; align-items:flex-start; flex-direction:column; gap:4px}
+.coach-compared-session a {display:inline-flex; align-items:center; min-height:44px; color:#245779; text-decoration:underline}
