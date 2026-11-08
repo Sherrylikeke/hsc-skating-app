@@ -1,4 +1,4 @@
-import {formatInTimeZone,fromZonedTime} from 'date-fns-tz';
+import {scheduleInstant} from './schedule-time.ts';
 import type {ClubSkater, LiveEvent} from './club-types.ts';
 import {scheduleRows} from './official-parser.ts';
 import {AccessError, accessibleSkaters, admittedIDs, assertSkater, audit, nowISO, stringField} from './member-access.ts';
@@ -11,10 +11,8 @@ export function reminderPlans(events:LiveEvent[],rules:Rule[],time=Date.now()):R
   const rows=scheduleRows(events,skaters).filter(row=>!row.uncertain);
   const output:ReminderPlan[]=[];
   for (const rule of rules.filter(item=>item.enabled)) for (const row of rows.filter(item=>item.skaterId===rule.skater_id)) {
-    const start=fromZonedTime(`${row.date}T${row.start}:00`,row.timezone).getTime();
-    if (!Number.isFinite(start) || start<=time) continue;
-    const local=`${row.date}T${row.start}`;
-    if(formatInTimeZone(start,row.timezone,"yyyy-MM-dd'T'HH:mm")!==local||[-3600000,3600000].some(offset=>formatInTimeZone(start+offset,row.timezone,"yyyy-MM-dd'T'HH:mm")===local))continue;
+    const start=scheduleInstant(row.date,row.start,row.timezone);
+    if (start===null || start<=time) continue;
     const notify=start-rule.notify_minutes*60000;
     if (notify<time-3600000) continue;
     output.push({id:`reminder|${rule.id}|${rule.revision}|${row.eventId}|${row.slotKey}|${start}`,ruleId:rule.id,memberId:rule.member_id,skaterId:row.skaterId,eventId:row.eventId,eventName:row.eventName,category:row.category,startAt:new Date(start).toISOString(),arrivalAt:new Date(start-rule.arrival_minutes*60000).toISOString(),notifyAt:new Date(notify).toISOString(),packing:rule.packing,timezone:row.timezone,source:row.sourceUrl,basis:'official-group-start'});

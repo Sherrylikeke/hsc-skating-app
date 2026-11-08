@@ -1,0 +1,22 @@
+.club-personal-picker.family-controls{padding:12px 16px;margin-bottom:14px;overflow:visible}
+.family-filter{display:flex;align-items:center;flex-wrap:wrap;gap:8px 16px;color:#334f70;font-size:14px}
+.family-filter .club-compact-select{flex:1;min-width:min(180px,100%)}
+.family-filter select{width:100%}
+.family-controls .home-skaters{border:0;border-top:1px solid #dbe4ef;border-radius:0;box-shadow:none;margin:10px 0 0;padding:0;background:transparent}
+.family-controls .home-skaters summary{padding:10px 0 4px;margin:0}
+.family-controls .home-skaters[open] label{display:flex;align-items:stretch;gap:6px}
+.family-past summary,.family-empty{padding:14px 16px;font-size:14px;color:#435971}
+.family-past summary{cursor:pointer;min-height:44px}
+.club-session-time .family-arrival{display:block;margin-top:6px;font-size:14px;font-weight:600;color:#254f55}
+.club-panel:is(.family-upcoming,.family-pending,.family-past) .club-order-label small{display:block;margin-top:2px}
+.family-pending .club-candidate-times small{display:block;padding:5px 0}
+.family-pending .club-candidate-times .club-source{display:inline-flex;margin-inline-start:6px}
+@media(max-width:720px){
+  .club-page-heading.family-heading{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px}
+  .family-heading .club-eyebrow{display:none}
+  .club-page-heading.family-heading .club-data-controls{width:auto;max-width:155px;justify-content:flex-end}
+  .club-page-heading.family-heading p:last-child{font-size:12px;margin-top:4px}
+  .family-controls .family-filter{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr)}
+  .family-filter .club-compact-select{min-width:0}
+  .family-filter .club-phone-select>button{width:100%}
+}
