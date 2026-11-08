@@ -354,7 +354,7 @@ const importEventId='SO-999002',importUrl='https://skateontario.org/import-fixtu
 const scheduleBytes=fs.readFileSync('tests/fixtures/keswick-2026-schedule.pdf');
 const entryBytes=fs.readFileSync('tests/fixtures/adult-2026-gold-entry.pdf');
 const scheduleHash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',scheduleBytes))).map(value=>value.toString(16).padStart(2,'0')).join('');
-const importFixture={...fixture,id:importEventId,url:importUrl,documents:[{kind:'schedule',url:importUrl+'schedule.pdf',hash:scheduleHash}],participants:[],startingOrders:[]};
+const importFixture={...fixture,id:importEventId,url:importUrl,documents:[{kind:'schedule',url:importUrl+'schedule.pdf',hash:scheduleHash,parserVersion:'schedule-bands-3'}],participants:[],startingOrders:[]};
 database.database.prepare('INSERT INTO live_events (id,payload,updated_at) VALUES (?,?,?)').run(importEventId,JSON.stringify(importFixture),new Date().toISOString());
 database.database.prepare('INSERT INTO hsc_admissions (skater_id,admitted,payload,updated_by,updated_at) VALUES (?,1,?,?,?)').run('fixture-gold',JSON.stringify({name:'Alexis Collins',identityPending:false,training:true}),'owner',new Date().toISOString());
 let invalidImport=false;
@@ -371,7 +371,7 @@ try{
   assert.equal(first.participants.length,16);assert.equal(first.documents.find(document=>document.kind==='entries').entryFiles.filter(file=>file.checkedAt).length,4);
   assert.equal(first.blocks.length,40);assert.deepEqual([...new Set(first.blocks.map(block=>block.date))],['2026-11-20','2026-11-21','2026-11-22']);
   assert.equal(first.documents.find(document=>document.kind==='schedule').hash,scheduleHash);
-  assert.equal(first.documents.find(document=>document.kind==='schedule').parserVersion,'schedule-bands-3');
+  assert.equal(first.documents.find(document=>document.kind==='schedule').parserVersion,'schedule-bands-4');
   assert.match(first.entryStatus,/4\/6/);assert.match(first.scheduleStatus,/部分导入/);
   assert.equal(database.database.prepare("SELECT count(*) AS count FROM source_revisions WHERE event_id=? AND kind='entries'").get(importEventId).count,4);
   await syncEvent(importEventId);

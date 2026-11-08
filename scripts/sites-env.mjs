@@ -10,6 +10,7 @@ process.env.WRANGLER_SEND_METRICS ||= "false";
 process.env.WRANGLER_WRITE_LOGS ||= "false";
 process.env.WRANGLER_LOG_PATH ||= path.join(runtimeRoot, "wrangler/logs");
 process.env.WRANGLER_REGISTRY_PATH ||= path.join(runtimeRoot, "wrangler/dev-registry");
+process.env.CLOUDFLARE_DEV_REGISTRY_PATH ||= process.env.WRANGLER_REGISTRY_PATH;
 process.env.MINIFLARE_REGISTRY_PATH ||= path.join(runtimeRoot, "wrangler/registry");
 
 process.chdir(projectRoot);

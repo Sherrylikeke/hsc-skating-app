@@ -1,12 +1,13 @@
 // Run after the production build. Uses an ephemeral Worker and D1 with fixture credentials only.
 import assert from 'node:assert/strict';
-import {Miniflare} from 'miniflare';
+import {Miniflare, convertV4MiniflareOptions} from 'miniflare';
 import fs from 'node:fs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 
 const origin='https://hsc-coach-roster.sherrylikeke.chatgpt.site';
 const root=path.resolve('dist/server');
+const runtime=JSON.parse(fs.readFileSync(path.join(root,'wrangler.json'),'utf8'));
 const files=fs.readdirSync(root,{recursive:true}).filter(file=>/\.(m?js)$/.test(file)&&file!=='index.js');
 const modules=['index.js',...files].map(file=>({type:'ESModule',path:path.join(root,file)}));
 const pilotToken='a'.repeat(64),password='Fixture-only-Password-2026!';
@@ -18,7 +19,7 @@ const startingHtml='<script>var EVENT_ID="'+startingFixture.eventId+'";var API="
 let awardsFetches=0;
 const fixtureHost='sc-css-public-api-cmh9d3htgxfpdkb7.canadacentral-01.azurewebsites.net';
 let officialRequests=0;
-const mf=new Miniflare({modules,modulesRoot:root,compatibilityDate:'2026-05-15',compatibilityFlags:['nodejs_compat'],d1Databases:['DB'],bindings:{
+const workerOptions={cf:false,modules,modulesRoot:root,compatibilityDate:runtime.compatibility_date,compatibilityFlags:runtime.compatibility_flags,d1Databases:['DB'],bindings:{
   BETTER_AUTH_SECRET:'isolated-tests-only-secret-0123456789-abcdef',
   HSC_PILOT_REGISTRATIONS:JSON.stringify([{email:'pilot-fixture@example.test',role:'parent',invitationHash:hash(pilotToken),expiresAt:new Date(Date.now()+3600000).toISOString()}]),
 },outboundService:request=>{const url=new URL(request.url);
@@ -31,7 +32,8 @@ if(url.pathname==='/fixture-low-star-entry.pdf')return new Response(fs.readFileS
 if(url.pathname==='/fixture-event/')return new Response('<a href="https://www.skateontario.org/Awards-Schedule.pdf">Awards Schedule</a><a href="https://www.skateontario.org/competition-schedule.pdf">Competition Schedule</a><a href="https://www.skateontario.org/fixture-entries.html">Entry List</a><a href="'+startingFixture.documentUrl+'">Start Orders &amp; Results</a>');
 if(url.pathname==='/Awards-Schedule.pdf'){awardsFetches++;return new Response('Must not import awards as competition times',{status:500});}
 if(url.pathname==='/competition-schedule.pdf')return new Response(fs.readFileSync('tests/fixtures/sectionals-2026-oct26-schedule.pdf'),{headers:{'Content-Type':'application/pdf'}});
-if(url.pathname==='/fixture-entries.html')return new Response('<table><tr data-category="Pre-Novice Men" data-club="Hamilton SC"><td><span class="skater-name">Carson Wang</span></td></tr></table>');if(url.pathname.endsWith('CR.pdf'))return new Response(fs.readFileSync('tests/fixtures/results-provincials-2026-u10-category.pdf'),{headers:{'Content-Type':'application/pdf'}});if(url.pathname.endsWith('DRO.pdf'))return new Response(fs.readFileSync('tests/fixtures/results-provincials-2026-u10-detail.pdf'),{headers:{'Content-Type':'application/pdf'}});return new Response('<a href="26PROVSTAR5WomenU10FP2DRO.pdf">Detailed classification</a>');}if(url.hostname!==fixtureHost)return new Response('Unavailable fixture',{status:404});officialRequests++;if(url.pathname.endsWith('/elements'))return Response.json(markFixture.elements);if(url.pathname.endsWith('/components'))return Response.json(markFixture.components);return Response.json({CompetitorEntries:[{competitorEntryId:'fixture-entry-a',competitorName:'Fixture Alpha',competitorClub:'Fixture Club',segmentRank:1,categoryRank:1,tes:16.66,pcs:13.67,score:30.33,competitorStatus:'SCORED'},{competitorEntryId:'fixture-entry-b',competitorName:'Fixture Beta',competitorClub:'Other Fixture Club',segmentRank:2,categoryRank:2,tes:15,pcs:13,score:28,competitorStatus:'SCORED'}]});},serviceBindings:{ASSETS:()=>new Response('Missing',{status:404})}});
+if(url.pathname==='/fixture-entries.html')return new Response('<table><tr data-category="Pre-Novice Men" data-club="Hamilton SC"><td><span class="skater-name">Carson Wang</span></td></tr></table>');if(url.pathname.endsWith('CR.pdf'))return new Response(fs.readFileSync('tests/fixtures/results-provincials-2026-u10-category.pdf'),{headers:{'Content-Type':'application/pdf'}});if(url.pathname.endsWith('DRO.pdf'))return new Response(fs.readFileSync('tests/fixtures/results-provincials-2026-u10-detail.pdf'),{headers:{'Content-Type':'application/pdf'}});return new Response('<a href="26PROVSTAR5WomenU10FP2DRO.pdf">Detailed classification</a>');}if(url.hostname!==fixtureHost)return new Response('Unavailable fixture',{status:404});officialRequests++;if(url.pathname.endsWith('/elements'))return Response.json(markFixture.elements);if(url.pathname.endsWith('/components'))return Response.json(markFixture.components);return Response.json({CompetitorEntries:[{competitorEntryId:'fixture-entry-a',competitorName:'Fixture Alpha',competitorClub:'Fixture Club',segmentRank:1,categoryRank:1,tes:16.66,pcs:13.67,score:30.33,competitorStatus:'SCORED'},{competitorEntryId:'fixture-entry-b',competitorName:'Fixture Beta',competitorClub:'Other Fixture Club',segmentRank:2,categoryRank:2,tes:15,pcs:13,score:28,competitorStatus:'SCORED'}]});},serviceBindings:{ASSETS:()=>new Response('Missing',{status:404})}};
+const mf=new Miniflare(convertV4MiniflareOptions(workerOptions));
 const post=(route,body,headers={})=>mf.dispatchFetch(origin+route,{method:'POST',headers:{origin,'Content-Type':'application/json',...headers},body:JSON.stringify(body)});
 const cookies=response=>response.headers.getSetCookie().map(value=>value.split(';')[0]).join('; ');
 try {

@@ -26,6 +26,8 @@ data/ 保存原始资料，lib/ 保存共享类型及解析器，db/schema.ts �
 
 类型检查：`npx tsc --noEmit`。真实官方样本解析回归：`node scripts/check-official-source.mjs`。教练粘贴检查：`node scripts/check-paste.mjs`。Sites 构建与打包使用插件 build-site.mjs、site-workflow.mjs，源码推送必须与部署归档一致。
 
+复现 Web PR 检查请使用 Node 24。依次运行 `npm run install:ci`、`npx tsc --noEmit`、`npm test`、`npm run build`、`node scripts/check-owner-registration-worker.mjs`。最后一步使用本次构建的 Worker、临时 D1 和隔离邮件配置。依赖检查单独运行 `npm audit --package-lock-only`，包含打包进 Worker 的开发依赖。
+
 浏览器验收包含实际官方数据、备注保存并刷新、同步后备注保留，以及发布前后逐行比较原有教练资料。页面修改不会自动回写原始 Excel。
 
 ## 原教练编辑功能说明
