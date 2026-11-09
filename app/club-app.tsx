@@ -18,6 +18,7 @@ import {arrivalReference} from '../lib/schedule-time';
 import {activeMemberRole} from '../lib/member-client';
 import {coachOverlaps,filterCoachSchedule,orderCoachSchedule} from '../lib/coach-schedule';
 import CoachDailySchedule from './coach-daily-schedule';
+import {coachTimingEstimate} from '../lib/coach-timing';
 import SkaterEditor from './skater-editor';
 import {useWorkspaceNavigation} from './workspace-navigation';
 import type {Member} from '../lib/member-access';
@@ -102,6 +103,8 @@ export default function ClubApp(){
         const arrival=showArrival ? arrivalReference(row,plan?.meetingTime) : null;
         const meeting=plan?.meetingTime && <span className="club-meeting">{view==='personal'?text("Coach meeting · ","教练集合 · "):translate("集合 ")}{dateLabel(plan.meetingTime)} {plan.meetingTime.slice(11,16)}</span>;
         const order=row.startingOrder;
+        const coachDetail=view==='coach' && row.activity==='competition';
+        const estimate=coachDetail && event ? coachTimingEstimate(row,event) : null;
         return <tr role="row" key={row.id}>
           <td role="cell" className="club-session-time">
             <span className="club-date">{dateLabel(row.date)}</span>
@@ -121,8 +124,11 @@ export default function ClubApp(){
             <button className="club-text-button" onClick={()=>navigate('skaters',row.skaterId)}>{row.skaterName}</button>
             <span className="club-detail-line">{row.category}</span><small>{row.activity==='practice'?translate("官方练习"):translate("比赛分项")}</small>
             {row.activity==='competition'&&<span className="club-order-label">
-              {order?translate("出场 #{0} · {1}",[order.startNumber,order.warmupGroup!==null?'Warm-up Group '+order.warmupGroup:translate('Warm-up Group 待公布')]):translate("出场顺序 / Warm-up Group 待公布")}
+              {order?translate("出场 #{0} · {1}",[order.startNumber,order.warmupGroup!==null?text('Warm-up Group ','热身组 ')+order.warmupGroup:translate('Warm-up Group 待公布')]):translate("出场顺序 / Warm-up Group 待公布")}
               {order?.individualTime ? <small>{translate("官方个人时间 ")}{order.individualTime}</small> : view==='personal'&&<small>{text("Individual time pending","个人时间待公布")}</small>}
+              {estimate && <small>{text('Estimated warm-up','预计上冰热身')} · <b>{estimate.warmup}</b></small>}
+              {estimate && !order?.individualTime && <small>{text('Estimated skate start','预计开滑')} · <b>{estimate.start}</b></small>}
+              {coachDetail && !estimate && !order?.individualTime && <small>{text('Individual start pending','个人开滑时间待定')}</small>}
             </span>}
             <button className="club-tiny-link" onClick={()=>navigate('events',row.eventId)}>{row.eventName}</button>
           </td>

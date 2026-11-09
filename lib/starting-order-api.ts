@@ -4,7 +4,7 @@ import type {StartingOrder,Participant} from './club-types';
 type Roster=Array<{id:string;name:string;identityPending?:boolean}>;
 type ReadBytes=(url:string,maxBytes?:number)=>Promise<Uint8Array>;
 type ApiCategory={categoryId:string;categoryDescription?:string;categoryGivenName?:string;categoryName?:string;disciplineName?:string};
-type ApiSegment={segmentId:string;segmentName:string;patternDance?:string};
+type ApiSegment={segmentId:string;segmentName:string;patternDance?:string;warmUpTime?:number};
 const uuid=(value:unknown)=>typeof value==='string'&&/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(value);
 export function startingOrderApp(html:string,url:string){
   const origin=new URL(url);if(origin.protocol!=='https:'||!['skatingresults.ca','www.skatingresults.ca'].includes(origin.hostname))return null;
@@ -22,12 +22,14 @@ export function parseApiStartingOrder(payload:unknown,category:string,segment:Ap
   const entries=(payload as {CompetitorEntries?:Array<Record<string,unknown>>})?.CompetitorEntries;
   if(!Array.isArray(entries)||entries.length>500)throw Error('官方出场接口格式待核对');
   const fullCategory=category+' - '+segment.segmentName+(segment.patternDance?' - '+segment.patternDance:'');
+  const warmupSeconds=segment.warmUpTime;
+  const timing=typeof warmupSeconds==='number'&&Number.isSafeInteger(warmupSeconds)&&warmupSeconds>0?{warmupSeconds}:{};
   return entries.flatMap(entry=>{
     const number=entry.sortOrder;if(typeof number!=='number'||!Number.isInteger(number)||number<1||/WITHDRAW|DNS|DISQUAL/i.test(String(entry.competitorStatus||'')))return [];
     const name=String(entry.competitorName||'').trim();if(!name)return [];
     const skaterIds=name.split(/\s*\/\s*/).flatMap(part=>{const matches=roster.filter(s=>!s.identityPending&&normalizeName(s.name)===normalizeName(part));return matches.length===1?[matches[0].id]:[];});
     const warmup=entry.warmUpGroup;
-    return [{id:documentUrl+'|'+segment.segmentId+'|'+name,name,category:fullCategory,program:programOf(fullCategory),startNumber:number,warmupGroup:typeof warmup==='number'&&Number.isInteger(warmup)&&warmup>0?warmup:null,individualTime:null,sourceUrl:documentUrl.split('#')[0]+'#/seg/'+segment.segmentId+'/start',sourceDocumentUrl:documentUrl,sourceSegmentId:segment.segmentId,page:0,skaterIds}];
+    return [{id:documentUrl+'|'+segment.segmentId+'|'+name,name,category:fullCategory,program:programOf(fullCategory),startNumber:number,warmupGroup:typeof warmup==='number'&&Number.isInteger(warmup)&&warmup>0?warmup:null,...timing,individualTime:null,sourceUrl:documentUrl.split('#')[0]+'#/seg/'+segment.segmentId+'/start',sourceDocumentUrl:documentUrl,sourceSegmentId:segment.segmentId,page:0,skaterIds}];
   });
 }
 export async function importStartingOrderApp(html:string,documentUrl:string,roster:Roster,participants:Participant[],previous:StartingOrder[],read:ReadBytes){

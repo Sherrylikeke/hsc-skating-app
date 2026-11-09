@@ -13,6 +13,11 @@ const member={id:'fixture-parent',name:'Alexandra Fixture Parent',email:'parent@
 const carson={id:'fixture-carson',name:'Carson Wang',coach:'Jen Jackson/Bryce Davidson',training:true,categories:['Pre-Novice Men'],clubs:['Hamilton SC'],recordCount:0,eventCount:0,identityStatus:'Fixture'};
 const event={id:'fixture-sectionals',name:'2027 Skate Ontario Junior & Senior Sectional Championships',url:'https://skateontario.org/event/fixture/',start:'2026-11-05',end:'2026-11-08',timezone:'America/Toronto',venue:'Komoka Wellness Centre',city:'Komoka',source:'Skate Ontario',updateText:'',documents:[],needsReview:false,participants:[{id:'fixture-entry',name:'Carson Wang',category:'Pre-Novice Men',club:'Hamilton SC',section:'ON',skaterIds:[carson.id],matchStatus:'Fixture',sourceUrl:'https://skateontario.org/entry.pdf'}],blocks:[{id:'fixture-short',category:'PRE-NOVICE MEN SHORT (16-25)',categoryKey:'PRENOVICE:MEN',group:null,range:[16,25],activity:'competition',date:'2026-11-05',start:'11:15',end:'12:15',rink:'MOLSON RINK',page:1,sourceUrl:'https://skateontario.org/schedule.pdf'}],startingOrders:[{id:'fixture-order',name:'Carson Wang',category:'Pre-Novice Men - Short Program',program:'short',startNumber:19,warmupGroup:4,individualTime:null,sourceUrl:'https://skatingresults.ca/fixture/#/seg/fixture/start',page:0,skaterIds:[carson.id]}]};
 const sydney={...carson,id:'fixture-sydney',name:'Sydney Mitchell'},ownIds=testStatus==='club-viewer'?[sydney.id]:[carson.id];
+const target=event.startingOrders[0];
+for(let number=16;number<=25;number++){
+  if(number!==target.startNumber)event.startingOrders.push({...target,id:'guest-'+number,name:'Guest '+number,
+    startNumber:number,warmupGroup:number<=20?4:5,skaterIds:[]});
+}
 const club={member,ownSkaterIds:ownIds,writableSkaterIds:[],skaters:[carson,sydney],events:[event],plans:[],sync:{},historyEvents:[],recent:[],asOf:'2026-11-03',summary:{category_records:0,team_records:0},reviews:[],limitations:[]};
 const browserType=process.env.HSC_MOBILE_ENGINE==='webkit'?webkit:chromium;
 const readyUntil=Date.now()+90000;let previewReady=false;while(Date.now()<readyUntil){try{const response=await fetch(origin+'/favicon.svg',{signal:AbortSignal.timeout(2000)});if(response.ok){previewReady=true;break;}}catch{}await new Promise(resolve=>setTimeout(resolve,500));}assert.ok(previewReady,'Local preview must be ready before browser checks');
@@ -39,6 +44,37 @@ try{for(const width of (process.env.HSC_MOBILE_WIDTHS||'320,375,390,430,1280').s
     if(route!=='/'&&width<=430){const nav=await page.locator('.club-sidebar nav').evaluate(el=>({width:el.clientWidth,scroll:el.scrollWidth,buttons:[...el.querySelectorAll('button')].map(b=>({text:b.textContent.trim(),left:b.getBoundingClientRect().left,right:b.getBoundingClientRect().right}))}));layout.navigation=nav;for(const b of nav.buttons)if(b.left<0||b.right>width+.5)issues.push('Navigation clipped: '+b.text);}
     if(route!=='/'&&width<=430){const actions=await page.locator('.club-data-controls>button').evaluateAll(buttons=>buttons.map(b=>{const r=b.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,height:r.height,center:(r.top+r.bottom)/2};}));layout.actions=actions;layout.actionStyle=await page.locator('.club-data-controls').evaluate(el=>{const s=getComputedStyle(el);return {width:s.width,maxWidth:s.maxWidth,flexDirection:s.flexDirection};});if(actions.some(a=>a.left<0||a.right>width+.5))issues.push('Page actions overflow');if(testRole==='admin'&&width>=375&&actions.length>1&&Math.min(actions[0].bottom,actions[1].bottom)-Math.max(actions[0].top,actions[1].top)<Math.min(actions[0].height,actions[1].height)/2)issues.push('Admin page actions should share one row');}
     const filename=`${browserType.name()}-${width}-${language}-${route==='/'?'home':'coach'}.png`;await page.screenshot({path:path.join(output,filename),fullPage:false});report.push({width,language,route,layout,issues,screenshot:filename});
+    if(route!=='/'){
+      const details=page.getByRole('button',{name:/Details for Carson Wang|Carson Wang的赛程详情/});
+      const expanded=page.locator('.coach-day-details:visible');
+      assert.equal(await page.getByText(/Estimated skate start|预计开滑/).count(),0);
+      await details.click();
+      await expanded.getByText(/(?:Estimated warm-up|预计上冰热身) · 11:15/).waitFor();
+      await expanded.getByText(/(?:Estimated skate start|预计开滑) · 11:35/).waitFor();
+      const [warmupLine,startLine]=await expanded.locator('.club-order-label small').evaluateAll(nodes=>nodes.map(el=>{
+        const rect=el.getBoundingClientRect();return {top:rect.top,bottom:rect.bottom};
+      }));
+      assert.ok(warmupLine.bottom<=startLine.top,'The two times must remain on separate lines');
+      await expanded.locator('.club-session-skater').screenshot({path:path.join(output,'detail-'+browserType.name()+'-'+width+'-'+language+'.png')});
+      await details.click();
+      await expanded.waitFor({state:'hidden'});
+      // A later official publication replaces the modelled skate start.
+      try{
+        target.individualTime='11:37';
+        await page.reload({waitUntil:'networkidle'});
+        await details.click();
+        await expanded.getByText(/(?:Official individual time|官方个人时间)\s*11:37/i).waitFor();
+        assert.equal(await expanded.getByText(/Estimated skate start|预计开滑/).count(),0);
+      }finally{target.individualTime=null;}
+      const savedOrders=event.startingOrders;
+      try{
+        event.startingOrders=[target];
+        await page.reload({waitUntil:'networkidle'});
+        await details.click();
+        await expanded.getByText(/Individual start pending|个人开滑时间待定/).waitFor();
+        assert.equal(await expanded.getByText(/Estimated warm-up|预计上冰热身/).count(),0);
+      }finally{event.startingOrders=savedOrders;}
+    }
   }await context.close();
 }await fs.writeFile(path.join(output,'report.json'),JSON.stringify({engine:browserType.name(),role:testRole,status:testStatus,fixtureOnly:true,realAccountLogin:false,checks:report},null,2));
 const failures=report.filter(r=>r.issues.length);console.log(JSON.stringify({engine:browserType.name(),views:report.length,failures:failures.map(({width,language,route,issues})=>({width,language,route,issues})),output},null,2));
