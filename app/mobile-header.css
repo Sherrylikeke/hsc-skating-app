@@ -1,4 +1,8 @@
 .club-topbar-home-short{display:none}
+.club-topbar .club-account-link{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:5px 12px;border:1px solid #bdcfe3;border-radius:8px;color:#245489;background:#fff;font-weight:600;text-decoration:none}
+.member-header .member-account-summary{color:#245489;text-underline-offset:3px}
+.member-account-panel{max-width:620px}
+.member-account-panel p{overflow-wrap:anywhere}
 .club-topbar .club-member-home{display:inline-flex;align-items:center;min-height:24px;color:#245489;text-decoration:underline;text-underline-offset:3px}
 @media(max-width:760px){
  .member-app{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
@@ -18,7 +22,8 @@
  .club-topbar>div{display:contents}
  .club-topbar .hsc-language{grid-column:2;grid-row:1;justify-self:end}
  .club-topbar .hsc-language select{width:106px;min-width:106px;min-height:40px;padding:7px 8px!important;font-size:15px}
- .club-topbar .club-topbar-home{grid-column:1/-1;grid-row:2;justify-self:start;min-height:32px;padding:5px 0;font-size:13px;color:#245489;white-space:nowrap}
+ .club-topbar .club-topbar-home{grid-column:1;grid-row:2;justify-self:start;min-height:32px;padding:5px 0;font-size:13px;color:#245489;white-space:nowrap}
+ .club-topbar .club-account-link{grid-column:2;grid-row:2;justify-self:end;font-size:13px;white-space:nowrap}
  .club-topbar-home-full{display:none}.club-topbar-home-short{display:inline}
  .club-topbar .club-avatar,.club-topbar .club-local-date,.club-topbar .club-maintain{display:none}
  .club-page-heading{flex-direction:column;align-items:stretch;gap:12px;margin-bottom:18px}

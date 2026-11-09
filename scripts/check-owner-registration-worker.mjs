@@ -148,5 +148,48 @@ try {
   assert.equal((await post('/api/skaters',newSkater,viewerHeaders)).status,403);assert.equal((await post('/api/sync',{eventId:syncEvent.id},viewerHeaders)).status,403);
   console.log('Shared coach schedule: role-null club viewer pins one skater and reads another skater official event, while private notes, roster edits, plan writes and official sync remain blocked.');
 
+  const memberAction=(action,headers)=>mf.dispatchFetch(origin+'/api/member?action='+action,{headers});
+  assert.equal((await memberAction('admin',viewerHeaders)).status,403);
+  assert.equal((await memberAction('admin',{cookie:passwordCookie})).status,200);
+  const secondLogin=await post('/api/auth/sign-in/email',{email:pilotBody.email,password});
+  assert.equal(secondLogin.status,200);
+  const secondDevice={cookie:cookies(secondLogin)};
+  // A malformed record in this ephemeral D1 makes the roster service unavailable.
+  const damagedId='fixture-unreadable-profile';
+  await database.prepare('INSERT INTO hsc_admissions (skater_id,payload,updated_by,updated_at) VALUES (?,?,?,?)')
+    .bind(damagedId,'{','fixture',new Date().toISOString()).run();
+  assert.equal((await memberAction('admin',{cookie:passwordCookie})).status,503,'Confirm that roster reads are failing');
+  const identity=await memberAction('identity',viewerHeaders);
+  assert.equal(identity.status,200);
+  assert.equal((await identity.json()).identity.email,pilotBody.email);
+  assert.equal((await post('/api/member?action=session',{role:'parent'},secondDevice)).status,200);
+  for(const action of ['logout','revoke-own-sessions']){
+    assert.equal((await post('/api/member?action='+action,{}, {...viewerHeaders,origin:'https://other.example.test'})).status,403);
+  }
+  assert.equal((await memberAction('me',viewerHeaders)).status,200,'Rejected writes leave the current device signed in');
+  const logout=()=>post('/api/member?action=logout',{},viewerHeaders);
+  assert.equal((await logout()).status,200);
+  assert.equal((await memberAction('me',viewerHeaders)).status,401);
+  const repeated=await logout();
+  assert.equal(repeated.status,200,'Retry after the HSC session was revoked');
+  assert.match(repeated.headers.get('set-cookie')||'',/__Host-hsc_session=;.*Max-Age=0/);
+  assert.equal((await post('/api/auth/sign-out',{},viewerHeaders)).status,200);
+  assert.equal((await logout()).status,200,'The stale login cookie can also be cleared');
+  assert.equal((await memberAction('me',viewerHeaders)).status,401);
+  assert.equal((await post('/api/member?action=session',{role:'parent'},viewerHeaders)).status,401);
+  assert.equal((await memberAction('me',secondDevice)).status,200);
+  const thirdLogin=await post('/api/auth/sign-in/username',{username:pilotBody.username,password});
+  assert.equal(thirdLogin.status,200);
+  const thirdDevice={cookie:cookies(thirdLogin)};
+  assert.equal((await post('/api/member?action=session',{role:'parent'},thirdDevice)).status,200);
+  assert.equal((await post('/api/member?action=revoke-own-sessions',{},secondDevice)).status,200);
+  for(const device of [secondDevice,thirdDevice]){
+    assert.equal((await memberAction('me',device)).status,401);
+    assert.equal((await post('/api/member?action=session',{role:'parent'},device)).status,401);
+  }
+  await database.prepare('DELETE FROM hsc_admissions WHERE skater_id=?').bind(damagedId).run();
+  assert.equal((await memberAction('admin',{cookie:passwordCookie})).status,200);
+  console.log('Account actions survive unreadable roster data. Device sign-out can be retried, cross-origin writes are rejected, and revoke-all only ends this account’s logins.');
+
   console.log('Worker registration: anonymous blocked; administrator signup, same-identity linking, email/username login and role preserved; pilot signup and single use passed; authenticated results, all opponents, detailed marks and arbitrary-source rejection and custom-domain login/same-origin protection passed; real Worker sync resolves Carson #19 / warm-up 4 to 11:15–12:15 and excludes awards.');
 }finally{await mf.dispose();}

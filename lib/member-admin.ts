@@ -1,4 +1,4 @@
-import {AccessError, accessibleSkaters, scheduleSkaterIds, actor, admittedIDs, audit, bodyJSON, digest, failure, idsField, json, nowISO, parseIDs, randomToken, rateLimit, relationStatement, requireRole, roleField, sessionCookie, sessionHash, startSession, stringField} from './member-access.ts';
+import {AccessError, accessibleSkaters, schedulePreferences, scheduleSkaterIds, actor, admittedIDs, audit, bodyJSON, digest, failure, idsField, json, nowISO, parseIDs, randomToken, rateLimit, relationStatement, requireRole, roleField, sessionCookie, sessionHash, startSession, stringField} from './member-access.ts';
 import type {Candidate, Identity, Member, Role} from './member-access.ts';
 import {drainOutbox, listNotifications, markNotification, listRequirements, writeRequirement, receiptRequirement} from './member-messages.ts';
 import {listReminders,saveReminder} from './reminders.ts';
@@ -19,12 +19,20 @@ export async function memberRequest(context: Context, request: Request): Promise
       return await startSession(database, identity, request, roleField(body.role), ownerEmail);
     }
     if (operation === 'identity' && request.method === 'GET') return json({identity: identity ? {name: identity.displayName, email: identity.email, provider:identity.provider || 'chatgpt',canRestore:!identity.provider&&identity.email.toLowerCase()===ownerEmail.toLowerCase()} : null});
+    if (operation === 'logout' && request.method === 'POST') {
+      await bodyJSON(request);
+      // An expired/revoked membership or a full write quota must still allow this device to sign out.
+      if(identity){
+        await database.prepare('UPDATE hsc_sessions SET revoked_at=? WHERE hash=? AND member_id=? AND revoked_at IS NULL').bind(nowISO(),await sessionHash(request,identity),identity.userId).run();
+      }
+      return json({ok:true},200,{'Set-Cookie':sessionCookie(request,'',0)});
+    }
     const member = await actor(database, identity, request, false);
     if (request.method === 'GET') {
       if (operation === 'me') {
         const allowed = await accessibleSkaters(database, member);
         const {results: claims} = await database.prepare('SELECT id,kind,payload,status,created_at FROM hsc_claims WHERE member_id=? ORDER BY created_at DESC LIMIT 30').bind(member.id).all();
-        return json({member, skaterIds: allowed, preferredSkaterIds:await scheduleSkaterIds(database,member), claims, channels: {inApp: member.status==='active', email: false, webPush: false}, syncIntervalMinutes: 60});
+        return json({member, skaterIds: allowed, ...(await schedulePreferences(database,member,allowed)), claims, channels: {inApp: member.status==='active', email: false, webPush: false}, syncIntervalMinutes: 60});
       }
       if (operation === 'match') {
         await rateLimit(database, `match:${member.id}`, 15);
@@ -43,10 +51,6 @@ export async function memberRequest(context: Context, request: Request): Promise
     if (request.method !== 'POST') throw new AccessError(405, '请求方法无效');
     const body = await bodyJSON(request);
     await rateLimit(database, `write:${member.id}`, 80);
-    if (operation === 'logout') {
-      await database.prepare('UPDATE hsc_sessions SET revoked_at=? WHERE hash=? AND member_id=?').bind(nowISO(), await sessionHash(request, identity), member.id).run();
-      return json({ok: true}, 200, {'Set-Cookie': sessionCookie(request, '', 0)});
-    }
     if (operation === 'revoke-own-sessions') {
       await database.batch([database.prepare('UPDATE hsc_members SET auth_version=auth_version+1 WHERE id=?').bind(member.id),revokePasswordSessions(database,member.id)]);
       return json({ok: true}, 200, {'Set-Cookie': sessionCookie(request, '', 0)});

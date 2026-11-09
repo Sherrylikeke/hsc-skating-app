@@ -3,6 +3,8 @@ import fs from 'node:fs/promises';
 import {existsSync} from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
+import {checkRegistrationFeedback} from './registration-browser.mjs';
+import {checkAccountRecovery} from './account-recovery-browser.mjs';
 
 const cache = path.resolve('work/browser-qa/browsers');
 if (!process.env.PLAYWRIGHT_BROWSERS_PATH && existsSync(cache)) process.env.PLAYWRIGHT_BROWSERS_PATH = cache;
@@ -197,6 +199,8 @@ try {
       if (!browsers.has(engine)) {
         const launch=engine==='chromium' && process.platform==='win32' ? {executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe'} : {};
         browsers.set(engine,await playwright[engine].launch(launch));
+        await checkRegistrationFeedback(browsers.get(engine),profile,origin);
+        await checkAccountRecovery(browsers.get(engine),profile,origin);
       }
       const folder=path.join(output,[model.replaceAll(' ','-').toLowerCase(),orientation,locale].join('-'));
       await fs.mkdir(folder,{recursive:true});

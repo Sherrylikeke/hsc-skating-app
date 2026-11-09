@@ -10,6 +10,7 @@ const output=process.env.HSC_MOBILE_OUTPUT||path.resolve('work/mobile-layout');a
 // Schedule fixture stays intentionally small. Official parser coverage is in check-starting-order-api.mjs.
 const testRole=process.env.HSC_MOBILE_ROLE||'parent',testStatus=process.env.HSC_MOBILE_STATUS||'active';
 const member={id:'fixture-parent',name:'Alexandra Fixture Parent',email:'parent@example.test',role:testRole==='none'?null:testRole,requested_role:testRole==='none'?'parent':testRole,status:testStatus,auth_version:1};
+const effectiveAdmin=member.role==='admin'&&member.status==='active';
 const carson={id:'fixture-carson',name:'Carson Wang',coach:'Jen Jackson/Bryce Davidson',training:true,categories:['Pre-Novice Men'],clubs:['Hamilton SC'],recordCount:0,eventCount:0,identityStatus:'Fixture'};
 const event={id:'fixture-sectionals',name:'2027 Skate Ontario Junior & Senior Sectional Championships',url:'https://skateontario.org/event/fixture/',start:'2026-11-05',end:'2026-11-08',timezone:'America/Toronto',venue:'Komoka Wellness Centre',city:'Komoka',source:'Skate Ontario',updateText:'',documents:[],needsReview:false,participants:[{id:'fixture-entry',name:'Carson Wang',category:'Pre-Novice Men',club:'Hamilton SC',section:'ON',skaterIds:[carson.id],matchStatus:'Fixture',sourceUrl:'https://skateontario.org/entry.pdf'}],blocks:[{id:'fixture-short',category:'PRE-NOVICE MEN SHORT (16-25)',categoryKey:'PRENOVICE:MEN',group:null,range:[16,25],activity:'competition',date:'2026-11-05',start:'11:15',end:'12:15',rink:'MOLSON RINK',page:1,sourceUrl:'https://skateontario.org/schedule.pdf'}],startingOrders:[{id:'fixture-order',name:'Carson Wang',category:'Pre-Novice Men - Short Program',program:'short',startNumber:19,warmupGroup:4,individualTime:null,sourceUrl:'https://skatingresults.ca/fixture/#/seg/fixture/start',page:0,skaterIds:[carson.id]}]};
 const sydney={...carson,id:'fixture-sydney',name:'Sydney Mitchell'},ownIds=testStatus==='club-viewer'?[sydney.id]:[carson.id];
@@ -28,14 +29,25 @@ try{for(const width of (process.env.HSC_MOBILE_WIDTHS||'320,375,390,430,1280').s
   const page=await context.newPage();page.setDefaultNavigationTimeout(90000);
   await page.clock.setFixedTime(new Date('2026-11-05T14:00:00Z'));
   await page.addInitScript(locale=>{localStorage.setItem('hsc-language',locale);},language);
-  await page.route('**/api/**',async route=>{const url=new URL(route.request().url());let payload={};
+  let signedIn=true;
+  const signOutRequests=[];
+  const unnecessaryAccountReads=[];
+  await context.route('**/api/**',async route=>{const url=new URL(route.request().url());let payload={};
+    if(new URL(route.request().frame().url()).searchParams.get('tab')==='account'&&(url.pathname==='/api/club'||['admin','requirements','notifications'].includes(url.searchParams.get('action')))){
+      unnecessaryAccountReads.push(url.pathname+url.search);
+      return route.abort();
+    }
+    if(url.pathname==='/api/member'&&url.searchParams.get('action')==='logout')signOutRequests.push('member');
+    if(url.pathname==='/api/auth/sign-out'){signOutRequests.push('password');signedIn=false;}
+    if(!signedIn&&url.pathname==='/api/member'&&url.searchParams.get('action')==='identity')return route.fulfill({json:{identity:null}});
+    if(!signedIn&&url.pathname==='/api/club')return route.fulfill({status:401,json:{error:'Sign in'}});
     if(url.pathname==='/api/club')payload=club;
     else if(url.pathname==='/api/member'){const action=url.searchParams.get('action');payload=action==='identity'?{identity:{name:member.name,email:member.email,provider:'password'}}:action==='me'?{member,skaterIds:testStatus==='club-viewer'?[]:[carson.id],preferredSkaterIds:ownIds,claims:[]}:action==='notifications'?{notifications:[]}:action==='requirements'?{requirements:[]}:action==='admin'?{members:[],candidates:[carson],admissions:[],relations:[],invites:[],claims:[],logs:[],coachCandidates:[],outbox:[]}:{};}
     await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(payload)});
   });
   for(const route of ['/','/workspace?view=coach']){
     await page.goto(origin+route,{waitUntil:'networkidle'});await page.locator(route==='/'?'.member-header':'.club-topbar').waitFor();
-    if(route==='/'){await page.getByRole('button',{name:/Sign out|退出登录/}).waitFor();await page.getByRole('link',{name:/Coach master schedule|教练总赛程/}).waitFor();}else {await page.locator('.club-sidebar nav').getByRole('button',{name:/Coach master schedule|教练总赛程/}).click();assert.equal(await page.locator('.club-note-button').count(),0);assert.equal(await page.locator('.club-sync-button').count(),testRole==='admin'?1:0);await page.getByText('Carson Wang',{exact:true}).first().waitFor();await page.getByRole('link',{name:/Start #19|出场 #19/}).waitFor();}
+    if(route==='/'){await page.getByRole('button',{name:/Sign out|退出登录/}).waitFor();await page.getByRole('link',{name:/Coach master schedule|教练总赛程/}).waitFor();}else {await page.locator('.club-sidebar nav').getByRole('button',{name:/Coach master schedule|教练总赛程/}).click();assert.equal(await page.locator('.club-note-button').count(),0);assert.equal(await page.locator('.club-sync-button').count(),effectiveAdmin?1:0);await page.getByText('Carson Wang',{exact:true}).first().waitFor();await page.getByRole('link',{name:/Start #19|出场 #19/}).waitFor();}
     const selector=route==='/'?'.member-header':'.club-topbar';
     const layout=await page.locator(selector).evaluate(header=>{const rect=header.getBoundingClientRect();const targets=[...header.querySelectorAll('a,button,select')].filter(el=>el.getClientRects().length).map(el=>{const b=el.getBoundingClientRect();return {label:el.textContent?.trim().slice(0,60),x:b.x,y:b.y,right:b.right,bottom:b.bottom,width:b.width,height:b.height};});return {header:{x:rect.x,y:rect.y,right:rect.right,bottom:rect.bottom,height:rect.height},targets,viewport:innerWidth,pageWidth:document.documentElement.scrollWidth};});
     const issues=layout.targets.filter(t=>t.x<-.5||t.right>width+.5||t.y<layout.header.y-.5||t.bottom>layout.header.bottom+.5).map(t=>'outside: '+t.label);
@@ -75,7 +87,28 @@ try{for(const width of (process.env.HSC_MOBILE_WIDTHS||'320,375,390,430,1280').s
         assert.equal(await expanded.getByText(/Estimated warm-up|预计上冰热身/).count(),0);
       }finally{event.startingOrders=savedOrders;}
     }
-  }await context.close();
+  }
+  const accountLink=page.locator('.club-topbar a[href="/?tab=account"]');
+  await accountLink.click();
+  const account=page.locator('.member-account-panel');
+  await account.getByRole('heading',{name:effectiveAdmin?/^Administrator account$|^管理员账户$/:/^Member account$|^普通账户$/}).waitFor();
+  assert.deepEqual(unnecessaryAccountReads,[]);
+  assert.equal(await account.locator('a[href="/?tab=admin"]').count(),effectiveAdmin?1:0);
+  assert.equal(await account.getByRole('button',{name:/Revoke all|撤销我的所有/i}).isVisible(),false);
+  const sibling=await context.newPage();
+  await sibling.goto(origin+'/workspace?view=personal');
+  await sibling.locator('.club-account-link').waitFor();
+  await account.getByRole('button',{name:/Sign out|退出登录/i}).click();
+  await page.locator('#hsc-login').waitFor();
+  await sibling.locator('#hsc-login').waitFor();
+  await sibling.close();
+  assert.deepEqual(signOutRequests,['member','password']);
+  await page.goBack();
+  await page.locator('.club-signin').waitFor();
+  await page.reload();
+  await page.locator('.club-signin').waitFor();
+  assert.equal(await page.getByText('Carson Wang',{exact:true}).count(),0);
+  await context.close();
 }await fs.writeFile(path.join(output,'report.json'),JSON.stringify({engine:browserType.name(),role:testRole,status:testStatus,fixtureOnly:true,realAccountLogin:false,checks:report},null,2));
 const failures=report.filter(r=>r.issues.length);console.log(JSON.stringify({engine:browserType.name(),views:report.length,failures:failures.map(({width,language,route,issues})=>({width,language,route,issues})),output},null,2));
 if(process.env.HSC_MOBILE_BASELINE!=='1')assert.equal(failures.length,0,'Header controls must fit without overlap');

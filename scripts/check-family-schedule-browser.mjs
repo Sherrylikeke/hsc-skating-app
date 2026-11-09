@@ -42,6 +42,67 @@ addBlock('Senior Men SHORT', '12:00', '12:40');
 const club = {member, ownSkaterIds:ownIds, writableSkaterIds:[], skaters, events:[event], plans:[], sync:{},
   historyEvents:[], recent:[], asOf:day, summary:{category_records:0, team_records:0}, reviews:[], limitations:[]};
 
+async function checkMembershipControls(page, language) {
+  let account = {...member,role:null,status:'club-viewer'};
+  let membershipClaimStatus = 'pending';
+  let preferredSkaterIds = ['ana'];
+  const approvedIds = ['ben'];
+  const writes = [];
+  await page.route('**/api/**', async route => {
+    const req = route.request(), url = new URL(req.url()), action = url.searchParams.get('action');
+    if (url.pathname === '/api/club' && !url.search)
+      return route.fulfill({json:{...club,member:account,ownSkaterIds:preferredSkaterIds,membershipClaimStatus}});
+    if (action === 'me')
+      return route.fulfill({json:{member:account,membershipClaimStatus,skaterIds:account.status==='active'?approvedIds:[],preferredSkaterIds,claims:[]}});
+    if (req.method() === 'POST') {
+      writes.push(action);
+      if (action === 'home-skater') {
+        assert.deepEqual(req.postDataJSON(),{skaterId:'kim',pinned:true});
+        preferredSkaterIds = [...preferredSkaterIds,'kim'];
+        return route.fulfill({json:{preferredSkaterIds}});
+      }
+      // A relationship can be revoked while the form is open.
+      if (action === 'reminder') return route.fulfill({status:403,json:{error:'无权访问该选手'}});
+    }
+    if (action === 'reminders') return route.fulfill({json:{rules:[],plans:[]}});
+    if (action === 'admin') return route.fulfill({json:{members:[],candidates:skaters,admissions:[{skater_id:'kim',admitted:1}],relations:[],invites:[],claims:[],logs:[],coachCandidates:[],outbox:[]}});
+    return route.fallback();
+  });
+  const pending = page.getByRole('heading',{name:/Membership application under review|会员申请正在审核/});
+  await page.goto(origin+'/workspace?view=personal');
+  await pending.waitFor();
+  await page.goto(origin+'/');
+  await pending.waitFor();
+  const manager=page.locator('.home-skaters');
+  await manager.locator('summary').click();
+  await manager.getByRole('searchbox').fill('kim');
+  await manager.getByRole('combobox').selectOption('kim');
+  await manager.getByRole('button',{name:/Add to my homepage|加入我的主页/}).click();
+  await manager.getByRole('status').filter({hasText:/Kim Park was added|已将 Kim Park 加入/}).waitFor();
+  assert.equal(await manager.getByRole('searchbox').inputValue(),'');
+  await manager.getByRole('searchbox').fill('absent');
+  await manager.getByRole('status').filter({hasText:/No matching|没有匹配/}).waitFor();
+  membershipClaimStatus='rejected';
+  await page.reload();
+  await page.getByRole('heading',{name:/Membership application declined|会员申请未获批准/}).waitFor();
+  account={...account,status:'active',role:'parent'};
+  await page.goto(origin+'/?tab=reminders');
+  const select = page.locator('.member-panel form').getByRole('combobox');
+  await select.waitFor();
+  assert.deepEqual(await select.locator('option').allTextContents(),[language==='en'?'Choose a skater':'选择选手','Ben Reed']);
+  await select.selectOption('ben');
+  await page.getByRole('button',{name:/Save reminder|保存提醒/}).click();
+  await page.getByRole('alert').filter({hasText:language==='en'?'You do not have access to this skater':'无权访问该选手'}).waitFor();
+  for (const [role,eligible] of [['coach','Ben Reed'],['admin','Kim Park']]) {
+    account={...account,role};
+    await page.goto(origin+'/?tab=requirements');
+    const choices=page.locator('#requirement-form fieldset');
+    await choices.getByRole('checkbox',{name:new RegExp(eligible)}).waitFor();
+    assert.equal(await choices.getByRole('checkbox').count(),1);
+  }
+  assert.deepEqual(writes,['home-skater','reminder']);
+}
+
 async function walk(width, language, browser) {
   const desktop = width >= 1000;
   const device = desktop ? (engine === webkit ? 'Desktop Safari':'Desktop Chrome') : (engine === webkit ? 'iPhone 13':'Pixel 7');
@@ -199,6 +260,7 @@ async function walk(width, language, browser) {
     await direct.locator('.club-skater-card').first().waitFor();
     await direct.close();
     assert.deepEqual(writes,[]);
+    await checkMembershipControls(page,language);
     assert.deepEqual(errors,[]);
     return {width,language,entryY,firstRowY,firstRow};
   } finally {

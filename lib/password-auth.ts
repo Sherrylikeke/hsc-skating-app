@@ -22,7 +22,9 @@ export function createPasswordAuth(database: D1Database, secret: string, origin 
     emailAndPassword:{enabled:true,minPasswordLength:12,maxPasswordLength:128,autoSignIn:false,resetPasswordTokenExpiresIn:3600,revokeSessionsOnPasswordReset:true,
       ...(delivery.enabled&&delivery.sendReset?{async sendResetPassword({user,url}:{user:{email:string};url:string}){await delivery.sendReset!(user.email,url);}}:{}),
     },
-    emailVerification:{sendOnSignUp:delivery.enabled,sendOnSignIn:false,expiresIn:3600,autoSignInAfterVerification:false,
+    // Request the initial email explicitly once membership is saved. Better Auth's
+    // automatic sign-up notification catches transport failures before returning.
+    emailVerification:{sendOnSignUp:false,sendOnSignIn:false,expiresIn:3600,autoSignInAfterVerification:false,
       ...(delivery.enabled?{async sendVerificationEmail({user,url}:{user:{email:string};url:string}){if(!delivery.send)throw new Error('Email delivery is unavailable.');await delivery.send(user.email,url);}}:{}),
     },
     databaseHooks:{session:{create:{before:async session=>{
@@ -58,7 +60,7 @@ export function createPasswordAuth(database: D1Database, secret: string, origin 
     if(request.method==='POST'&&(request.headers.get('origin')!==origin||request.headers.get('sec-fetch-site')==='cross-site'))return Response.json({message:'Invalid request origin.'},{status:403});
     if(request.method==='POST'&&!request.headers.get('content-type')?.startsWith('application/json'))return Response.json({message:'Use application/json.'},{status:415});
     if(request.method==='POST'&&['/api/auth/request-password-reset','/api/auth/reset-password','/api/auth/send-verification-email'].includes(pathname)){
-      if(!delivery.enabled)return Response.json({message:'Email service setup is pending. Existing accounts can still sign in.'},{status:503});
+      if(!delivery.enabled&&pathname!=='/api/auth/reset-password')return Response.json({code:'MAIL_DISABLED',message:'Email service setup is pending. Existing accounts can still sign in.'},{status:503});
       try{
         const raw=await request.clone().text();
         if(new TextEncoder().encode(raw).length>8192)return Response.json({message:'Request is too large.'},{status:413});
@@ -80,7 +82,11 @@ export function createPasswordAuth(database: D1Database, secret: string, origin 
         return Response.json({pilotRegistrationAllowed:true,emailVerificationRequired:false,pilotRole:pilot.role,email:pilot.email,expiresAt:pilot.expiresAt},{headers:{'Cache-Control':'private, no-store'}});
       }catch(error){return Response.json({message:error instanceof AccessError?error.message:error instanceof SyntaxError?'Invalid request.':'Invitation could not be checked. Please retry.'},{status:error instanceof AccessError?error.status:error instanceof SyntaxError?400:503,headers:{'Cache-Control':'private, no-store'}});}
     }
-    if(request.method==='POST'&&pathname==='/api/auth/send-verification-email'&&!delivery.enabled)return Response.json({message:'Email verification is awaiting mail service setup. Existing accounts can still sign in.'},{status:503});
+    if(request.method==='POST'&&pathname==='/api/auth/send-verification-email'){
+      const response=await auth.handler(request);
+      if(response.status>=500)return Response.json({code:'MAIL_UNAVAILABLE',message:'We could not send the verification email. Please try again later.'},{status:503});
+      return response;
+    }
     if(request.method==='POST'&&pathname==='/api/auth/sign-up/email') {
       try {
         if(Number(request.headers.get('content-length')||0)>8192)return Response.json({message:'Registration request is too large.'},{status:413});
@@ -99,7 +105,7 @@ export function createPasswordAuth(database: D1Database, secret: string, origin 
         const registration=existingRole==='admin'?null:await registrationEligibility(database,body,request.headers.get('cf-connecting-ip')||'unknown');
         if(pilot&&registration?.role!==pilot.role)return Response.json({message:'Use the role assigned to your pilot invitation.'},{status:403});
         if(existingRole&&existingRole!=='admin'&&existingRole!==registration?.role)return Response.json({message:'The selected role must match your verified membership.'},{status:403});
-        if(!existingRole&&await database.prepare('SELECT id FROM hsc_members WHERE lower(email)=?').bind(email).first())return Response.json({message:'An account already uses this email. Sign in or contact the club administrator. Accounts are never merged by email alone.'},{status:409});
+        if(!existingRole&&await database.prepare('SELECT id FROM hsc_members WHERE lower(email)=?').bind(email).first())return Response.json({code:'ACCOUNT_ALREADY_EXISTS',message:'An account already uses this email. Sign in or contact the club administrator. Accounts are never merged by email alone.'},{status:409});
         if(body.callbackURL&&body.callbackURL!==origin+'/verify-email?verified=1')return Response.json({message:'Invalid verification return URL.'},{status:400});
         const previousUser=await database.prepare('SELECT id FROM hsc_auth_user WHERE lower(email)=?').bind(email).first();
         if(pilot&&previousUser)return Response.json({message:'This invitation has already been used. Sign in with your account.'},{status:409});
@@ -114,8 +120,23 @@ export function createPasswordAuth(database: D1Database, secret: string, origin 
             if(pilot)await database.prepare('INSERT INTO app_meta (key,value) VALUES (?,?) ON CONFLICT(key) DO NOTHING').bind(pilotUsedKey(pilot),JSON.stringify({userId:createdUser.id,usedAt:nowISO()})).run();
           }
         }
-        if(pilot&&response.ok){const headers=new Headers(response.headers);headers.set('X-HSC-Registration-Mode','pilot');return new Response(response.body,{status:response.status,headers});}
-        return response;
+        if(!response.ok)return response;
+        const headers=new Headers(response.headers);
+        headers.delete('Content-Length');
+        const result=await response.json() as {user?:{id:string};token?:string|null};
+        if(!result.user||result.token)return Response.json(result,{status:response.status,headers});
+        const registrationMode=pilot?'pilot':delivery.enabled?'verification':'linked';
+        if(pilot)headers.set('X-HSC-Registration-Mode','pilot');
+        let verificationDelivery:'requested'|'retry-needed'|undefined;
+        if(registrationMode==='verification'&&!previousUser){
+          try {
+            await auth.api.sendVerificationEmail({body:{email,callbackURL:origin+'/verify-email?verified=1'}});
+            verificationDelivery='requested';
+          }catch{
+            verificationDelivery='retry-needed';
+          }
+        }
+        return Response.json({...result,registrationMode,verificationDelivery},{status:response.status,headers});
       }catch(error){return Response.json({message:error instanceof AccessError?error.message:error instanceof SyntaxError?'Invalid registration request.':'Registration could not be completed. Please contact the club.'},{status:error instanceof AccessError?error.status:error instanceof SyntaxError?400:503});}
     }
     return auth.handler(request);

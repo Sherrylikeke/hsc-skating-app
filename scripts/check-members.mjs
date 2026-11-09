@@ -429,6 +429,8 @@ assert.equal(database.database.prepare('SELECT count(*) AS count FROM hsc_auth_u
 const signup=await auth.handler(authRequest('sign-up/email',{...registrationBody,skaterName:'  TEST   ALPHA  '}));
 assert.equal(signup.status,200,await signup.clone().text());
 const signupValue=await signup.json();
+assert.equal(signupValue.registrationMode,'verification');
+assert.equal(signupValue.verificationDelivery,'requested');
 assert.equal(signupValue.user.emailVerified,false);
 assert.equal(signupValue.token,null);
 assert.equal(signup.headers.get('set-auth-token'),null);
@@ -477,6 +479,7 @@ assert.equal((await memberRequest(passwordContext,request(null,'me'))).status,20
 assert.equal((await memberRequest(passwordContext,request(null,'admin'))).status,403);
 const viewerMe=await memberRequest(passwordContext,request(null,'me')).then(response=>response.json());
 assert.deepEqual(viewerMe.skaterIds,[]);assert.deepEqual(viewerMe.preferredSkaterIds,['SK-A']);
+assert.equal(viewerMe.membershipClaimStatus,'pending');
 assert.equal((await memberRequest(passwordContext,request(null,'notifications'))).status,403);
 assert.equal((await memberRequest(passwordContext,request(null,'requirement',{title:'forged coach',body:'not allowed',skaterIds:['SK-A']}))).status,403);
 globalThis.hscTestAuthSecret='isolated-tests-only-secret-0123456789-abcdef';globalThis.hscTestHeaders=new Headers();
@@ -485,6 +488,7 @@ const viewerResponse=await mobileAPI.GET(viewerRequest);assert.equal(viewerRespo
 const viewerData=await viewerResponse.json();assert.deepEqual(viewerData.privateSkaterIds,[]);assert.ok(viewerData.skaters.length>2);assert.equal(viewerData.skaters[0].id,'SK-A');assert.ok(viewerData.rows.every(row=>row.plan===null));
 const viewerClub=await clubAPI.GET(new Request('https://hsc-coach-roster.sherrylikeke.chatgpt.site/api/club',{headers:{authorization:'Bearer '+signedToken}})).then(response=>response.json());
 assert.deepEqual(viewerClub.plans,[]);assert.deepEqual(viewerClub.writableSkaterIds,[]);assert.deepEqual(viewerClub.ownSkaterIds,['SK-A']);
+assert.equal(viewerClub.membershipClaimStatus,'pending');
 const {filterHomeSchedule}=await import('../lib/home-schedule.ts');
 const prefCall=(body)=>memberRequest(passwordContext,request(null,'home-skater',body));
 assert.equal((await prefCall({skaterId:'SK-B',pinned:true,memberId:users.owner.identity.userId,role:'admin'})).status,200);
@@ -507,6 +511,7 @@ assert.deepEqual((await memberRequest(passwordContext,request(null,'me')).then(r
 const secondViewer={identity:identity('second-viewer'),cookie:''};await login(secondViewer,'parent');
 database.database.prepare("UPDATE hsc_members SET status='club-viewer' WHERE id=?").run(secondViewer.identity.userId);
 assert.deepEqual((await call(secondViewer,'me')).value.preferredSkaterIds,[]);
+assert.equal((await call(secondViewer,'me')).value.membershipClaimStatus,null);
 await call(secondViewer,'home-skater',{skaterId:'SK-C',pinned:true});
 assert.deepEqual((await call(secondViewer,'me')).value.preferredSkaterIds,['SK-C']);
 assert.deepEqual((await memberRequest(passwordContext,request(null,'me')).then(response=>response.json())).preferredSkaterIds.sort(),['SK-A','SK-B']);
@@ -591,11 +596,23 @@ try{
 const failedDeliveryAuth=createPasswordAuth(registrationDatabase,'isolated-tests-only-secret-0123456789-abcdef','http://127.0.0.1:5173',undefined,{enabled:true,registrationEnabled:true,async send(){throw new Error('fixture-only mail failure');}});
 const failedDeliveryResponse=await failedDeliveryAuth.handler(authRequest('sign-up/email',{...registrationBody,email:'mail-failure@example.test',username:'mail.failure',skaterName:'Club Skater'},{'cf-connecting-ip':'192.0.2.185'}));
 assert.equal(failedDeliveryResponse.status,200);
+const failedSignup=await failedDeliveryResponse.json();
+assert.equal(failedSignup.registrationMode,'verification');
+assert.equal(failedSignup.verificationDelivery,'retry-needed');
 assert.equal(failedDeliveryResponse.headers.get('set-auth-token'),null);
 const failedUser=registrationDatabase.database.prepare("SELECT id,email_verified FROM hsc_auth_user WHERE email='mail-failure@example.test'").get();
 assert.ok(failedUser);assert.equal(failedUser.email_verified,0);
 assert.equal(registrationDatabase.database.prepare('SELECT status FROM hsc_members WHERE id=?').get('password:'+failedUser.id).status,'club-viewer');
 assert.equal(registrationDatabase.database.prepare('SELECT count(*) AS count FROM hsc_auth_session WHERE user_id=?').get(failedUser.id).count,0);
+const failedResend=await failedDeliveryAuth.handler(authRequest('send-verification-email',{email:'mail-failure@example.test',callbackURL:'http://127.0.0.1:5173/verify-email?verified=1'},{'cf-connecting-ip':'192.0.2.187'}));
+assert.equal(failedResend.status,503);
+assert.equal((await failedResend.json()).code,'MAIL_UNAVAILABLE');
+const recoveredResend=await isolatedAuth.handler(authRequest('send-verification-email',{email:'mail-failure@example.test',callbackURL:'http://127.0.0.1:5173/verify-email?verified=1'},{'cf-connecting-ip':'192.0.2.188'}));
+assert.equal(recoveredResend.status,200);
+const recoveredVerification=verificationLinks.find(link=>link.email==='mail-failure@example.test');
+assert.ok(recoveredVerification);
+await isolatedAuth.handler(new Request(recoveredVerification.url));
+assert.equal(registrationDatabase.database.prepare('SELECT email_verified FROM hsc_auth_user WHERE id=?').get(failedUser.id).email_verified,1);
 database.database.prepare('UPDATE hsc_auth_user SET email_verified=0 WHERE id=?').run(signupValue.user.id);
 const oldLogin=await noMailAuth.handler(authRequest('sign-in/email',{email:passwordIdentity.email,password:testPassword},{'cf-connecting-ip':'192.0.2.188'}));
 assert.equal(oldLogin.status,200);
@@ -761,7 +778,8 @@ database.database.prepare('UPDATE hsc_auth_verification SET expires_at=? WHERE i
 assert.equal((await recoveryAuth.handler(authRequest('reset-password',{token:resetToken,newPassword:resetPassword}))).status,400);
 assert.equal((await recoveryAuth.handler(resetRequest(pilotEmail,'192.0.2.235'))).status,200);
 const freshToken=new URL(resetLinks[1].url).pathname.split('/').pop();
-assert.equal((await recoveryAuth.handler(authRequest('reset-password',{token:freshToken,newPassword:resetPassword},{'cf-connecting-ip':'192.0.2.236'}))).status,200);
+// Disabling new mail must not invalidate an already-issued password reset.
+assert.equal((await noMailAuth.handler(authRequest('reset-password',{token:freshToken,newPassword:resetPassword},{'cf-connecting-ip':'192.0.2.236'}))).status,200);
 assert.equal((await recoveryAuth.handler(authRequest('reset-password',{token:freshToken,newPassword:resetPassword},{'cf-connecting-ip':'192.0.2.237'}))).status,400);
 assert.equal(await recoveryAuth.api.getSession({headers:new Headers({authorization:'Bearer '+pilotActivated.headers.get('set-auth-token')})}),null);
 assert.notEqual((await recoveryAuth.handler(authRequest('sign-in/email',{email:pilotEmail,password:testPassword},{'cf-connecting-ip':'192.0.2.238'}))).status,200);

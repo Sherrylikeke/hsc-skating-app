@@ -1,78 +1,158 @@
 'use client';
-import {apiFetch as fetch} from '../lib/client-platform';
-import {useEffect,useState} from 'react';
-import EmailVerificationPanel from './email-verification-panel';
-import PasswordResetPanel from './password-reset-panel';
-import {translate,text,useLanguage} from '../lib/i18n';
+import {useEffect,useId,useRef,useState} from 'react';
+import {apiFetch} from '../lib/client-platform';
+import {text,useLanguage} from '../lib/i18n';
 import type {Role} from '../lib/member-access';
+import {authFeedback,authProblem,type AuthProblem} from './auth-feedback';
+import EmailVerificationPanel,{type VerificationReason} from './email-verification-panel';
+import PasswordResetPanel from './password-reset-panel';
+import {useAuthAvailability} from './auth-availability';
+
+type PilotRole='parent'|'coach'|'skater';
+type RegistrationResult=AuthProblem&{token?:string|null;user?:{email:string};registrationMode?:'verification'|'pilot'|'linked';verificationDelivery?:'requested'|'retry-needed'};
+
 export default function PasswordPanel({role,onComplete,allowAdminLink=false}:{role:Role;onComplete:()=>Promise<void>;allowAdminLink?:boolean}) {
   useLanguage();
-  const [register,setRegister]=useState(false),[username,setUsername]=useState(''),[password,setPassword]=useState(''),[confirm,setConfirm]=useState(''),[email,setEmail]=useState(''),[skaterName,setSkaterName]=useState(''),[requestedRole,setRequestedRole]=useState<Role>(role==='admin'?'parent':role),[link,setLink]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[pendingEmail,setPendingEmail]=useState('');
+  const id=useId();
+  const [register,setRegister]=useState(false),[username,setUsername]=useState(''),[password,setPassword]=useState(''),[confirm,setConfirm]=useState(''),[email,setEmail]=useState(''),[skaterName,setSkaterName]=useState('');
+  const [requestedRole,setRequestedRole]=useState<Role>(role==='admin'?'parent':role),[link,setLink]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
+  const [verification,setVerification]=useState<{email:string;reason:VerificationReason}|null>(null);
+  const signInInput=useRef<HTMLInputElement>(null);
+  const restoreSignInFocus=useRef(false);
+  const availability=useAuthAvailability(),config=availability.state;
+  const [inviteToken,setInviteToken]=useState(''),[inviteAttempt,setInviteAttempt]=useState(0),[checkingInvite,setCheckingInvite]=useState(false),[inviteFailed,setInviteFailed]=useState(false);
+  const [pilot,setPilot]=useState<{token:string;role:PilotRole}|null>(null);
   const adminLink=allowAdminLink&&link;
-  const [pilotRole,setPilotRole]=useState<'parent'|'coach'|'skater'|null>(null);
-  const [pilotToken,setPilotToken]=useState('');
-  const [deliveryConfigured,setDeliveryConfigured]=useState(false);
+
   useEffect(()=>{
-    void fetch('/api/auth/config',{cache:'no-store'}).then(async response=>{if(response.ok)setDeliveryConfigured((await response.json() as {registrationConfigured?:boolean}).registrationConfigured===true);}).catch(()=>{});
-    const fragment=new URLSearchParams(location.hash.slice(1)),token=fragment.get('invite');if(!token)return;
-    fragment.delete('invite');history.replaceState(null,'',location.pathname+location.search+(fragment.size?'#'+fragment.toString():''));
-    void fetch('/api/auth/pilot-invitation',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})}).then(async response=>{
-      const config=await response.json() as {message?:string;pilotRegistrationAllowed?:boolean;pilotRole?:'parent'|'coach'|'skater';email?:string};
-      if(!response.ok)throw new Error(config.message||'This invitation is invalid or expired.');
-      if(config.pilotRegistrationAllowed&&config.pilotRole&&config.email){setPilotToken(token);setPilotRole(config.pilotRole);setRequestedRole(config.pilotRole);setEmail(config.email);setRegister(true);}
-    }).catch(failure=>setError(failure.message));
+    function readInvite(){
+      const fragment=new URLSearchParams(location.hash.slice(1)),token=fragment.get('invite');
+      if(!token)return;
+      fragment.delete('invite');
+      history.replaceState(history.state,'',location.pathname+location.search+(fragment.size?'#'+fragment.toString():''));
+      setInviteToken(token);setInviteAttempt(attempt=>attempt+1);setPilot(null);setCheckingInvite(true);setInviteFailed(false);
+      setEmail('');setPassword('');setConfirm('');setError('');setVerification(null);setRegister(true);
+    }
+    readInvite();
+    window.addEventListener('hashchange',readInvite);
+    return ()=>window.removeEventListener('hashchange',readInvite);
   },[]);
-  const invitationRequired=register&&!allowAdminLink&&!pilotRole&&!deliveryConfigured;
+
+  useEffect(()=>{
+    if(!inviteToken)return;
+    let current=true;
+    setCheckingInvite(true);setInviteFailed(false);setError('');
+    void (async()=>{
+      try{
+        const response=await apiFetch('/api/auth/pilot-invitation',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:inviteToken})});
+        const data=await response.json() as AuthProblem&{pilotRegistrationAllowed?:boolean;pilotRole?:PilotRole;email?:string};
+        if(!current)return;
+        if(!response.ok){
+          setError(authProblem(response.status,data));setInviteFailed(response.status>=500);
+          if(response.status<500){setInviteToken('');setRegister(false);}
+          return;
+        }
+        if(!data.pilotRegistrationAllowed||!data.pilotRole||!['skater','parent','coach'].includes(data.pilotRole)||!data.email)throw new Error();
+        setPilot({token:inviteToken,role:data.pilotRole});setRequestedRole(data.pilotRole);setEmail(data.email);setRegister(true);
+      }catch{if(current){setInviteFailed(true);setError('UNAVAILABLE');}}finally{if(current)setCheckingInvite(false);}
+    })();
+    return ()=>{current=false;};
+  },[inviteToken,inviteAttempt]);
+
+  function chooseRegister(value:boolean){
+    if(value!==register){setPassword('');setConfirm('');}
+    setRegister(value);setError('');
+  }
+
+  function returnToSignIn(){
+    restoreSignInFocus.current=true;
+    chooseRegister(false);
+    setVerification(null);
+  }
+  useEffect(()=>{
+    if(!verification&&restoreSignInFocus.current){
+      restoreSignInFocus.current=false;
+      signInInput.current?.focus();
+    }
+  },[verification]);
+
   async function submit(event:React.FormEvent) {
-    event.preventDefault();if(busy)return;setBusy(true);setError('');
+    event.preventDefault();
+    if(busy)return;
+    if(register&&password!==confirm){setError('PASSWORD_MISMATCH');return;}
+    setBusy(true);setError('');
     try {
-      if(register&&password!==confirm)throw new Error(text('The passwords do not match.','两次密码不一致。'));
       const identifier=username.trim(),emailLogin=!register&&identifier.includes('@');
       const endpoint=register?'sign-up/email':emailLogin?'sign-in/email':'sign-in/username';
-      const body=register?{name:identifier,email,username:identifier,password,role:requestedRole,skaterName,linkExisting:adminLink,...(pilotToken?{pilotInvitation:pilotToken}:{})}:emailLogin?{email:identifier,password}:{username:identifier,password};
-      const response=await fetch('/api/auth/'+endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-      const result=await response.json() as {message?:string;token?:string|null;user?:{email:string};error?:{message?:string}};
+      const body=register?{name:identifier,email:email.trim(),username:identifier,password,role:requestedRole,skaterName,linkExisting:adminLink,...(pilot?{pilotInvitation:pilot.token}:{})}:emailLogin?{email:identifier,password}:{username:identifier,password};
+      const response=await apiFetch('/api/auth/'+endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const result:RegistrationResult=await response.json();
+      if(!response.ok){
+        if(!register&&response.status===403&&(result.code==='EMAIL_NOT_VERIFIED'||result.message==='Verify your email before signing in.')){
+          setPassword('');setVerification({email:emailLogin?identifier:'',reason:'sign-in'});return;
+        }
+        setError(authProblem(response.status,result));
+        return;
+      }
       setPassword('');setConfirm('');
-      if(!response.ok){if(!register&&response.status===403&&result.message==='Verify your email before signing in.')setPendingEmail(emailLogin?identifier:'');throw new Error(result.message||result.error?.message||text('Unable to sign in. Please try again.','无法登录，请重试。'));}
       if(register&&result.user&&!result.token){
-        const config=await fetch('/api/auth/config').then(response=>response.json()) as {deliveryConfigured:boolean};
-        if((!adminLink&&response.headers.get('X-HSC-Registration-Mode')!=='pilot')||config.deliveryConfigured){setPendingEmail(email);return;}
-        const signed=await fetch('/api/auth/sign-in/email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:body.password})});
-        if(!signed.ok)throw new Error(text('Sign in to complete account linking.','请登录后完成账号关联。'));
+        // Legacy Workers expose pilot mode only in a header. Native adapters can strip that header.
+        const silentSignIn=result.registrationMode?result.registrationMode!=='verification':response.headers.get('X-HSC-Registration-Mode')==='pilot'||!!pilot||(adminLink&&config==='invite-only');
+        if(!silentSignIn){
+          setVerification({email:result.user.email,reason:result.verificationDelivery==='retry-needed'?'delivery-failed':'registered'});return;
+        }
+        const signed=await apiFetch('/api/auth/sign-in/email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:body.password})});
+        if(!signed.ok){setRegister(false);setError(authProblem(signed.status,await signed.json()));return;}
       }
       if(adminLink) {
-        const linked=await fetch('/api/link-password',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
-        const value=await linked.json() as {error?:string};if(!linked.ok)throw new Error(value.error||'Account linking failed.');
+        const linked=await apiFetch('/api/link-password',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+        const value=await linked.json() as {error?:string};if(!linked.ok){setError(value.error||'UNAVAILABLE');return;}
       }
-      const session=await fetch('/api/member?action=session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role:register?requestedRole:role})});
-      const value=await session.json() as {error?:string};if(!session.ok)throw new Error(value.error||'Membership session failed.');
+      const session=await apiFetch('/api/member?action=session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role:register?requestedRole:role})});
+      const value=await session.json() as {error?:string};if(!session.ok){setError(value.error||'UNAVAILABLE');return;}
       await onComplete();
-    }catch(failure){setError((failure as Error).message);}finally{setBusy(false);}
+    }catch{setError('UNAVAILABLE');}finally{setBusy(false);}
   }
-  return <section className="member-panel password-panel" id="hsc-login" aria-label="HSC email sign in">
-    <div className="member-actions"><button type="button" className={!register?'selected':''} onClick={()=>{setRegister(false);setError('');}}>{text('Sign in','登录')}</button><button type="button" className={register?'selected':''} onClick={()=>{setRegister(true);setError('');}}>{text('Create an account','创建账号')}</button></div>
+
+  if(verification)return <EmailVerificationPanel availability={availability} initialEmail={verification.email} reason={verification.reason} onReturnToSignIn={returnToSignIn}/>;
+  const showForm=!register||(!checkingInvite&&!inviteFailed&&(allowAdminLink||!!pilot||config==='open'));
+  return <section className="member-panel password-panel" id="hsc-login" aria-label={text('HSC account','HSC 账号')}>
+    <div className="member-actions">
+      <button type="button" disabled={busy||checkingInvite} aria-pressed={!register} className={!register?'selected':''} onClick={()=>chooseRegister(false)}>{text('Sign in','登录')}</button>
+      <button type="button" disabled={busy||checkingInvite} aria-pressed={register} className={register?'selected':''} onClick={()=>chooseRegister(true)}>{text('Create an account','创建账号')}</button>
+    </div>
     <h2>{register?text('Create your HSC account','创建 HSC 账号'):text('Sign in to HSC','登录 HSC')}</h2>
-    <p className="member-muted">{pilotRole?text('Your personal invitation is ready. Choose a username and password. No ChatGPT login or HSC email verification is needed.','专属邀请已确认，请自行设置用户名和密码。无需 ChatGPT 登录或 HSC 邮箱验证。'):text('Use your own email and password. No ChatGPT account is required.','使用自己的邮箱和密码，不需要 ChatGPT 账号。')}</p>
-    {pendingEmail&&<EmailVerificationPanel initialEmail={pendingEmail}/>}
-    {invitationRequired&&<p className="member-muted">{text('Registration is by invitation during this club test. Open the personal registration link shared with you.','本次测试采用邀请制，请打开俱乐部单独发给你的专属注册链接。')}</p>}
-    {!invitationRequired&&<form onSubmit={event=>void submit(event)}>
-      <label>{register?text('Username','用户名'):text('Email or username','邮箱或用户名')}<input required value={username} onChange={event=>setUsername(event.target.value)} autoComplete="username" minLength={register?3:1} maxLength={register?30:254} pattern={register?'[a-zA-Z0-9_.]+':undefined} spellCheck={false} autoCapitalize="none"/></label>
-      {register&&<small>{text('3–30 letters, numbers, underscores or periods.','3–30 位英文字母、数字、下划线或句点。')}</small>}
-      <label>{text('Password','密码')}<input required type="password" value={password} onChange={event=>setPassword(event.target.value)} autoComplete={register?'new-password':'current-password'} minLength={register?12:1} maxLength={128}/></label>
+    {register&&!showForm&&<>
+      {checkingInvite?<p role="status">{text('Checking your invitation…','正在核对你的邀请…')}</p>:
+        inviteFailed?<button onClick={()=>setInviteAttempt(attempt=>attempt+1)}>{text('Check invitation again','重新核对邀请')}</button>:
+        config==='loading'?<p role="status">{text('Checking registration availability…','正在查询注册状态…')}</p>:
+        config==='failed'?<><p role="alert">{text('Registration availability could not be loaded.','暂时无法读取注册状态。')}</p><button onClick={availability.retry}>{text('Try again','重试')}</button></>:
+        <p>{config==='closed'?text('Public registration is not open yet.','公开注册尚未开放。'):text('During this club test, open your personal invitation link to register.','俱乐部测试期间，请使用你的专属邀请链接注册。')}</p>}
+    </>}
+    {showForm&&<form onSubmit={submit}>
+      {register&&pilot&&<p>{text('Your invitation is ready. Choose a username and password.','专属邀请已确认，请设置用户名和密码。')}</p>}
+      <label>{register?text('Username','用户名'):text('Email or username','邮箱或用户名')}<input ref={signInInput} required value={username} onChange={event=>setUsername(event.target.value)} autoComplete="username" minLength={register?3:1} maxLength={register?30:254} pattern={register?'[a-zA-Z0-9_.]+':undefined} aria-describedby={register?id+'-username':undefined} spellCheck={false} autoCapitalize="none"/></label>
+      {register&&<small id={id+'-username'}>{text('3–30 letters, numbers, underscores or periods.','3–30 位英文字母、数字、下划线或句点。')}</small>}
+      <label>{text('Password','密码')}<input required type="password" value={password} onChange={event=>setPassword(event.target.value)} autoComplete={register?'new-password':'current-password'} minLength={register?12:1} maxLength={128} aria-describedby={register?id+'-password':undefined}/></label>
       {register&&<>
+        <small id={id+'-password'}>{text('Use 12–128 characters.','请输入 12–128 个字符。')}</small>
         <label>{text('Confirm password','确认密码')}<input required type="password" value={confirm} onChange={event=>setConfirm(event.target.value)} autoComplete="new-password" minLength={12} maxLength={128}/></label>
-        <label>{text('Your email','你的邮箱')}<input required type="email" value={email} onChange={event=>setEmail(event.target.value)} readOnly={!!pilotRole} autoComplete="email" maxLength={254}/></label>
-        {!adminLink&&<><label>{text('Role','身份')}<select required value={requestedRole} onChange={event=>setRequestedRole(event.target.value as Role)}>{(!pilotRole||pilotRole==='skater')&&<option value="skater">{text('Skater','选手')}</option>}{(!pilotRole||pilotRole==='parent')&&<option value="parent">{text('Parent','家长')}</option>}{(!pilotRole||pilotRole==='coach')&&<option value="coach">{text('Coach','教练')}</option>}</select></label>
-        <label>{text("Skater's name on the club list","俱乐部名单中的选手姓名")}<input required value={skaterName} onChange={event=>setSkaterName(event.target.value)} maxLength={120} autoComplete="off"/></label>
-        <p className="member-muted">{text('Skater: your own name. Parent: your child. Coach: a club skater. Registration only checks whether this name is on the list.','选手填写本人、家长填写孩子、教练填写俱乐部选手。注册资格只检查姓名是否在名单中。')}</p></>}
+        <label>{text('Your email','你的邮箱')}<input required type="email" value={email} onChange={event=>setEmail(event.target.value)} readOnly={!!pilot} autoComplete="email" maxLength={254}/></label>
+        {!adminLink&&<><label htmlFor={id+'-role'}>{text('Role','身份')}</label><select id={id+'-role'} required value={requestedRole} onChange={event=>setRequestedRole(event.target.value as Role)}>
+          {(!pilot||pilot.role==='skater')&&<option value="skater">{text('Skater','选手')}</option>}{(!pilot||pilot.role==='parent')&&<option value="parent">{text('Parent','家长')}</option>}{(!pilot||pilot.role==='coach')&&<option value="coach">{text('Coach','教练')}</option>}
+        </select><label>{text("Skater's name on the club list","俱乐部名单中的选手姓名")}<input required value={skaterName} onChange={event=>setSkaterName(event.target.value)} maxLength={120} autoComplete="off" aria-describedby={id+'-skater'}/></label>
+        <p id={id+'-skater'} className="member-muted">{text('Skaters enter their own name, parents their child’s, and coaches a club skater’s.','选手填写本人姓名，家长填写孩子姓名，教练填写一位俱乐部选手的姓名。')}</p></>}
       </>}
-      {allowAdminLink&&<div className="member-check-row"><label><input type="checkbox" checked={link} onChange={event=>setLink(event.target.checked)}/>{text('Link these credentials to my current administrator account','将这些登录凭据关联到我当前的管理员账号')}</label><small>{text('Only for the signed-in administrator using the same email. Email alone never grants administrator rights.','仅限已登录管理员使用同一邮箱；仅凭邮箱相同不会授予管理员权限。')}</small></div>}
+      {allowAdminLink&&<div className="member-check-row"><label><input type="checkbox" checked={link} onChange={event=>setLink(event.target.checked)}/>{text('Link these credentials to my current administrator account','将这些登录凭据关联到我当前的管理员账号')}</label><small>{text('Only for the signed-in administrator using the same email.','仅限已登录管理员使用同一邮箱。')}</small></div>}
       <button className="primary" disabled={busy}>{busy?text('Please wait…','请稍候…'):register?text('Check name and create account','核对姓名并创建账号'):text('Sign in','登录')}</button>
-      {error&&<p role="alert" className="password-error">{translate(error)}</p>}
     </form>}
-    {invitationRequired&&error&&<p role="alert" className="password-error">{translate(error)}</p>}
-    {!pilotRole&&<details><summary>{text('Need to verify your email?','需要验证邮箱？')}</summary><EmailVerificationPanel/></details>}
-    {!register&&<details><summary>{text('Forgot your password?','忘记密码？')}</summary><PasswordResetPanel/></details>}
-    <p className="member-muted">{pilotRole?text('Pilot accounts can view shared official schedules. Private relationships and coach editing still require administrator approval.','内测账号可查看共享官方赛程。私人关系和教练编辑权限仍需管理员批准。'):text('New accounts require a listed skater name and email verification. When mail service setup is pending, existing accounts can still sign in. Homepage choices do not grant private coach, message or administration permissions.','新账号须填写名单内选手姓名并验证邮箱。邮件服务配置期间，现有账号仍可登录；主页选择不会授予教练、私人消息或管理员权限。')}</p>
+    {error&&<p role="alert" className="password-error">{authFeedback(error)}</p>}
+    {register&&error==='ACCOUNT_ALREADY_EXISTS'&&<div className="member-actions">
+      <button onClick={()=>{setUsername(email.trim());chooseRegister(false);}}>{text('Sign in with this email','使用此邮箱登录')}</button>
+      <button onClick={()=>{setPassword('');setConfirm('');setVerification({email:email.trim(),reason:'resend'});}}>{text('Request a verification link','申请验证链接')}</button>
+    </div>}
+    {!register&&<><details><summary>{text('Need to verify your email?','需要验证邮箱？')}</summary><EmailVerificationPanel availability={availability}/></details>
+      <details><summary>{text('Forgot your password?','忘记密码？')}</summary><PasswordResetPanel availability={availability}/></details></>}
+    {register&&showForm&&<p className="member-muted">{pilot?text('Your invitation gives access to shared schedules.','专属邀请可用于查看共享赛程。'):text('Verify your email after registering to view shared club schedules.','注册后请验证邮箱，即可查看俱乐部共享赛程。')} {text('Private access requires club approval.','私人资料访问权限由俱乐部另行审批。')}</p>}
   </section>;
 }
