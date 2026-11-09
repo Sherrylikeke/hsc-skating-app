@@ -5,7 +5,8 @@
 ## 2026-11-08 PR #5 手机浏览器检查修复
 
 - `Web regression #11` 的 `mobile-browser` 在搜索 `Guest Club` 后立即读取复选框数量，偶发读到尚未完成 details toggle / React 更新的空列表。隔离浏览器将 toggle 事件延后 250 毫秒可复现同样的 `0 !== 1`；改为等待筛选结果达到预期数量后，原断言与具体选手选择继续执行，相同延迟下中英文均通过。
-- 本轮只修改浏览器回归脚本和项目记录，运行代码及会员数据不变。Web 类型、18 个功能回归通过；按 CI 顺序复跑横竖屏交互 12 组、观赛 6 组、月历 12 组和 390 px 个人赛程中英文 2 组，均通过。浏览器使用 Chromium / WebKit 与隔离资料。修复沿用 [PR #5](https://github.com/Sherrylikeke/hsc-skating-app/pull/5)，最终远端检查与合并状态以该 PR 为准。
+- 本轮只修改浏览器回归脚本和项目记录，运行代码及会员数据不变。Web 类型、18 个功能回归通过；按 CI 顺序复跑横竖屏交互 12 组、观赛 6 组、月历 12 组和 390 px 个人赛程中英文 2 组，均通过。浏览器使用 Chromium / WebKit 与隔离资料。
+- 修复提交 `0f0d442` 已推送原 [PR #5](https://github.com/Sherrylikeke/hsc-skating-app/pull/5)。[Web regression #12](https://github.com/Sherrylikeke/hsc-skating-app/actions/runs/42538262136) 的 `regression`、`dependencies`、`mobile-browser` 三项全部通过后，于 Toronto 2026-11-08 合并为 `f556627`；本地 `main` 已快进同步且 `HEAD...origin/main` 为 `0 0`。本条结果补记仅为文档，不另部署生产。
 - 本轮重新查询 Sites 原项目仍返回 `NOT_FOUND`；正式域名首页 HTTP 200、匿名 club API 401。未部署，生产版本和小时同步状态仍待有项目访问权的账号核实；实体手机待验收。
 
 ## 2026-11-08 网页返回导航
