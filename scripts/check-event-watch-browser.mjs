@@ -60,6 +60,8 @@ async function walk(browser,profile,language,folder) {
     assert.equal(await page.evaluate(()=>document.activeElement.type==='search'),false);
     const search=page.getByRole('searchbox');
     await search.fill('Guest Club');
+    // The details toggle and React filter can commit after fill() returns.
+    await page.waitForFunction(()=>document.querySelectorAll('.watch-choices input[type="checkbox"]').length===1);
     assert.equal(await page.getByRole('checkbox').count(),1);
     await page.getByRole('checkbox',{name:/Jules Ray/}).check();
     await search.fill('');
