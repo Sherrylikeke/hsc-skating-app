@@ -6,7 +6,8 @@
 
 - Coach 总表展开一位选手的比赛详情后，中英文均分行显示预计上冰热身和预计开滑。逐时段使用完整官方出场顺序，扣除各热身组和已列明的同冰面休息后，将剩余时间平均分配给该时段的参赛者。赛事公布的热身长度优先，其次采用 [Skate Canada 竞赛规则 §3.9](https://info.skatecanada.ca/index.php/en-ca/rules-of-sport/54-competitions.html)。官方个人时间优先显示，提醒、教练集合时间与 CSV 继续使用原有数据。共享／轮转、出场名单不完整或无法确认对应时段时，详情显示待定。
 - Carson 的 Pre-Novice Short 官方样本 #19（热身组 4）复算为预计 11:15 热身、11:35 开滑，下一组 #21 为 11:45／11:50。覆盖 STAR 仅写级别的赛程、旧存档、赛事热身覆盖规则、跨组、浇冰及缺项。Web 类型、18 个功能脚本、生产构建、隔离 Worker/D1 回归通过。以隔离 API 和本地生产包完成 Chromium（390/1280px）、WebKit（390px）中英文验收，核对收起／展开、官方时间替换与缺资料时的显示。截图在忽略目录 `work/coach-timing`。
-- 本轮查询原 Sites 项目和源码凭据均返回 `Sites project not found`；正式域名首页 HTTP 200、匿名 club API 401。新功能待有原项目访问权的账号部署，生产版本及小时同步状态未能核实。GitHub `origin` 当前为 public，本轮保留本地提交。
+- 本地验收时查询原 Sites 项目和源码凭据均返回 `Sites project not found`；正式域名首页 HTTP 200、匿名 club API 401。新功能待有原项目访问权的账号部署，生产版本及小时同步状态未能核实。
+- 已按用户要求推送原 GitHub 并开 [PR #6](https://github.com/Sherrylikeke/hsc-skating-app/pull/6)。审阅时复现了两个时段列出相同出场编号时产生两份个人预估的问题；现对相同或交叠编号区间保留待定，加入完整重叠和部分重叠两项回归。
 
 ## 2026-11-08 PR #5 手机浏览器检查修复
 

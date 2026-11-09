@@ -50,10 +50,14 @@ export function coachTimingEstimate(row:ScheduleRow, event:Pick<ClubEvent,'id'|'
   if (draw.some(o=>o.category!==order.category || o.sourceUrl!==order.sourceUrl)) return null;
   const otherBlocks=event.blocks.filter(b=>b.id!==block.id && b.activity==='competition');
   if (otherBlocks.some(b=>b.date===block.date && b.rink===block.rink && b.start<block.end && b.end>block.start)) return null;
+  // Two sessions claiming the same part of this draw cannot both identify a skater's start.
+  const range=block.range;
+  if (otherBlocks.some(b=>sameCategory(b.category) && categoryCompatible(order.category,b.category) &&
+      scheduledProgram(b.category)===scheduledProgram(block.category) &&
+      (!range || !b.range || (b.range[0]<=range[1] && range[0]<=b.range[1])))) return null;
 
   if (!block.range) {
     // Without an explicit number range, verify that this entire draw belongs to one session.
-    if (otherBlocks.some(b=>sameCategory(b.category) && scheduledProgram(b.category)===scheduledProgram(block.category))) return null;
     const entered=event.participants.filter(p=>sameCategory(p.category));
     const names=new Set(entered.map(p=>normalizeName(p.name)));
     if (entered.length!==draw.length || names.size!==draw.length || !draw.every(o=>names.delete(normalizeName(o.name)))) return null;
