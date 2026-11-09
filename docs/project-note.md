@@ -2,6 +2,17 @@
 
 这是项目负责人的持续维护记录，不属于会员网页内容。后续会话先读取本文件与 AGENTS.md，在完成实质修改或验收后更新；不自动轮询、不新增定时任务。下列运行数据是查询快照，不是实时监控。
 
+## 2026-11-09 远端更新发布到网站与客户端
+
+- 按用户要求将原 GitHub main 的 cd62767d310750738b98fd60e89634f44877bf66（PR #1–#7）发布到原 Sites 项目。当前连接可访问原项目及源码，已解决 11-08 会话中 NOT_FOUND 的访问限制；未另建站点、迁移 Worker/D1 或修改域名、public 范围、邮件/注册及小时任务。
+- V33 保存版本 appgprj_6ad76ca2dba481919ba883865cbd5a0d~appgver_926e1591a8dc819197a68184004f646d，部署 appgdep_6af22ecad9508191b07b3a9a18b2a66a 于 2026-11-09 15:36:40 Toronto 返回 succeeded、env_set_revision=6、MCP ready。运行源码保持 cd62767，不为后续文档记账单独部署。
+- 正式自定义域名匿名首页200、新版静态资源200且SHA256与本地构建一致、club API401；config实读deliveryConfigured=false、registrationConfigured=false。已请求在Codex浏览器面板打开正式网址（工具返回queued），不以面板排队当成浏览器验收。
+- 全新 work/release-20261109 副本恢复仓库完整夹具，保留两个旧副本各13项未提交PDF删除。Web类型、18项功能脚本、官方生产构建及真实隔离Worker/D1回归通过。生产预览中的三款手机英中横竖屏月历12组、390px英中家庭赛程/账号导航2组通过；家庭脚本首次使用其默认5175端口失败，指定实际5173后通过，无运行代码修补。开发预览已停止。
+- Capacitor静态构建、10项适配检查、Android/iOS资源同步通过。实际静态包配合模拟原生插件，Android/英文与iOS/中文的离线冷开/登录后断网共4组通过，不代表真机安装。13份静态资源在Android APK、iOS工程public和交接dist中逐字节一致，APK包含HSCSessionPlugin且没有远站server.url。
+- Android沿用原便携JDK21、SDK36和调试签名，assembleDebug/lintDebug通过，Lint为0错误16警告；签名v2校验通过，appId=ca.hsc.skating、minSdk24、targetSdk36。沿用源码版本versionCode=1/versionName=1.0，调试包非商店发布。APK SHA256=f61b53912b478723409e314532d249d3d4321041f4be8970eaf1eef3394c3446。
+- 用户交付目录为当前会话outputs/2026-11-09：Android APK、HSC-iOS-build-assets-cd62767.zip、release-checks.json与线上核验记录。iOS zip SHA256=9ebc7e0b5aba1196a739f64725a1c7cf2a84b076485078d412ae473a86d3ec87；包含预构建资源、iOS工程与npm锁文件，Mac执行npm ci、cap sync ios后用Xcode26+签名编译。Windows没有生成IPA、安装手机或上传商店；未新增Expo构建。
+- Sites归档时Android并行构建生成了未忽略的.kotlin缓存，官方助手按一致性检查停止。只在该发布副本.git/info/exclude排除该缓存后原提交归档成功，缓存未入源码、未改变运行代码。GitHub仓库本轮保持已有public状态，无真实邮件发送、无生产资料/数据库迁移。
+
 ## 2026-11-08 账户、退出与注册反馈修复（本地已验收，待部署）
 
 - GitHub [PR #7](https://github.com/Sherrylikeke/hsc-skating-app/pull/7) 审阅中复现并修复返回路径：从共享赛程进入，验证提示可在原页面切回登录并保留目标；HSC 会话过期后可以恢复到账户页；自动恢复会话和手动输入密码都能直接返回原赛程，不依赖会员首页的通知与教练要求。这些路径已加入浏览器回归。本 PR 不变更线上注册设置。

@@ -4,6 +4,12 @@
 
 ## 目前线上状态
 
+### 最新续做（2026-11-09）
+
+- 网站已部署V33，源码cd62767d310750738b98fd60e89634f44877bf66，包含原GitHub main的PR #1–#7；保存版本appgprj_6ad76ca2dba481919ba883865cbd5a0d~appgver_926e1591a8dc819197a68184004f646d，部署appgdep_6af22ecad9508191b07b3a9a18b2a66a succeeded、env revision6、MCP ready，15:36:40 Toronto完成。原Sites项目访问已恢复，沿用域名/Worker/D1/public范围，邮件及普通注册保持关闭。
+- 本轮发布副本为本会话work/release-20261109；两个旧副本各有13项未提交PDF删除，继续保留。原GitHub现为public，未在本轮改可见性。详细验证和客户端边界见docs/project-note.md最新条目。
+- Android调试APK已编译、Lint及签名校验，iOS预构建工程已同步打包，交付在本会话outputs/2026-11-09。未安装真机、未生成IPA或发布商店。客户端和网站使用同一远端源码；邮件域名和真实送达仍待原授权流程。
+
 ### 本轮续做更新（2026-11-04 16:44 Toronto）
 
 - 当前已部署 V32：运行源码 `0570d3e395ae26c707365de5e583e529a2ef4646`，保存版本 `appgprj_6ad76ca2dba481919ba883865cbd5a0d~appgver_4183cc2af7d8819182bfa0d431eb03f2`，部署 `appgdep_6aeba744a65481919bc94f8a30e35e29` succeeded、env revision 6、MCP ready。下方 V31 内容是上一轮基线。
