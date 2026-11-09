@@ -4,8 +4,10 @@ import type {ClubEvent,ClubSkater} from '../lib/club-types';
 import {friendStorageKey,readFriends,watchChoices,watchedRows,watchTiming} from '../lib/event-watch';
 import {text} from '../lib/i18n';
 import CompactSelect from './compact-select';
+import {followWorkspaceLink} from './workspace-navigation';
 
-type Props = {events:ClubEvent[]; eventId:string; memberId:string; ownIds:string[]; skaters:ClubSkater[]; onEvent:(id:string,replace?:boolean)=>void};
+type WatchControls={rink:string;fromNow:boolean;onFilter:(changes:{rink?:string;fromNow?:boolean})=>void;onCalendar:()=>void};
+type Props = WatchControls & {events:ClubEvent[]; eventId:string; memberId:string; ownIds:string[]; skaters:ClubSkater[]; onEvent:(id:string,replace?:boolean)=>void};
 function readValue(key:string) {
   try { return sessionStorage.getItem(key); } catch { return null; }
 }
@@ -14,7 +16,7 @@ function localDate(now:number,timezone:string) {
   catch { return ''; }
 }
 
-export default function EventWatch({events,eventId,memberId,ownIds,skaters,onEvent}:Props) {
+export default function EventWatch({events,eventId,memberId,ownIds,skaters,onEvent,...controls}:Props) {
   const [now,setNow]=useState(Date.now);
   useEffect(()=>{
     const tick=()=>setNow(Date.now());
@@ -44,15 +46,15 @@ export default function EventWatch({events,eventId,memberId,ownIds,skaters,onEve
         {!event&&<option value="">{text('Choose an event','选择比赛')}</option>}
         {available.map(e=><option value={e.id} key={e.id}>{e.name} · {e.start}</option>)}
       </CompactSelect></label> : <h2 className="watch-event-name">{event.name}</h2>}
-    {event ? <EventTimeline key={JSON.stringify([memberId,event.id])} event={event} ownIds={ownIds} skaters={skaters} now={now} refreshClock={()=>setNow(Date.now())}
+    {event ? <EventTimeline {...controls} key={JSON.stringify([memberId,event.id])} event={event} ownIds={ownIds} skaters={skaters} now={now} refreshClock={()=>setNow(Date.now())}
       storageKey={friendStorageKey(memberId,event.id)}/> :
       <p>{text('No competition available here. Check the competition calendar.','当前没有可查看的比赛，可到比赛中心查看日历。')}</p>}
   </section>;
 }
 
-function EventTimeline({event,ownIds,skaters,now,refreshClock,storageKey}:Pick<Props,'ownIds'|'skaters'>&{event:ClubEvent;now:number;refreshClock:()=>void;storageKey:string}) {
+function EventTimeline({event,ownIds,skaters,now,refreshClock,storageKey,rink,fromNow,onFilter,onCalendar}:WatchControls & Pick<Props,'ownIds'|'skaters'>&{event:ClubEvent;now:number;refreshClock:()=>void;storageKey:string}) {
   const [friends,setFriends]=useState(()=>readFriends(storageKey));
-  const [query,setQuery]=useState(''),[rink,setRink]=useState(''),[fromNow,setFromNow]=useState(true);
+  const [query,setQuery]=useState('');
   const [choosing,setChoosing]=useState(false);
   const [saveFailed,setSaveFailed]=useState(false);
   const choices=useMemo(()=>watchChoices(event,skaters),[event,skaters]);
@@ -89,9 +91,9 @@ function EventTimeline({event,ownIds,skaters,now,refreshClock,storageKey}:Pick<P
     </details>
     {saveFailed&&<p role="status">{text('This selection is available until you leave this view.','当前选择可用至离开本页面。')}</p>}
     <div className="watch-toolbar">
-      <div className="watch-mode"><button type="button" aria-pressed={fromNow} onClick={()=>{setFromNow(true);refreshClock();}}>{text('From now','从现在看')}</button>
-        <button type="button" aria-pressed={!fromNow} onClick={()=>setFromNow(false)}>{text('Whole event','整场比赛')}</button></div>
-      {rinks.length>0&&<CompactSelect aria-label={text('Ice surface','比赛冰面')} value={activeRink} onChange={e=>setRink(e.target.value)}>
+      <div className="watch-mode"><button type="button" aria-pressed={fromNow} onClick={()=>{onFilter({fromNow:true});refreshClock();}}>{text('From now','从现在看')}</button>
+        <button type="button" aria-pressed={!fromNow} onClick={()=>onFilter({fromNow:false})}>{text('Whole event','整场比赛')}</button></div>
+      {rinks.length>0&&<CompactSelect aria-label={text('Ice surface','比赛冰面')} value={activeRink} onChange={e=>onFilter({rink:e.target.value})}>
         <option value="">{text('All rinks','所有冰面')}</option>{rinks.map(r=><option key={r}>{r}</option>)}
       </CompactSelect>}
     </div>
@@ -108,6 +110,6 @@ function EventTimeline({event,ownIds,skaters,now,refreshClock,storageKey}:Pick<P
     {missing.length>0&&<p>{text('Awaiting a matched group time: ','尚待匹配组别时段：')}{missing.map(c=>c.name).join('、')}</p>}
     {event.needsReview&&<p>{text('Some official details are awaiting confirmation.','部分官方资料待核对。')}</p>}
     <a className="club-source" href={event.url} target="_blank" rel="noreferrer">{text('Official event details ↗','赛事官网 ↗')}</a>
-    <a className="cal-entry" href="/workspace?view=calendar">{text('Schedule calendar','赛程日历')}</a>
+    <a className="cal-entry" href="/workspace?view=calendar" onClick={e=>followWorkspaceLink(e,onCalendar)}>{text('Schedule calendar','赛程日历')}</a>
   </>;
 }

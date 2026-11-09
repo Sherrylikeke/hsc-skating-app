@@ -60,6 +60,8 @@ async function walk(browser,profile,language,folder) {
     assert.equal(await page.evaluate(()=>document.activeElement.type==='search'),false);
     const search=page.getByRole('searchbox');
     await search.fill('Guest Club');
+    // The details toggle and React filter can commit after fill() returns.
+    await page.waitForFunction(()=>document.querySelectorAll('.watch-choices input[type="checkbox"]').length===1);
     assert.equal(await page.getByRole('checkbox').count(),1);
     await page.getByRole('checkbox',{name:/Jules Ray/}).check();
     await search.fill('');
@@ -77,6 +79,16 @@ async function walk(browser,profile,language,folder) {
     await shot('from-now');
     await choose(ui('Ice surface','比赛冰面'),'Red');
     assert.deepEqual(await timeline.locator('.watch-person strong').allTextContents(),[names[1]]);
+    const whole=page.getByRole('button',{name:ui('Whole event','整场比赛'),exact:true});
+    await whole.click();
+    const watchUrl=page.url();
+    await page.locator('.watch-panel .cal-entry').click();
+    await page.locator('.family-calendar').waitFor();
+    await page.locator('.club-back').click();
+    await timeline.waitFor();
+    assert.equal(page.url(),watchUrl);
+    assert.equal(await whole.getAttribute('aria-pressed'),'true');
+    assert.deepEqual(await timeline.locator('.watch-person strong').allTextContents(),[names[1]],'Return to the selected rink');
     await choose(ui('Ice surface','比赛冰面'),ui('All rinks','所有冰面'));
     await page.getByRole('button',{name:ui('Whole event','整场比赛'),exact:true}).click();
     await row(names[0]).waitFor();
