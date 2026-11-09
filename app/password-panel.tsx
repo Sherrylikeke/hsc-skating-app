@@ -1,5 +1,5 @@
 'use client';
-import {useEffect,useId,useState} from 'react';
+import {useEffect,useId,useRef,useState} from 'react';
 import {apiFetch} from '../lib/client-platform';
 import {text,useLanguage} from '../lib/i18n';
 import type {Role} from '../lib/member-access';
@@ -17,6 +17,8 @@ export default function PasswordPanel({role,onComplete,allowAdminLink=false}:{ro
   const [register,setRegister]=useState(false),[username,setUsername]=useState(''),[password,setPassword]=useState(''),[confirm,setConfirm]=useState(''),[email,setEmail]=useState(''),[skaterName,setSkaterName]=useState('');
   const [requestedRole,setRequestedRole]=useState<Role>(role==='admin'?'parent':role),[link,setLink]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const [verification,setVerification]=useState<{email:string;reason:VerificationReason}|null>(null);
+  const signInInput=useRef<HTMLInputElement>(null);
+  const restoreSignInFocus=useRef(false);
   const availability=useAuthAvailability(),config=availability.state;
   const [inviteToken,setInviteToken]=useState(''),[inviteAttempt,setInviteAttempt]=useState(0),[checkingInvite,setCheckingInvite]=useState(false),[inviteFailed,setInviteFailed]=useState(false);
   const [pilot,setPilot]=useState<{token:string;role:PilotRole}|null>(null);
@@ -62,6 +64,18 @@ export default function PasswordPanel({role,onComplete,allowAdminLink=false}:{ro
     setRegister(value);setError('');
   }
 
+  function returnToSignIn(){
+    restoreSignInFocus.current=true;
+    chooseRegister(false);
+    setVerification(null);
+  }
+  useEffect(()=>{
+    if(!verification&&restoreSignInFocus.current){
+      restoreSignInFocus.current=false;
+      signInInput.current?.focus();
+    }
+  },[verification]);
+
   async function submit(event:React.FormEvent) {
     event.preventDefault();
     if(busy)return;
@@ -100,7 +114,7 @@ export default function PasswordPanel({role,onComplete,allowAdminLink=false}:{ro
     }catch{setError('UNAVAILABLE');}finally{setBusy(false);}
   }
 
-  if(verification)return <EmailVerificationPanel availability={availability} initialEmail={verification.email} reason={verification.reason}/>;
+  if(verification)return <EmailVerificationPanel availability={availability} initialEmail={verification.email} reason={verification.reason} onReturnToSignIn={returnToSignIn}/>;
   const showForm=!register||(!checkingInvite&&!inviteFailed&&(allowAdminLink||!!pilot||config==='open'));
   return <section className="member-panel password-panel" id="hsc-login" aria-label={text('HSC account','HSC 账号')}>
     <div className="member-actions">
@@ -117,7 +131,7 @@ export default function PasswordPanel({role,onComplete,allowAdminLink=false}:{ro
     </>}
     {showForm&&<form onSubmit={submit}>
       {register&&pilot&&<p>{text('Your invitation is ready. Choose a username and password.','专属邀请已确认，请设置用户名和密码。')}</p>}
-      <label>{register?text('Username','用户名'):text('Email or username','邮箱或用户名')}<input required value={username} onChange={event=>setUsername(event.target.value)} autoComplete="username" minLength={register?3:1} maxLength={register?30:254} pattern={register?'[a-zA-Z0-9_.]+':undefined} aria-describedby={register?id+'-username':undefined} spellCheck={false} autoCapitalize="none"/></label>
+      <label>{register?text('Username','用户名'):text('Email or username','邮箱或用户名')}<input ref={signInInput} required value={username} onChange={event=>setUsername(event.target.value)} autoComplete="username" minLength={register?3:1} maxLength={register?30:254} pattern={register?'[a-zA-Z0-9_.]+':undefined} aria-describedby={register?id+'-username':undefined} spellCheck={false} autoCapitalize="none"/></label>
       {register&&<small id={id+'-username'}>{text('3–30 letters, numbers, underscores or periods.','3–30 位英文字母、数字、下划线或句点。')}</small>}
       <label>{text('Password','密码')}<input required type="password" value={password} onChange={event=>setPassword(event.target.value)} autoComplete={register?'new-password':'current-password'} minLength={register?12:1} maxLength={128} aria-describedby={register?id+'-password':undefined}/></label>
       {register&&<>

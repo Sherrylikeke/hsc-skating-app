@@ -24,7 +24,8 @@ export async function checkRegistrationFeedback(browser,profile,origin){
     });
     const page=await context.newPage();
     for(outcome of ['requested','retry-needed']){
-      await page.goto(origin);
+      const sharedLink=new URL('/?schedule=view%3Dcoach',origin).href;
+      await page.goto(sharedLink);
       await page.getByRole('button',{name:'Create an account',exact:true}).tap();
       await page.getByLabel('Username',{exact:true}).fill('registration.fixture');
       await page.getByLabel('Password',{exact:true}).fill('Registration-Fixture-Only');
@@ -45,6 +46,12 @@ export async function checkRegistrationFeedback(browser,profile,origin){
         await page.getByRole('status').filter({hasText:'a verification email has been requested'}).waitFor();
         assert.equal(resends,1);
       }
+      await page.getByRole('button',{name:'Return to sign in',exact:true}).tap();
+      const identifier=page.getByLabel('Email or username',{exact:true});
+      await identifier.waitFor();
+      assert.equal(await identifier.inputValue(),'registration.fixture');
+      assert.equal(await page.url(),sharedLink,'Returning to sign in retains the original schedule destination');
+      assert.equal(await identifier.evaluate(el=>el===document.activeElement),true);
     }
     mail='unavailable';
     await page.goto(origin);

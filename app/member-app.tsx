@@ -67,7 +67,10 @@ export default function MemberApp() {
   },[]);
   function clearDashboard(){setAdmin(null);setNotices([]);setRequirements([]);setClubSkaters([]);setSkaters([]);setEvents([]);}
   function resetMember(){
-    setMe(null);clearDashboard();navigateTab('home',true);setIssued('');setEditRequirement(null);setRequirementIds([]);setTitle('');setContent('');setDueAt('');setSlotKey('');setEventId('');setMatches([]);setClaimIds([]);setClaimNote('');setInviteCode('');setInviteEmail('');setInviteIds([]);setRelationMember('');setRelationSkater('');
+    setMe(null);clearDashboard();
+    // Account can recover an expired club session independently of the dashboard.
+    if(new URLSearchParams(location.search).get('tab')!=='account')navigateTab('home',true);
+    setIssued('');setEditRequirement(null);setRequirementIds([]);setTitle('');setContent('');setDueAt('');setSlotKey('');setEventId('');setMatches([]);setClaimIds([]);setClaimNote('');setInviteCode('');setInviteEmail('');setInviteIds([]);setRelationMember('');setRelationSkater('');
   }
   async function signOut(allDevices=false){
     const native=isNativeClient();
@@ -105,11 +108,16 @@ export default function MemberApp() {
       setError(allDevices?text('Could not confirm sign-out on every device. Check your connection and try again.','未能确认所有设备均已退出。请检查网络后重试。'):text('Could not confirm sign-out. Check your connection and try again.','未能确认退出登录。请检查网络后重试。'));
     }finally{setBusy(false);}
   }
-  async function refresh() {
+  async function refresh(resumeSchedule=false) {
     try{
       const result = await api<Me>('me');setMe(result);clearDashboard();
-      if(new URLSearchParams(location.search).get('tab')==='account')return;
+      const params=new URLSearchParams(location.search);
+      if(params.get('tab')==='account')return;
       if (result.member.status !== 'active' && result.member.status !== 'club-viewer')return;
+      if(resumeSchedule&&params.has('schedule')){
+        location.replace(destinationAfterSignIn(location.search));
+        return;
+      }
       const [notificationData, requirementData, clubResponse] = await Promise.all([result.member.status==='club-viewer'?Promise.resolve({notifications:[]}):api<{notifications: Notice[]}>('notifications'), result.member.status==='club-viewer'?Promise.resolve({requirements:[]}):api<{requirements: Requirement[]}>('requirements'), fetch('/api/club', {cache: 'no-store'})]);
       const club=await readMemberResponse<{skaters:ClubSkater[];events:LiveEvent[]}>(clubResponse,translate("赛程资料暂时无法读取"));
       const nextAdmin=result.member.role==='admin'&&result.member.status==='active'?await api<AdminData>('admin'):null;
@@ -126,7 +134,7 @@ export default function MemberApp() {
     }
     const requested = new URLSearchParams(location.search).get('role');
     if (requested && requested in roleNames) setRole(requested as Role);
-    void api<{identity:{name:string;email:string;provider?:string;canRestore?:boolean}|null}>('identity').then(async result=>{setIdentity(result.identity);if(!result.identity)return;await recoverMemberSession(refresh,()=>api('session',{role:'parent'}),result.identity.provider==='password'||result.identity.canRestore===true);}).catch(failure=>{
+    void api<{identity:{name:string;email:string;provider?:string;canRestore?:boolean}|null}>('identity').then(async result=>{setIdentity(result.identity);if(!result.identity)return;await recoverMemberSession(()=>refresh(true),()=>api('session',{role:'parent'}),result.identity.provider==='password'||result.identity.canRestore===true);}).catch(failure=>{
       if(isNativeClient()&&new URLSearchParams(location.search).get('tab')==='account'&&(!(failure instanceof MemberAPIError)||failure.status>=500))setOfflineAccount(true);
       else setError(failure.message);
     }).finally(()=>setLoading(false));
@@ -163,7 +171,7 @@ export default function MemberApp() {
   const accountType=adminRole?text('Administrator','管理员'):scheduleOnly?text('Club schedule account','俱乐部赛程账户'):me?.member.status==='active'&&me.member.role?roleNames[me.member.role]:translate("待审批");
   return <div className="member-app"><header className="member-header"><a className="member-brand" href="/">HSC<span>Hamilton Skating Club<small>{translate("会员工作区")}</small></span></a><div><LanguageSwitch/>{me && <a className="member-account-summary" href="/?tab=account" aria-current={tab==='account'?'page':undefined}>{adminRole?text('Admin account','管理员账户'):text('Account','账户')} · {me.member.name}</a>}{identity && (!me||tab!=='account') && <button className="member-signout" disabled={busy} onClick={()=>void signOut()}>{translate("退出登录")}</button>}</div></header><main>
 
-    {loading ? <section className="member-panel">{translate("正在读取账号…")}</section> : !me && offlineAccount ? <section className="member-panel member-account-panel"><h1>{text("Account","账户")}</h1><p>{text("Your account could not be loaded. Retry when connected, or clear the saved sign-in on this device.","暂时无法读取账号。你可以联网重试，或清除这台设备上保存的登录信息。")}</p><div className="member-actions"><button onClick={()=>location.reload()} disabled={busy}>{text("Retry","重试")}</button><button onClick={()=>void signOut()} disabled={busy}>{text("Sign out on this device","从本机退出")}</button></div></section> : !me ? <><PasswordPanel role={role} onComplete={async()=>{const destination=destinationAfterSignIn(location.search);const result=await api<{identity:{name:string;email:string;provider?:string}|null}>("identity");setIdentity(result.identity);await refresh();location.replace(destination);}}/><section className="member-hero"><p>HAMILTON SKATING CLUB</p><h1>{translate("让每一次上冰，")}<br/>{translate("都有清楚的安排。")}</h1><p>{translate("查看自己的赛程、接收官方修订与教练要求。")}</p></section></> : <>
+    {loading ? <section className="member-panel">{translate("正在读取账号…")}</section> : !me && offlineAccount ? <section className="member-panel member-account-panel"><h1>{text("Account","账户")}</h1><p>{text("Your account could not be loaded. Retry when connected, or clear the saved sign-in on this device.","暂时无法读取账号。你可以联网重试，或清除这台设备上保存的登录信息。")}</p><div className="member-actions"><button onClick={()=>location.reload()} disabled={busy}>{text("Retry","重试")}</button><button onClick={()=>void signOut()} disabled={busy}>{text("Sign out on this device","从本机退出")}</button></div></section> : !me ? <><PasswordPanel role={role} onComplete={async()=>location.replace(destinationAfterSignIn(location.search))}/><section className="member-hero"><p>HAMILTON SKATING CLUB</p><h1>{translate("让每一次上冰，")}<br/>{translate("都有清楚的安排。")}</h1><p>{translate("查看自己的赛程、接收官方修订与教练要求。")}</p></section></> : <>
       {tab==='account'?<section className="member-panel member-account-panel" aria-labelledby="account-title">
         <h1 id="account-title">{adminRole?text('Administrator account','管理员账户'):text('Member account','普通账户')}</h1>
         <p><strong>{me.member.name}</strong><br/>{me.member.email}{!adminRole&&<><br/>{accountType}</>}</p>

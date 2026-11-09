@@ -6,9 +6,9 @@ import {authFeedback,authProblem} from './auth-feedback';
 import {MailAvailability,type AuthAvailability} from './auth-availability';
 
 export type VerificationReason='registered'|'delivery-failed'|'sign-in'|'resend';
-type Props={initialEmail?:string;reason?:VerificationReason;availability:AuthAvailability};
+type Props={initialEmail?:string;reason?:VerificationReason;availability:AuthAvailability;onReturnToSignIn?:()=>void};
 
-export default function EmailVerificationPanel({initialEmail='',reason,availability}:Props) {
+export default function EmailVerificationPanel({initialEmail='',reason,availability,onReturnToSignIn}:Props) {
   useLanguage();
   const heading=useRef<HTMLHeadingElement>(null);
   const [email,setEmail]=useState(initialEmail),[busy,setBusy]=useState(false);
@@ -70,6 +70,6 @@ export default function EmailVerificationPanel({initialEmail='',reason,availabil
     {sent&&<p role="status">{text('If this address has an unverified account, a verification email has been requested. Check your inbox and spam folder.','如果此邮箱有待验证账号，已请求验证邮件。请检查收件箱和垃圾邮件。')}</p>}
     {error&&<p role="alert">{authFeedback(error)}</p>}
     </MailAvailability>
-    <a href="/">{text('Return to sign in','返回登录')}</a>
+    {onReturnToSignIn?<button type="button" onClick={onReturnToSignIn}>{text('Return to sign in','返回登录')}</button>:<a href="/">{text('Return to sign in','返回登录')}</a>}
   </section>;
 }
