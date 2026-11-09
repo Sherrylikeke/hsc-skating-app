@@ -60,6 +60,7 @@ function dateOnLine(text:string){
 }
 export function parseScheduleDocument(pages:PdfItem[][],sourceUrl:string):{blocks:ScheduleBlock[];warnings:string[]}{
   const blocks:ScheduleBlock[]=[],warnings=new Set<string>();
+  const pauses:Array<{date:string;rink:string;start:string;end:string}>=[];
   for(const [page,items] of pages.entries()){
     const anchors=pdfLines(items).map(line=>({y:line.y,text:line.items.map(item=>item.str).join(' ')})).filter(line=>/\b(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+/i.test(line.text)).map(line=>({y:line.y,date:dateOnLine(line.text)}));
     const starts=items.filter(item=>item.str.trim()==='START').sort((first,second)=>second.y-first.y||first.x-second.x);
@@ -85,7 +86,13 @@ export function parseScheduleDocument(pages:PdfItem[][],sourceUrl:string):{block
           shared=undefined;if(categoryKey(text))warnings.add('第 '+(page+1)+' 页有未明确列出完整起止时间的类别，暂不导入');continue;
         }
         shared=undefined;
-        const category=match[3].trim(),key=categoryKey(category);if(/FLOOD|GOOD NIGHT|GOODNIGHT|DRIVE SAFE|THANK YOU/i.test(category))continue;
+        const category=match[3].trim(),key=categoryKey(category);
+        if(/^(?:ICE\s+(?:RESURFACING|RESURFACE)|FLOOD|(?:LUNCH|DINNER|JUDGES'?\s+)?\s*BREAK|LUNCH|DINNER)\b/i.test(category)){
+          const start=time24(match[1]),end=time24(match[2]);
+          if(start&&end&&start<end)pauses.push({date,rink,start,end});
+          continue;
+        }
+        if(/FLOOD|GOOD NIGHT|GOODNIGHT|DRIVE SAFE|THANK YOU/i.test(category))continue;
         if(!key){warnings.add('第 '+(page+1)+' 页有尚未支持的类别，暂不导入');continue;}
         const start=time24(match[1]),end=time24(match[2]);if(!start||!end||start>=end){warnings.add('第 '+(page+1)+' 页有无效或倒序时间，暂不导入');continue;}
         const range=category.match(/\((\d+)\s*[-–]\s*(\d+)\)/);
@@ -93,6 +100,10 @@ export function parseScheduleDocument(pages:PdfItem[][],sourceUrl:string):{block
         blocks.push(block);if(/shared warm[ -]?up/i.test(category))shared=block;
       }
     }
+  }
+  for(const block of blocks){
+    const inside=pauses.filter(p=>p.date===block.date&&p.rink===block.rink&&p.start<block.end&&p.end>block.start);
+    if(inside.length)block.breaks=inside.map(({start,end})=>({start,end}));
   }
   return {blocks:[...new Map(blocks.map(block=>[block.id,block])).values()].sort((first,second)=>(first.date+' '+first.start).localeCompare(second.date+' '+second.start)),warnings:[...warnings]};
 }

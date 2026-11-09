@@ -2,13 +2,23 @@ import type {StartingOrder} from './club-types';
 import type {PdfItem} from './official-parser';
 import {categoryKey,categoryCompatible,groupOf,normalizeName,plain} from './official-parser.ts';
 type Roster=Array<{id:string;name:string;identityPending?:boolean}>;
-export const programOf=(text:string)=>/\bSHORT\b/i.test(text)?'short':/\bFREE\b/i.test(text)?'free':/\bRHYTHM\b/i.test(text)?'rhythm':/\bPATTERN\b/i.test(text)?plain(text).toLowerCase().replace(/.*pattern\s*dance/i,'pattern').trim():'';
+export const programOf=(text:string)=>/\bARTISTIC\b/i.test(text)?'artistic':/\bSHORT\b/i.test(text)?'short':/\bFREE(?:SKATE|SKATING)?\b/i.test(text)?'free':/\bRHYTHM\b/i.test(text)?'rhythm':/\bPATTERN\b/i.test(text)?plain(text).toLowerCase().replace(/.*pattern\s*dance/i,'pattern').trim():'';
+export function scheduledProgram(category:string){
+  const explicit=programOf(category);
+  if(explicit)return explicit;
+  // Some official timetables print only the level for these single-program singles events.
+  const [level,discipline]=categoryKey(category).split(':');
+  if(!['MEN','WOMEN','FREESKATE'].includes(discipline))return '';
+  if(/^STAR\s*[79]$/.test(level))return 'short';
+  return /^(?:STAR\s*(?:[34568]|10)|GOLD|PREJUVENILE|JUVENILE)$/.test(level)?'free':'';
+}
 function ids(name:string,roster:Roster){return name.split(/\s*\/\s*/).flatMap(part=>{const matches=roster.filter(s=>!s.identityPending&&normalizeName(s.name)===normalizeName(part));return matches.length===1?[matches[0].id]:[];});}
-function row(name:string,category:string,startNumber:number,warmupGroup:number|null,individualTime:string|null,sourceUrl:string,page:number,roster:Roster):StartingOrder{return {id:`${sourceUrl}|${category}|${name}`,name,category,program:programOf(category),startNumber,warmupGroup,individualTime,sourceUrl,page,skaterIds:ids(name,roster)};}
+function row(name:string,category:string,startNumber:number,warmupGroup:number|null,individualTime:string|null,sourceUrl:string,page:number,roster:Roster):StartingOrder{return {id:`${sourceUrl}|${category}|${name}`,name,category,program:scheduledProgram(category),startNumber,warmupGroup,individualTime,sourceUrl,page,skaterIds:ids(name,roster)};}
 export function parseStartingOrderPdf(pages:PdfItem[][],url:string,roster:Roster):StartingOrder[]{
   const output:StartingOrder[]=[];let warmup:number|null=null;let category='';
   pages.forEach((items,page)=>{const text=items.map(i=>i.str).join(' ');if(!/starting\s*order/i.test(text))return;
-    const nextCategory=items.find(i=>categoryKey(i.str)&&programOf(i.str))?.str.trim()||category;if(nextCategory!==category)warmup=null;category=nextCategory;if(!category)return;
+    const heading=items.find(i=>categoryKey(i.str)&&programOf(i.str))??items.find(i=>categoryKey(i.str)&&scheduledProgram(i.str));
+    const nextCategory=heading?.str.trim()||category;if(nextCategory!==category)warmup=null;category=nextCategory;if(!category)return;
     const nameHeader=items.find(i=>/^name$/i.test(i.str.trim()));const clubHeader=items.find(i=>/^club$/i.test(i.str.trim()));if(!nameHeader||!clubHeader)return;
     const warmHeader=items.find(i=>/warm.?up\s*group/i.test(i.str)&&Math.abs(i.y-nameHeader.y)<3);
     const timeHeader=items.find(i=>/^(?:start\s*)?time$/i.test(i.str.trim())&&Math.abs(i.y-nameHeader.y)<3);
@@ -24,7 +34,7 @@ export function parseStartingOrderPdf(pages:PdfItem[][],url:string,roster:Roster
 export function parseStartingOrderHtml(html:string,url:string,roster:Roster):StartingOrder[]{
   const output:StartingOrder[]=[];let category='',headers:string[]=[],warmup:number|null=null;
   for(const match of html.matchAll(/<(h[1-4]|caption)\b[^>]*>([\s\S]*?)<\/\1>|<tr\b([^>]*)>([\s\S]*?)<\/tr>/gi)){
-    if(match[1]){const text=plain(match[2]);if(categoryKey(text)&&programOf(text)){category=text;warmup=null;}continue;}
+    if(match[1]){const text=plain(match[2]);if(categoryKey(text)&&scheduledProgram(text)){category=text;warmup=null;}continue;}
     const cells=[...match[4].matchAll(/<t[hd]\b[^>]*>([\s\S]*?)<\/t[hd]>/gi)].map(c=>plain(c[1]));if(!cells.length)continue;
     if(/<th\b/i.test(match[4])){headers=cells;continue;}
     const text=cells.join(' '),explicit=text.match(/^warm[- ]?up\s+group\s*[:#]?\s*(\d+)$/i);if(explicit){warmup=Number(explicit[1]);continue;}
@@ -35,4 +45,4 @@ export function parseStartingOrderHtml(html:string,url:string,roster:Roster):Sta
     const time=cells[timeIndex]||'';output.push(row(cells[nameIndex],current,Number(cells[orderIndex]),warm,/^\d{1,2}:\d{2}(?::\d{2})?(?:\s*[AP]M)?$/i.test(time)?time:null,url,0,roster));
   }return output;
 }
-export function orderFor(orders:StartingOrder[],id:string,category:string){const key=categoryKey(category),program=programOf(category),group=groupOf(category);const matches=orders.filter(o=>o.skaterIds.includes(id)&&categoryKey(o.category)===key&&categoryCompatible(o.category,category)&&o.program===program&&(groupOf(o.category)===group||groupOf(o.category)===null||group===null));return matches.length===1?matches[0]:undefined;}
+export function orderFor(orders:StartingOrder[],id:string,category:string){const key=categoryKey(category),program=scheduledProgram(category),group=groupOf(category);const matches=orders.filter(o=>o.skaterIds.includes(id)&&categoryKey(o.category)===key&&categoryCompatible(o.category,category)&&(o.program||scheduledProgram(o.category))===program&&(groupOf(o.category)===group||groupOf(o.category)===null||group===null));return matches.length===1?matches[0]:undefined;}

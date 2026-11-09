@@ -25,7 +25,7 @@ async function source(url:string,maxBytes=3_000_000):Promise<Uint8Array>{
 }
 const hashBytes=async(bytes:Uint8Array)=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes as BufferSource))).map(n=>n.toString(16).padStart(2,'0')).join('');
 const message=(error:unknown)=>error instanceof Error?error.message:'官网读取失败';
-const SCHEDULE_VERSION='schedule-bands-4';
+const SCHEDULE_VERSION='schedule-bands-5';
 const readPdfItems=readOfficialPdfItems;
 function entryProgress(event:LiveEvent){const files=event.documents.flatMap(document=>(document.entryFiles||[]).map(file=>({file,rosterHash:document.matchingRosterHash})));const verified=files.filter(({file,rosterHash})=>file.checkedAt&&!file.error&&file.parserVersion===ENTRY_PDF_VERSION&&file.matchingRosterHash===rosterHash).length;return {total:files.length,verified,pending:files.length-verified};}
 async function syncCalendarBody(){
@@ -95,10 +95,10 @@ async function syncEventBody(id:string){
           if(imported.errors.length){doc.error=imported.errors.join('；');errors.push(doc.error);}else delete doc.error;
           continue;
         }
-        if(previous?.hash!==hash||!orders.some(o=>o.sourceUrl===doc.url)||previous.matchingRosterHash!==matchingRosterHash){
+        if(previous?.hash!==hash||previous.parserVersion!=='starting-draw-2'||!orders.some(o=>o.sourceUrl===doc.url)||previous.matchingRosterHash!==matchingRosterHash){
           let parsed;if(/\.pdf(?:$|\?)/i.test(doc.url)){parsed=parseStartingOrderPdf(await readPdfItems(bytes),doc.url,roster);}else parsed=parseStartingOrderHtml(new TextDecoder().decode(bytes),doc.url,roster);
           if(!parsed.length)throw new Error('出场顺序格式待核对，保留上次有效资料');if(previous?.hash!==hash||JSON.stringify(parsed)!==JSON.stringify(orders.filter(order=>order.sourceUrl===doc.url)))changed++;orders=[...orders.filter(o=>o.sourceUrl!==doc.url),...parsed];
-        }doc.hash=hash;doc.matchingRosterHash=matchingRosterHash;doc.checkedAt=now;delete doc.error;
+        }doc.hash=hash;doc.parserVersion='starting-draw-2';doc.matchingRosterHash=matchingRosterHash;doc.checkedAt=now;delete doc.error;
       }catch(error){doc.error=message(error);errors.push(doc.error);}}
       event.startingOrders=orders;const pending=orderDocs.filter(d=>!d.checkedAt||d.error).length;event.startingOrderStatus=pending?`已读取 ${orders.length} 条出场信息，${pending} 份文件待核对`:`已读取 ${orders.length} 条官方出场信息`;
     }else event.startingOrderStatus=existing.startingOrders?.length?'官网当前未列出出场链接，保留已读取版本':'官网尚未发现 Starting Order 链接';

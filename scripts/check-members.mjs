@@ -371,7 +371,7 @@ try{
   assert.equal(first.participants.length,16);assert.equal(first.documents.find(document=>document.kind==='entries').entryFiles.filter(file=>file.checkedAt).length,4);
   assert.equal(first.blocks.length,40);assert.deepEqual([...new Set(first.blocks.map(block=>block.date))],['2026-11-20','2026-11-21','2026-11-22']);
   assert.equal(first.documents.find(document=>document.kind==='schedule').hash,scheduleHash);
-  assert.equal(first.documents.find(document=>document.kind==='schedule').parserVersion,'schedule-bands-4');
+  assert.equal(first.documents.find(document=>document.kind==='schedule').parserVersion,'schedule-bands-5');
   assert.match(first.entryStatus,/4\/6/);assert.match(first.scheduleStatus,/部分导入/);
   assert.equal(database.database.prepare("SELECT count(*) AS count FROM source_revisions WHERE event_id=? AND kind='entries'").get(importEventId).count,4);
   await syncEvent(importEventId);
