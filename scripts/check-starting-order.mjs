@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import {parseStartingOrderPdf,parseStartingOrderHtml,orderFor} from '../lib/starting-order.ts';
 import {discoverDocuments,scheduleRows} from '../lib/official-parser.ts';
+import {readOfficialPdfItems} from '../lib/official-pdf.ts';
+import {selectStartingOrderDocuments} from '../lib/starting-order-selection.ts';
 const fixture=JSON.parse(fs.readFileSync('tests/fixtures/provincials-2026-pre-novice-men-start-order-items.json','utf8'));
 const roster=[{id:'cyrus',name:'Cyrus Huang'},{id:'nathaniel',name:'Nathaniel',identityPending:true}];
 const url='https://skateontario.org/results/26PROVS/26PROVPre-NoviceMenFP2SO.pdf';
@@ -18,3 +20,21 @@ const rows=scheduleRows([event],[skater]);assert.equal(rows.length,1);assert.equ
 const pending=scheduleRows([{...event,startingOrders:[]}],[skater]);
 assert.equal(pending.length,1);assert.equal(pending[0].uncertain,true);assert.equal(pending[0].start,'');assert.equal(pending[0].end,'');assert.equal(pending[0].candidates.length,2);assert.ok(!pending[0].category.includes('('));
 console.log(JSON.stringify({officialPdfRows:parsed.length,explicitWarmupVerified:true,missingWarmupNeverGuessed:true,rangeResolvedByOfficialOrder:true,defaultCoachPreserved:true}));
+const keswickBase='https://skateontario.org/results/27KES/';
+for(const [file,count,name,number] of [
+  ['keswick-2026-preju-u11-group2-start.pdf',10,'Sydney Mitchell',2],
+  ['keswick-2026-star7-o12-group1-start.pdf',15,'Mina-Fée Trahan',1],
+]){
+  const pages=await readOfficialPdfItems(new Uint8Array(fs.readFileSync('tests/fixtures/'+file)));
+  const orders=parseStartingOrderPdf(pages,keswickBase+file,[]);
+  assert.equal(orders.length,count);assert.equal(orders.find(order=>order.name===name).startNumber,number);
+  assert.ok(orders.every(order=>order.warmupGroup===null&&order.individualTime===null));
+}
+const documents=Array.from({length:9},(_,index)=>({kind:'start-order',url:keswickBase+'27KesSTAR5WomenU13Group'+index+'FP2SO.pdf',label:'Starting Order'}));
+const participants=[{skaterIds:['sydney'],sourceUrl:keswickBase.replace('https://','https://www.')+'27KesSTAR5WomenU13Group8EL.pdf'}];
+const firstBatch=selectStartingOrderDocuments(documents,participants);
+assert.equal(firstBatch.length,4);assert.equal(firstBatch[0].url,documents[8].url);
+for(const document of firstBatch){document.attemptedAt='2026-11-09T20:00:00Z';document.error='fixture failed read';}
+const secondBatch=selectStartingOrderDocuments(documents,participants);
+assert.equal(secondBatch.length,4);assert.ok(secondBatch.every(document=>!document.attemptedAt));
+console.log('Keswick PDF draws preserve official order without inventing warm-up groups; related categories are prioritized and failed files cannot starve unattempted documents.');

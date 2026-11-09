@@ -2,6 +2,14 @@
 
 这是项目负责人的持续维护记录，不属于会员网页内容。后续会话先读取本文件与 AGENTS.md，在完成实质修改或验收后更新；不自动轮询、不新增定时任务。下列运行数据是查询快照，不是实时监控。
 
+## 2026-11-09 Keswick 出场顺序漏更与公开注册请求
+
+- 用户反馈Keswick已公布Starting Order并要求开放公开注册。重新核对线上V33、public、原小时任务enabled；邮件配置revision6，RESEND_API_KEY存在、HSC_EMAIL_FROM缺失、HSC_EMAIL_VERIFICATION_ENABLED=false，普通注册仍关闭。用户此次已授权开放普通注册，但真实发信域名仍待配置；Resend浏览器当前停在登录页，已请用户完成登录，不能绕过邮箱验证或伪造验证状态。
+- 实时同步记录显示Keswick SO-325449在2026-11-09 20:03:15Z检查过，错误为出场顺序格式待核对；并非自动任务未运行。官网赛事页的Start Orders/Results链接被归类start-order，旧逻辑只展开results汇总页，因而把目录HTML当单份顺序解析，未访问目录内61份PDF。
+- 修复同时展开results/start-order非PDF汇总页；发现子出场文档后不再把父目录当单份顺序。首次优先HSC已匹配选手的报名PDF同类别顺序来源，规范www与裸域；每轮仍最多4份，按attemptedAt轮转，失败文件不会长期卡住队列。同步返回独立startingOrderFiles进度，避免部分导入冒称全量成功。原名单、历史赛程、人工教练安排和失败保留规则不变。
+- 新增官方Keswick目录HTML和两份真实PDF夹具：Pre-Juvenile Women U11 Group2有10行，Sydney Mitchell官方#2；STAR7 Women O12 Group1有15行。两份均未明确列出热身组及个人时间，保持null。单元回归覆盖相关类别优先、失败轮转，Worker/D1回归覆盖混合标题目录展开61份、四份上限及Sydney顺序，生产发布和补同步结果待完成后补记。
+- 本轮Web类型、18项功能脚本、官方生产构建及真实隔离Worker/D1回归全部通过。Keswick测试确认目录61份、首批4份且Sydney来源优先、#2正确、热身组/个人时间不伪造、失败后下一批不重复卡在原文件。改动仅服务端同步及测试，不需重建既有客户端；网页和客户端刷新同一API即可读取更新。
+
 ## 2026-11-09 远端更新发布到网站与客户端
 
 - 按用户要求将原 GitHub main 的 cd62767d310750738b98fd60e89634f44877bf66（PR #1–#7）发布到原 Sites 项目。当前连接可访问原项目及源码，已解决 11-08 会话中 NOT_FOUND 的访问限制；未另建站点、迁移 Worker/D1 或修改域名、public 范围、邮件/注册及小时任务。

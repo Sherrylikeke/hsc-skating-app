@@ -19,12 +19,21 @@ const startingHtml='<script>var EVENT_ID="'+startingFixture.eventId+'";var API="
 let awardsFetches=0;
 const fixtureHost='sc-css-public-api-cmh9d3htgxfpdkb7.canadacentral-01.azurewebsites.net';
 let officialRequests=0;
+const keswickReads=[];
 const workerOptions={cf:false,modules,modulesRoot:root,compatibilityDate:runtime.compatibility_date,compatibilityFlags:runtime.compatibility_flags,d1Databases:['DB'],bindings:{
   BETTER_AUTH_SECRET:'isolated-tests-only-secret-0123456789-abcdef',
   HSC_PILOT_REGISTRATIONS:JSON.stringify([{email:'pilot-fixture@example.test',role:'parent',invitationHash:hash(pilotToken),expiresAt:new Date(Date.now()+3600000).toISOString()}]),
 },outboundService:request=>{const url=new URL(request.url);
 if(url.hostname==='skatingresults.ca'){if(url.pathname.endsWith('/categories'))return Response.json({Categories:[startingFixture.category]});if(url.pathname.endsWith('/segments'))return Response.json({Segments:startingFixture.segments});const id=url.pathname.match(/segment\/([^/]+)\/entries$/)?.[1];if(id)return Response.json(startingFixture.entries[id]);return new Response(startingHtml);}
 if(url.hostname==='www.skateontario.org'){
+if(url.pathname==='/fixture-keswick/')return new Response('<a href="https://www.skateontario.org/results/27KES/">Start Orders/Results</a>');
+if(url.pathname==='/results/27KES/')return new Response(fs.readFileSync('tests/fixtures/keswick-2026-starting-order-index.html','utf8'));
+if(url.pathname.startsWith('/results/27KES/')){
+  keswickReads.push(url.pathname);
+  if(url.pathname.endsWith('27KesPre-JuvenileWomenU11Group2FP2SO.pdf'))return new Response(fs.readFileSync('tests/fixtures/keswick-2026-preju-u11-group2-start.pdf'));
+  if(url.pathname.endsWith('27KesSTAR7WomenO12Group1SP2SO.pdf'))return new Response(fs.readFileSync('tests/fixtures/keswick-2026-star7-o12-group1-start.pdf'));
+  return new Response('Fixture failed read',{status:503});
+}
 if(url.pathname==='/fixture-low-star/')return new Response('<a href="https://www.skateontario.org/fixture-low-star-schedule.pdf">Schedule</a><a href="https://www.skateontario.org/fixture-low-star-entry.pdf">Entry List</a>');
 if(url.pathname==='/fixture-low-star-schedule.pdf')return new Response(fs.readFileSync('tests/fixtures/star1-4-east-gwillimbury-2026-schedule.pdf'));
 if(url.pathname==='/fixture-low-star-entry.pdf')return new Response(fs.readFileSync('tests/fixtures/star3-niagara-2025-entry.pdf'));
@@ -79,7 +88,22 @@ try {
   await database.prepare('INSERT INTO live_events (id,payload,updated_at) VALUES (?,?,?)').bind(syncEvent.id,JSON.stringify(syncEvent),new Date().toISOString()).run();
   const syncResponse=await post('/api/sync',{eventId:syncEvent.id},platformHeaders);assert.equal(syncResponse.status,200,await syncResponse.clone().text());const synced=await syncResponse.json();const resolved=synced.schedulePreview.find(row=>row.name==='Carson Wang');assert.ok(resolved);assert.equal(resolved.startNumber,19);assert.equal(resolved.warmupGroup,4);assert.equal(resolved.start,'11:15');assert.equal(resolved.end,'12:15');assert.equal(resolved.uncertain,false);assert.equal(resolved.individualTime,null);assert.equal(awardsFetches,0);
   const savedSync=JSON.parse((await database.prepare('SELECT payload FROM live_events WHERE id=?').bind(syncEvent.id).first()).payload);assert.ok(savedSync.startingOrders.some(row=>row.skaterIds.includes(fixtureCarson.id)));assert.ok(savedSync.blocks.some(block=>block.category.includes('SHORT (16-25)')));
-  // Admin roster writes use the real Worker routes and isolated D1; no production data is changed.
+  const sydney=JSON.parse(fs.readFileSync('data/roster.json','utf8')).find(row=>row.name==='Sydney Mitchell');
+  const keswickEvent={...syncEvent,id:'SO-999993',url:'https://www.skateontario.org/fixture-keswick/',participants:[{id:'fixture-sydney-entry',name:sydney.name,category:'Pre-Juvenile Women (U11 Group 2)',club:'Hamilton SC',section:'ON',skaterIds:[sydney.id],matchStatus:'fixture',sourceUrl:'https://skateontario.org/results/27KES/27KesPre-JuvenileWomenU11Group2EL.pdf'}]};
+  await database.prepare('INSERT INTO live_events (id,payload,updated_at) VALUES (?,?,?)').bind(keswickEvent.id,JSON.stringify(keswickEvent),new Date().toISOString()).run();
+  const keswickResponse=await post('/api/sync',{eventId:keswickEvent.id},platformHeaders);
+  assert.equal(keswickResponse.status,200,await keswickResponse.clone().text());
+  assert.deepEqual((await keswickResponse.json()).startingOrderFiles,{total:61,verified:1,pending:60});
+  const keswickSaved=JSON.parse((await database.prepare('SELECT payload FROM live_events WHERE id=?').bind(keswickEvent.id).first()).payload);
+  assert.equal(keswickSaved.documents.filter(document=>document.kind==='start-order').length,61);
+  assert.ok(!keswickSaved.documents.some(document=>document.kind==='start-order'&&document.url.endsWith('/27KES/')));
+  assert.equal(keswickReads.length,4);assert.ok(keswickReads[0].endsWith('27KesPre-JuvenileWomenU11Group2FP2SO.pdf'));
+  const sydneyOrder=keswickSaved.startingOrders.find(order=>order.skaterIds.includes(sydney.id));
+  assert.equal(sydneyOrder.startNumber,2);assert.equal(sydneyOrder.warmupGroup,null);assert.equal(sydneyOrder.individualTime,null);
+  const firstReads=[...keswickReads];
+  assert.equal((await post('/api/sync',{eventId:keswickEvent.id},platformHeaders)).status,200);
+  assert.equal(keswickReads.length,8);assert.ok(keswickReads.slice(4).every(url=>!firstReads.includes(url)));
+  console.log('Keswick combined Start Orders/Results hub expands to 61 PDF documents; the related Sydney group imports first, official #2 is preserved, and failed files rotate within the four-file limit.');
   const newSkater={name:'Fixture Added Skater',coach:'Jen Jackson/Bryce Davidson',training:true,identityPending:false,profileRevision:null,coachRevision:0};
   assert.equal((await post('/api/skaters',newSkater)).status,401);
   for(const role of ['parent','coach']){
