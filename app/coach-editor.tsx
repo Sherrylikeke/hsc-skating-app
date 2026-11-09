@@ -4,6 +4,7 @@ import {translate,text,useLanguage,LanguageSwitch} from '../lib/i18n';
 
 import { useEffect, useRef, useState } from 'react';
 import { planPaste } from './paste';
+import {useRevalidateRestoredPage} from './workspace-navigation';
 
 type Row={id:string;name:string;coach:string;training:boolean;identityPending?:boolean;revision:number};
 type Change={id:string;coach:string};
@@ -11,6 +12,7 @@ const DRAFT='hsc-coach-drafts-v1';
 
 export default function CoachEditor(){
   useLanguage();
+  useRevalidateRestoredPage();
   const [rows,setRows]=useState<Row[]>([]);
   const [query,setQuery]=useState('');
   const [onlyEmpty,setOnlyEmpty]=useState(false);
@@ -147,7 +149,7 @@ export default function CoachEditor(){
   return <div className="shell">
     <LanguageSwitch/><header className="topbar"><a href="/" className="brand"><span className="monogram">HSC</span><span>HAMILTON<br/><b>SKATING CLUB</b></span></a><span className="private-label"><span/>{translate("私人工作表")}</span></header>
     <main>
-      <nav className="coach-return-links" aria-label={text('Return navigation','返回导航')}><a href="/workspace?view=coach">← {text('Back to coach schedule','返回教练总表')}</a><a href="/">{text('Back to my homepage','返回我的主页')}</a><span>{text('Administrators only','仅管理员可维护')}</span></nav>
+      <nav className="coach-return-links" aria-label={text('Return navigation','返回导航')}><a href="/workspace?view=coach">← {text('Back to coach schedule','返回教练总表')}</a><a href="/">{text('Back to my homepage','返回我的主页')}</a><a href="/?tab=account">{text('Account','账户')}</a><span>{text('Administrators only','仅管理员可维护')}</span></nav>
       <div className="page-heading"><div><p className="eyebrow">{translate("CLUB ROSTER / 教练资料")}</p><h1>{translate("选手与教练")}<span className="title-dot">.</span></h1><p className="subtitle">{translate("点一下教练格，直接输入或粘贴。")}</p></div><div className="save-state" role="status" aria-live="polite"><i className={phase}/>{phase==='ready'?translate("全部已保存"):phase==='saving'?translate("正在保存…"):phase==='error'?translate("尚未保存"):phase==='login'?translate("请先登录"):translate("正在读取…")}</div></div>
       {phase==='login'?<section className="empty-state"><h2>{translate("登录后即可编辑")}</h2><p>{text('This maintenance page requires an active administrator account. Return to the member homepage to sign in.','此维护页仅限有效管理员账号。请返回会员主页登录。')}</p><a className="primary button" href="/">{text('Return to member homepage','返回会员主页')}</a></section>:<>
         <section className="workspace" aria-label={translate("教练信息编辑表")}>

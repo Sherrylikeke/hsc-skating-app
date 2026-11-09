@@ -1,4 +1,7 @@
 .club-personal-picker.family-controls{padding:12px 16px;margin-bottom:14px;overflow:visible}
+.club-panel.membership-review-notice{padding:14px 16px;margin-bottom:14px}
+.membership-review-notice h2{margin:0;font-size:16px;line-height:1.4}
+.membership-review-notice p{margin:6px 0 0;font-size:14px;line-height:1.5}
 .family-filter{display:flex;align-items:center;flex-wrap:wrap;gap:8px 16px;color:#334f70;font-size:14px}
 .family-filter .club-compact-select{flex:1;min-width:min(180px,100%)}
 .family-filter select{width:100%}

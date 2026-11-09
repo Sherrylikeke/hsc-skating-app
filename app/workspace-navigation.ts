@@ -1,5 +1,5 @@
 'use client';
-import {useLayoutEffect,useState} from 'react';
+import {useEffect,useLayoutEffect,useState} from 'react';
 import type {MouseEvent} from 'react';
 import type {HomeScope} from '../lib/home-schedule';
 import {text} from '../lib/i18n';
@@ -19,6 +19,24 @@ export function followWorkspaceLink(event:MouseEvent<HTMLAnchorElement>,open:(()
   if(!open || event.button!==0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)return;
   event.preventDefault();
   open();
+}
+const signOutSignal='hsc-signed-out';
+export function notifyOtherTabsOfSignOut(){
+  // Notify only same-origin tabs. No identity or credential is stored here.
+  try{localStorage.setItem(signOutSignal,crypto.randomUUID());}catch{}
+}
+export function useRevalidateRestoredPage(){
+  useEffect(()=>{
+    function revalidate(event:PageTransitionEvent){
+      if(event.persisted)location.reload();
+    }
+    function onSignOut(event:StorageEvent){
+      if(event.key===signOutSignal&&event.newValue)location.replace('/?signedOut=1');
+    }
+    window.addEventListener('pageshow',revalidate);
+    window.addEventListener('storage',onSignOut);
+    return ()=>{window.removeEventListener('pageshow',revalidate);window.removeEventListener('storage',onSignOut);};
+  },[]);
 }
 function readEntry(memberId:string|undefined):Entry {
   const saved=history.state?.hscWorkspace as Entry|undefined;
@@ -48,6 +66,7 @@ function destinationLabel(destination:Destination){
 }
 
 export function useWorkspaceNavigation(memberId:string|undefined){
+  useRevalidateRestoredPage();
   const [route,setRoute]=useState({view:'personal' as View,skaterId:'',eventId:''});
   const [entry,setEntry]=useState<Entry>({memberId:'',from:null,filters:defaults});
   useLayoutEffect(()=>{

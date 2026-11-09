@@ -84,13 +84,18 @@ export async function assertSkater(database: D1Database, member: Member, skaterI
   requireRole(member, ...(write ? ['admin', 'coach'] as Role[] : ['admin', 'coach', 'parent', 'skater'] as Role[]));
   if (member.role !== 'admin' && !(await accessibleSkaters(database, member)).includes(skaterId)) throw new AccessError(403, '无权访问该选手');
 }
-export async function scheduleSkaterIds(database:D1Database,member:Member):Promise<string[]> {
-  const claim=await database.prepare("SELECT payload FROM hsc_claims WHERE member_id=? AND kind='membership' ORDER BY created_at DESC LIMIT 1").bind(member.id).first<{payload:string}>();
+export async function schedulePreferences(database:D1Database,member:Member,approvedSkaterIds:string[]) {
+  const claim=await database.prepare("SELECT payload,status FROM hsc_claims WHERE member_id=? AND kind='membership' ORDER BY created_at DESC LIMIT 1").bind(member.id).first<{payload:string;status:string}>();
   const ids=claim?JSON.parse(claim.payload).skaterIds:[];
-  const defaults=[...await accessibleSkaters(database,member),...(Array.isArray(ids)?ids.filter((id:unknown):id is string=>typeof id==='string'):[])];
+  const defaults=[...approvedSkaterIds,...(Array.isArray(ids)?ids.filter((id:unknown):id is string=>typeof id==='string'):[])];
   const {results}=await database.prepare('SELECT skater_id,pinned FROM hsc_home_skaters WHERE member_id=?').bind(member.id).all<{skater_id:string;pinned:number}>();
   const hidden=new Set(results.filter(row=>!row.pinned).map(row=>row.skater_id));
-  return [...new Set([...defaults,...results.filter(row=>row.pinned).map(row=>row.skater_id)])].filter(id=>!hidden.has(id));
+  const preferredSkaterIds=[...new Set([...defaults,...results.filter(row=>row.pinned).map(row=>row.skater_id)])].filter(id=>!hidden.has(id));
+  return {preferredSkaterIds,membershipClaimStatus:claim?.status??null};
+}
+export async function scheduleSkaterIds(database:D1Database,member:Member):Promise<string[]> {
+  const preferences=await schedulePreferences(database,member,await accessibleSkaters(database,member));
+  return preferences.preferredSkaterIds;
 }
 export async function admittedIDs(database: D1Database, ids: string[]) {
   const {results} = await database.prepare('SELECT skater_id FROM hsc_admissions WHERE admitted=1 AND skater_id IN (SELECT value FROM json_each(?))').bind(JSON.stringify(ids)).all<{skater_id: string}>();
