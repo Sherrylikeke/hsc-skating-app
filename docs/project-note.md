@@ -2,7 +2,16 @@
 
 这是项目负责人的持续维护记录，不属于会员网页内容。后续会话先读取本文件与 AGENTS.md，在完成实质修改或验收后更新；不自动轮询、不新增定时任务。下列运行数据是查询快照，不是实时监控。
 
-## 2026-11-09 DNS 添加后的注册兼容检查
+## 2026-11-09 公开注册已启用（23:49 Toronto）
+
+- 用户明确授权官方Sites工具通过隐藏输入使用原站短期源码凭据发布兼容修复，并向所有者邮箱发送一封密码找回测试邮件。官方助手正常同步原仓库，源码42d4679f414518346806df26d48490caed42fb9d；未向公开GitHub推送。
+- V35保存版本appgprj_6ad76ca2dba481919ba883865cbd5a0d~appgver_0ad2997999ec8191a75c369d746ed1ea。首次部署appgdep_6af2a1973e688191944f4cd014b30c6c于2026-11-10T04:46:28.562820Z成功，env revision8：严格既有账号兼容名单秘密配置、邮件开启、普通注册false。复核四个密码账号及已消费邀请，只纳入一个既有未验证有效家长；账号ID未写源码/交接。
+- 仅调用一次原站request-password-reset，2026-11-10T04:47:36.5518099Z HTTP200。Gmail限定收件人/发件地址/主题搜索确认邮件实际在INBOX，发件HSC Skating accounts@mail.memberportal.dev，主题Reset your HSC password / 重设 HSC 密码。未打开签名重设链接、修改密码、创建生产测试账号或读取无关邮件。
+- 按既有开放授权设置HSC_PUBLIC_REGISTRATION_ENABLED=true，env revision9；同V35部署appgdep_6af2a22cf9d081919c14b3870f46e467于2026-11-10T04:48:52.446969Z succeeded、MCP ready，public范围及原域名保留。新用户仍需名单内姓名及真实邮箱验证，验证不授予私人角色或关系。
+- 2026-11-10T04:49:52.1934431Z正式自定义域名验收：config的emailVerificationRequired/deliveryConfigured/registrationConfigured均true；首页、verify-email、reset-password为200，匿名club/results API仍401。核心27组、Web类型、构建及Worker隔离回归此前通过且运行代码未再修改；本轮真实送达已确认，未冒称新生产账号全流程或旧用户真实密码登录。
+- 交付outputs/2026-11-09/public-registration-live.json、controlled-mail-request.json及DNS与公开注册进度.md。原客户端刷新服务端配置生效，无新原生包/真机/上架验收；未迁移数据库、改私人关系或新增自动任务。回退公开注册可设HSC_PUBLIC_REGISTRATION_ENABLED=false并重部署同保存版本；邮件异常再按需关闭邮件，保留兼容机制。
+
+## 2026-11-09 DNS 添加后的注册兼容检查（历史准备）
 
 - 用户完成Resend验证后，本轮已恢复Chrome连接并读取原域名详情：mail.memberportal.dev状态Verified，DKIM及两条发送CNAME均Verified，Enable Sending开启、Receiving关闭；域名验证事件显示Nov09 23:09。此前尚未确认Verified的记录为历史快照。Sites只读重查仍V34/public、运行配置revision7、邮箱验证false，普通注册键缺失；没有执行新部署或真实发信。
 - 用户回复已添加DNS。Google公共DNS HTTPS查询已返回三条账户要求的记录：DKIM公开值一致、rsend.mail及send.mail的CNAME目标正确。本机解析器曾返回不存在，属于较早查询快照；尚未独立确认Resend后台Verified。浏览器调试连接报Debugger unattached，已请用户在原Resend域名页提交验证并回复结果；不使用桌面接管替代。

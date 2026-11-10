@@ -4,6 +4,13 @@
 
 ## 目前线上状态
 
+### 公开注册已启用（2026-11-09 23:49 Toronto，覆盖下方准备状态）
+
+- 当前V35，源码42d4679f414518346806df26d48490caed42fb9d，保存版本appgprj_6ad76ca2dba481919ba883865cbd5a0d~appgver_0ad2997999ec8191a75c369d746ed1ea；最终部署appgdep_6af2a22cf9d081919c14b3870f46e467于2026-11-10T04:48:52.446969Z成功，env revision9、MCP ready，原public及域名保留。
+- Resend域名和三条DNS均Verified；邮件及普通注册均true。精确一个既有未验证家长ID已存秘密配置HSC_EMAIL_VERIFICATION_GRACE_USERS，不写此文档；仅保留共享赛程登录，不伪验证或恢复私人访问。两个已消费内测邀请账号沿用原规则。
+- 获授权仅发送一封应用密码找回测试邮件，Gmail确认实际INBOX。没有点击重设链接、更改密码或新建生产测试账号。正式域名config的deliveryConfigured/registrationConfigured/emailVerificationRequired均true；首页、验证及找回页200，匿名club/results仍401。
+- 27组核心、类型、构建、Worker隔离检查均通过，未代登真实旧用户或创建新用户冒称全流程验收。原客户端刷新读取同一服务端开关，无新APK/IPA或上架。Sites源码已同步；公开GitHub新增内容仍待独立授权，未绕过此前拒绝。最终验收文档为部署后记账，不为文档更新重部署。
+
 ### DNS与旧账号兼容（2026-11-09 最新）
 
 - 用户已添加三条Resend实际记录，Google公共DNS解析已核对正确；后续Chrome连接恢复，已独立读取原域名详情，域名及三条记录均Verified，Enable Sending开启、Receiving关闭，验证事件Nov09 23:09。发件地址已保存并通过同V34配置部署应用，最新Sites只读重查仍V34/public、env revision7；邮件及普通注册仍关闭，未真实发信。

@@ -14,7 +14,13 @@ Invited users choose their own username and password and still provide a listed 
 
 The isolated core regression covers the actual runtime callback with no platform identity, email and username login, no outgoing requests, unchanged unverified status, single use, failed-password retry, role/email mismatch, expiry, cross-site requests, anonymous protected endpoints, direct-header spoof attempts and removal of the list. Anonymous production checks must be performed again after changing the outer access policy; do not consume a real tester invitation merely to test.
 
-## Existing-account compatibility prepared on 2026-11-09
+## Public registration activated on 2026-11-09
+
+V35 source `42d4679f414518346806df26d48490caed42fb9d` is deployed with runtime revision 9. The Resend domain and all three records are Verified. Mail verification and ordinary registration are enabled; the precise legacy allowlist was saved as a Sites secret before activation. One expressly authorized application password-reset mail reached the owner's Gmail INBOX from the configured sender. No password was changed, no signed reset link was opened, and no production test account was created.
+
+Live custom-domain config confirms delivery and registration enabled, with email verification required. Homepage, verification and reset pages return 200; anonymous club/results APIs return 401. The 27-group core suite, type check, production build and isolated Worker/D1 regression passed before publication. This does not claim a new-account production verification cycle or a real existing-user password login. To pause ordinary registration, set `HSC_PUBLIC_REGISTRATION_ENABLED=false` and redeploy the same saved version. Preserve legacy compatibility and private authorization during rollback. The preparation sections below describe historical stages.
+
+## Existing-account compatibility prepared on 2026-11-09 (historical)
 
 The user has already authorized opening ordinary registration. Three actual Resend DNS records now resolve publicly; the original provider domain detail page independently shows the domain and all three records as Verified (Nov09 23:09), sending enabled and receiving disabled. Real delivery still needs confirmation. The configured sender is `HSC Skating <accounts@mail.memberportal.dev>`, applied at runtime revision 7 with both mail and ordinary registration still disabled. Earlier proposed-domain and login-page descriptions below are historical.
 
