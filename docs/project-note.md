@@ -2,7 +2,14 @@
 
 这是项目负责人的持续维护记录，不属于会员网页内容。后续会话先读取本文件与 AGENTS.md，在完成实质修改或验收后更新；不自动轮询、不新增定时任务。下列运行数据是查询快照，不是实时监控。
 
-## 2026-11-10 手机关注与个人预计时间修复（V38已上线，新版赛程兼容验收中）
+## 2026-11-10 手机关注与个人预计时间修复（V39已上线，Max已恢复）
+
+- 最终V39运行源码d4ebc3c12952e37d7448fc8965b349ab646cf749，保存版本appgprj_6ad76ca2dba481919ba883865cbd5a0d~appgver_3afdd06b16ec8191b66a4da77a7abdf8，部署appgdep_6af37c63b3a08191bbe0865f8b952c5a于2026-11-10T20:19:58.502841Z succeeded、env revision9/MCP ready。域名、公开访问、注册/邮件与既有自动任务保持；没有新发信、私人关系/教练修改或数据库迁移。
+- 2026-11-10T20:20:33.041Z原HSC工具真实补同步确认Max已恢复周五2026-11-20 17:35–18:10 BLUE RINK，#2、热身1、uncertain=false；651参赛记录、40时段、57/61顺序文件仍有效，4份特殊格式待核对，未冒称全61成功。新官网Nov10原件完整复算Annie13:39/13:48、Shirley14:07/14:12、Sydney16:50/17:00（11月21日当地时间、预计热身/开滑）。Max共用正规/NQ时段不估算独占个人分钟，已有Starting Order并不代表官方公布了精确分钟。
+- 正式域名最终CEP_rxp_.js SHA256=E473A530638F019459BA6C3491B1EC24392F77A3DFE986C79D2F71351CFADC6F，与本地构建一致；首页200、匿名club/results仍401。本会话outputs/2026-11-10/mobile-review内live-keswick-check.json、mobile-live-checks.json及latest-source-timing-check.json分别记录真实同步、正式资源及最新来源复算。浏览器排版/选择/显示检查均为隔离资料，未冒称生产账号登录或真机。
+- 最终代码18/18功能脚本、Web类型、生产构建和真实Nov10原件Worker回归均通过。Android最终编译、Lint、签名/SDK验证通过，APK SHA256=EE578C1EEFABC54496DA347CDD7B32EF7D22006375CAEA751EE755B61936EF5B；手机静态资源同步与iOS交付证明见最终客户端记录。未装真机、未生成IPA或上架。源码已同步Sites，公开GitHub仍停在用户上一轮授权推送的508f4cf，未宣称本轮已推GitHub。
+- 发布准备曾被自动审批认为携带上轮源码/归档会漏掉修改而拦截；核实官方site-workflow先检查当前工作树、提交/推送最新文件，再生成新archivePath后，去除上轮归档元数据并按相同官方流程完成，未用另一通道绕过。后续只补文档记录，不为记录再部署。
+- 2026-11-10T20:23:57.3286801Z最终客户端证明：13份dist资源与APK及iOS公共资源逐字节一致，包含最终置顶/预计时间及新版类别匹配逻辑；APK EE578C1EEFABC54496DA347CDD7B32EF7D22006375CAEA751EE755B61936EF5B，iOS构建资源HSC-iOS-build-assets-mobile-review-V39.zip共57文件，SHA256=E5F5A887BB3BE038FC18313E1920FF08ED3CFE658CF9668C68A6EAA306CF86E8。以mobile-client-checks.json为最终证明，V37/V38中间包和记录不作为最终客户端交付。旧安装包需装最终APK才能更新本地JS；网站/PWA刷新读取新版本。临时预览进程已关闭，正式加油页open_in_codex返回queued，不冒称浏览器已显示或生产账号登录。
 
 - V38源码bc4f3729e12625a838c77d810558870461d54504，保存版本appgprj_6ad76ca2dba481919ba883865cbd5a0d~appgver_952741913f5c8191814ef4146410d021，部署appgdep_6af379afd9888191a206c7a1c5e1a310于2026-11-10T20:08:29.915154Z成功、env9/MCP ready。正式BeU2Wa_A.js SHA256=5DA4B5FB0DF995521E0317E3B3B39328FED2C375D5594274AA81DFDB665CE918，与本地构建逐字节一致。V38包含置顶、按钮说明及统一时间组件；后续Max兼容修复另行验收。
 - 已查明Max真实缺失原因：2026-11-10T20:09:01.832Z线上正在读取新链接Kes-Schedule-NOV-10.pdf（SHA256=262407707F342D1B09779864ABFDB928085D8098DCBC547B407B3C0150A92B7C），不再是此前手工下载的Oct28版。新表把共用组别写为STAR 5 Men U10 / STAR 5 U10 Non-Qualifying，省略第二段Men；原匹配器未能把正规组从整段NQ标签中分开。Max报名、教练与原始Starting Order均正常，未退赛、未删记录。
