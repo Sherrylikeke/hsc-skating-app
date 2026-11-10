@@ -12,7 +12,7 @@ import type {PilotRegistration} from './pilot-registration';
 import {isRegisteredPilot,pilotUsedKey} from './pilot-registration';
 
 export const productionOrigin = 'https://hsc-coach-roster.sherrylikeke.chatgpt.site';
-export function createPasswordAuth(database: D1Database, secret: string, origin = productionOrigin, existingMembership?: (request:Request,email:string)=>Promise<Role|null>, delivery:VerificationDelivery={enabled:false}, pilotRegistration?: (request:Request,email:string,token:string)=>Promise<PilotRegistration|null>) {
+export function createPasswordAuth(database: D1Database, secret: string, origin = productionOrigin, existingMembership?: (request:Request,email:string)=>Promise<Role|null>, delivery:VerificationDelivery={enabled:false}, pilotRegistration?: (request:Request,email:string,token:string)=>Promise<PilotRegistration|null>, verificationGrace?: (userId:string)=>boolean) {
   const local = origin === 'http://127.0.0.1:5173' || origin === 'http://localhost:5173';
   if (!secret || secret.length < 32) throw new Error('Password authentication is not configured');
   const schema = {user:authUser, session:authSession, account:authAccount, verification:authVerification};
@@ -32,6 +32,7 @@ export function createPasswordAuth(database: D1Database, secret: string, origin 
       const user=await database.prepare('SELECT email_verified FROM hsc_auth_user WHERE id=?').bind(session.userId).first<{email_verified:number}>();
       if(user?.email_verified)return;
       if(await isRegisteredPilot(database,session.userId))return;
+      if(verificationGrace?.(session.userId))return;
       const legacyAdmin=await database.prepare("SELECT m.id FROM hsc_members m JOIN hsc_auth_links l ON l.member_id=m.id WHERE l.auth_user_id=? AND m.role='admin' AND m.status='active'").bind(session.userId).first();
       if(!legacyAdmin)throw new APIError('FORBIDDEN',{code:'EMAIL_NOT_VERIFIED',message:'Verify your email before signing in.'});
     }}}},

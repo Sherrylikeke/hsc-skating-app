@@ -1,5 +1,5 @@
 export type VerificationDelivery={enabled:boolean;registrationEnabled?:boolean;send?:(email:string,url:string)=>Promise<void>;sendReset?:(email:string,url:string)=>Promise<void>};
-export type MailEnvironment={HSC_EMAIL_VERIFICATION_ENABLED?:string;HSC_PUBLIC_REGISTRATION_ENABLED?:string;RESEND_API_KEY?:string;HSC_EMAIL_FROM?:string};
+export type MailEnvironment={HSC_EMAIL_VERIFICATION_ENABLED?:string;HSC_PUBLIC_REGISTRATION_ENABLED?:string;HSC_EMAIL_VERIFICATION_GRACE_USERS?:string;RESEND_API_KEY?:string;HSC_EMAIL_FROM?:string};
 export function verificationDelivery(runtime:MailEnvironment):VerificationDelivery {
   if(runtime.HSC_EMAIL_VERIFICATION_ENABLED!=='true'||!runtime.RESEND_API_KEY||!runtime.HSC_EMAIL_FROM)return {enabled:false};
   async function deliver(email:string,url:string,reset=false){

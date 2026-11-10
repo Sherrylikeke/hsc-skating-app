@@ -14,6 +14,14 @@ Invited users choose their own username and password and still provide a listed 
 
 The isolated core regression covers the actual runtime callback with no platform identity, email and username login, no outgoing requests, unchanged unverified status, single use, failed-password retry, role/email mismatch, expiry, cross-site requests, anonymous protected endpoints, direct-header spoof attempts and removal of the list. Anonymous production checks must be performed again after changing the outer access policy; do not consume a real tester invitation merely to test.
 
+## Existing-account compatibility prepared on 2026-11-09
+
+The user has already authorized opening ordinary registration. Three actual Resend DNS records now resolve publicly; the original provider domain detail page independently shows the domain and all three records as Verified (Nov09 23:09), sending enabled and receiving disabled. Real delivery still needs confirmation. The configured sender is `HSC Skating <accounts@mail.memberportal.dev>`, applied at runtime revision 7 with both mail and ordinary registration still disabled. Earlier proposed-domain and login-page descriptions below are historical.
+
+One existing unverified non-pilot account needs compatibility before mail activation. The pending source change accepts `HSC_EMAIL_VERIFICATION_GRACE_USERS` only as a strict JSON array of at most 20 exact authentication user IDs. Configure only audited existing IDs as a secret through Sites; never put real values in source or documentation. Matching accounts retain email/username login and shared schedules while unverified. They project to role-null `club-viewer`; private relationships, notifications and writes remain blocked. Disabled accounts and revoked sessions remain rejected. Actual verification automatically stops this projection. Database verification, roles and relationships are not rewritten. New accounts are not added automatically. This change and its runtime list are not yet deployed.
+
+The core regression passes 27 isolated groups with zero external messages, including this compatibility, malformed/missing allowlists and disabled-account/session behavior. Do not interpret capture tests as real delivery acceptance. The production compatibility change must be published before enabling mail.
+
 ## User actions before activation
 
 1. Choose and register a mail provider account. If using this adapter, use Resend. Provider registration, any charges and domain purchase must be performed by the user.

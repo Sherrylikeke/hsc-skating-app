@@ -7,6 +7,7 @@ import {createPasswordAuth, productionOrigin} from './password-auth';
 import {verificationDelivery} from './verification-mail';
 import type {MailEnvironment} from './verification-mail';
 import {isRegisteredPilot,pilotInvitationFor} from './pilot-registration';
+import {legacyVerificationAccess} from './legacy-verification';
 
 export const ownerEmail = 'sherrylikeke@gmail.com';
 export function passwordAuth(request: Request) {
@@ -18,14 +19,14 @@ export function passwordAuth(request: Request) {
     const identity=await getChatGPTUser();
     if(!identity||identity.email.toLowerCase()!==email)return null;
     try {const member=await actor(db(),identity,incoming);return member.role;}catch{return null;}
-  },verificationDelivery(runtime),async(_request,email,token)=>pilotInvitationFor(runtime.HSC_PILOT_REGISTRATIONS,token,email));
+  },verificationDelivery(runtime),async(_request,email,token)=>pilotInvitationFor(runtime.HSC_PILOT_REGISTRATIONS,token,email),userId=>legacyVerificationAccess(runtime.HSC_EMAIL_VERIFICATION_GRACE_USERS,userId));
 }
 export async function requestIdentity(request: Request) {
   const auth = passwordAuth(request);
   const session = auth ? await auth.api.getSession({headers:request.headers}) : null;
   if (!session) return await getChatGPTUser();
   const link = await db().prepare('SELECT member_id FROM hsc_auth_links WHERE auth_user_id=?').bind(session.user.id).first<{member_id:string}>();
-  return {userId:link?.member_id || 'password:'+session.user.id,email:session.user.email,displayName:session.user.name,provider:'password' as const,authToken:session.session.token,authVerified:session.user.emailVerified,emailVerificationRequired:verificationDelivery(env as unknown as MailEnvironment).enabled&&!await isRegisteredPilot(db(),session.user.id)};
+  return {userId:link?.member_id || 'password:'+session.user.id,email:session.user.email,displayName:session.user.name,provider:'password' as const,authToken:session.session.token,authVerified:session.user.emailVerified,emailVerificationGrace:!session.user.emailVerified&&legacyVerificationAccess((env as unknown as MailEnvironment).HSC_EMAIL_VERIFICATION_GRACE_USERS,session.user.id),emailVerificationRequired:verificationDelivery(env as unknown as MailEnvironment).enabled&&!await isRegisteredPilot(db(),session.user.id)};
 }
 export async function requestMember(request: Request, roles?: Role[]): Promise<Member> {
   const member = await actor(db(), await requestIdentity(request), request);

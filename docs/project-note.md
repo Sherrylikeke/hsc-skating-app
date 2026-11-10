@@ -2,6 +2,24 @@
 
 这是项目负责人的持续维护记录，不属于会员网页内容。后续会话先读取本文件与 AGENTS.md，在完成实质修改或验收后更新；不自动轮询、不新增定时任务。下列运行数据是查询快照，不是实时监控。
 
+## 2026-11-09 DNS 添加后的注册兼容检查
+
+- 用户完成Resend验证后，本轮已恢复Chrome连接并读取原域名详情：mail.memberportal.dev状态Verified，DKIM及两条发送CNAME均Verified，Enable Sending开启、Receiving关闭；域名验证事件显示Nov09 23:09。此前尚未确认Verified的记录为历史快照。Sites只读重查仍V34/public、运行配置revision7、邮箱验证false，普通注册键缺失；没有执行新部署或真实发信。
+- 用户回复已添加DNS。Google公共DNS HTTPS查询已返回三条账户要求的记录：DKIM公开值一致、rsend.mail及send.mail的CNAME目标正确。本机解析器曾返回不存在，属于较早查询快照；尚未独立确认Resend后台Verified。浏览器调试连接报Debugger unattached，已请用户在原Resend域名页提交验证并回复结果；不使用桌面接管替代。
+- 生产账号只读审查发现：四个密码账号中三个未验证，其中两个已有已消费专属邀请记录，另一个为既有有效家长。直接开启邮件会阻断后者登录，故先准备精确账号ID的兼容机制；私人账号ID只允许进入Sites秘密运行配置，不写源码或交接。
+- 本地新增HSC_EMAIL_VERIFICATION_GRACE_USERS（JSON账号ID数组，至多20项，严格格式与精确匹配）；仅保留指定旧账号邮箱/用户名登录及共享赛程访问。未验证时投影为club-viewer/无私人角色，不改email_verified或数据库角色/关系，停用和撤销会话继续生效；新注册不享受例外。新代码尚未部署，该运行键尚未保存。
+- 核心隔离回归27组、Web类型检查、官方生产构建及真实Worker/D1隔离回归均通过，外部发信0封；新增覆盖精确匹配、损坏配置拒绝、旧账号登录、私人接口拒绝、停用撤销及未验证状态保持。Worker继续覆盖原管理员/内测登录、共享赛程、私人写入拒绝、会话撤销和Keswick目录展开。构建首次被沙箱spawn EPERM阻断，获本地构建/隔离测试升级后通过；未传入任何真实凭据，未连接生产数据库。
+- Sites官方源码助手接收原项目短期凭据被自动审批连续拒绝，理由是将活凭据传入沙箱外已运行终端缺少明确授权。已只读核实唯一接收进程为官方site-workflow.mjs、确切原项目参数及隐藏stdin，复核后仍拒绝；没有改用文件、argv、环境变量或其他传输绕过。等待用户明确允许该官方凭据传递和原站部署；公开GitHub新增内容仍未推送。
+- 线上仍为V34、配置revision7：From已应用，邮箱验证false、普通注册关闭。本轮没有真实发信、生产账号修改、数据库迁移或新定时任务；不能将DNS存在等同邮件送达或注册已开放。
+
+## 2026-11-09 Resend 登录后的发信域名准备
+
+- 用户已完成Resend登录并要求继续开放注册。实际读取sherrylikeke账户的Domains为空，新建mail.memberportal.dev（North Virginia），未购买域名、订阅或新建账户。Enable Sending开启、Enable receiving关闭；仍处于DNS验证准备阶段，未确认Verified。
+- Resend实际要求为TXT resend._domainkey.mail（账户生成的DKIM公开值），以及DNS-only CNAME rsend.mail→rsend.forge.rmta.net、send.mail→send.forge.rmta.net；并非旧文档示例中的MX/SPF记录。可选根域DMARC未改，网站CNAME及根域收信配置未动。精确记录已保存为本会话outputs/2026-11-09/Resend-DNS记录.md。
+- Sites已安全保存HSC_EMAIL_FROM=HSC Skating <accounts@mail.memberportal.dev>，配置revision7。HSC_EMAIL_VERIFICATION_ENABLED仍false，HSC_PUBLIC_REGISTRATION_ENABLED仍缺失/关闭，没有真实发信、普通注册或伪验证。准备将同一V34保存版本应用到revision7，不为此改运行源码。
+- 浏览器在打开Cloudflare时超时，随后浏览器连接恢复调用连续超时并重置，未能读取/修改Cloudflare DNS；不能把Add Domain成功冒称DNS生效。后续需要恢复浏览器连接或用户按已生成清单添加三条DNS，Resend验证通过后再进行受控真实邮件/验证流程及正式开放。原用户的开放授权继续有效，无需再次问是否要开放。
+- 本机DNS只读查询三条名称均返回DNS name does not exist。V34同保存版本的配置部署appgdep_6af24e3b27108191bceba72b4d718268于2026-11-09 17:50:45 Toronto succeeded、env revision7、MCP ready，已应用发件地址但邮件和普通注册继续关闭。未生成新API密钥、未授权Resend自动修改Cloudflare、未发送真实邮件；最新Note仅在本地，仍不向公开GitHub推送。
+
 ## 2026-11-09 Keswick 出场顺序漏更与公开注册请求
 
 - 用户反馈Keswick已公布Starting Order并要求开放公开注册。重新核对线上V33、public、原小时任务enabled；邮件配置revision6，RESEND_API_KEY存在、HSC_EMAIL_FROM缺失、HSC_EMAIL_VERIFICATION_ENABLED=false，普通注册仍关闭。用户此次已授权开放普通注册，但真实发信域名仍待配置；Resend浏览器当前停在登录页，已请用户完成登录，不能绕过邮箱验证或伪造验证状态。
@@ -9,6 +27,9 @@
 - 修复同时展开results/start-order非PDF汇总页；发现子出场文档后不再把父目录当单份顺序。首次优先HSC已匹配选手的报名PDF同类别顺序来源，规范www与裸域；每轮仍最多4份，按attemptedAt轮转，失败文件不会长期卡住队列。同步返回独立startingOrderFiles进度，避免部分导入冒称全量成功。原名单、历史赛程、人工教练安排和失败保留规则不变。
 - 新增官方Keswick目录HTML和两份真实PDF夹具：Pre-Juvenile Women U11 Group2有10行，Sydney Mitchell官方#2；STAR7 Women O12 Group1有15行。两份均未明确列出热身组及个人时间，保持null。单元回归覆盖相关类别优先、失败轮转，Worker/D1回归覆盖混合标题目录展开61份、四份上限及Sydney顺序，生产发布和补同步结果待完成后补记。
 - 本轮Web类型、18项功能脚本、官方生产构建及真实隔离Worker/D1回归全部通过。Keswick测试确认目录61份、首批4份且Sydney来源优先、#2正确、热身组/个人时间不伪造、失败后下一批不重复卡在原文件。改动仅服务端同步及测试，不需重建既有客户端；网页和客户端刷新同一API即可读取更新。
+- V34（运行源码5a3b09a4a5e7b7166b7efe0db922ebb4c0900c95；保存版本appgprj_6ad76ca2dba481919ba883865cbd5a0d~appgver_817ddab8088481919b5d4564c76c86ef）部署appgdep_6af237a8eca881918e53577b70954462于2026-11-09 16:14:26 Toronto返回succeeded、env revision6、MCP ready。保留原权限、邮件/注册关闭配置与每小时任务，无数据库迁移或客户端包重建。
+- 通过原HSC工具依次补同步16轮，每轮不超过4份。最后核验2026-11-09T21:18:12.204Z：604条官方出场信息、57/61份核对通过、4份Level3/4特殊类别格式待核对，不报全量成功；651条原参赛记录、40个已识别组别时段及教练安排保留。线上预览已返回Fiora Dong #1、Sydney Mitchell #2、Annie Dong #7、Shirley Dong #11；原赛程PDF尚未支持/不完整行继续提示核对，出场PDF未列热身组/个人时间时仍为null。完整补同步结果在本会话outputs/2026-11-09/keswick-sync.json。
+- 本次新修复、测试夹具及记录已同步Sites源仓库，但公开GitHub推送被自动审批拒绝：上次用户确认只覆盖上一份发布记录，新增payload需明确公开授权。未绕过拒绝，待用户确认本次新提交推送。公开注册已有本轮用户授权，但截至本次记录仍等待用户在Resend浏览器登录及验证实际发信域名；HSC_EMAIL_FROM仍缺失，没有发送邮件或开启注册。
 
 ## 2026-11-09 远端更新发布到网站与客户端
 

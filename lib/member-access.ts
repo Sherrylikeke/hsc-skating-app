@@ -1,5 +1,5 @@
 export type Role = 'admin' | 'parent' | 'skater' | 'coach';
-export type Identity = {userId: string; email: string; displayName: string; provider?: 'password'; authToken?: string; authVerified?:boolean; emailVerificationRequired?:boolean};
+export type Identity = {userId: string; email: string; displayName: string; provider?: 'password'; authToken?: string; authVerified?:boolean; emailVerificationRequired?:boolean; emailVerificationGrace?:boolean};
 export type Member = {id: string; email: string; name: string; role: Role | null; requested_role: Role; status: string; auth_version: number};
 export type Candidate = {id: string; name: string; identityPending?: boolean; training?: boolean; coach?: string};
 export class AccessError extends Error {
@@ -66,6 +66,7 @@ export async function actor(database: D1Database, identity: Identity | null, req
   const member = await database.prepare('SELECT m.* FROM hsc_members m JOIN hsc_sessions s ON s.member_id=m.id AND s.auth_version=m.auth_version WHERE m.id=? AND lower(m.email)=? AND s.hash=? AND s.revoked_at IS NULL AND s.expires_at>?').bind(identity.userId, identity.email.toLowerCase(), await sessionHash(request, identity), nowISO()).first<Member>();
   if (!member) throw new AccessError(401, '请进入会员入口重新登录');
   if (member.status === 'disabled') throw new AccessError(403, '账号已停用，请联系管理员');
+  if(identity.provider==='password'&&!identity.authVerified&&identity.emailVerificationGrace&&member.role!=='admin'&&['active','club-viewer'].includes(member.status))return {...member,status:'club-viewer',role:null};
   if(identity.provider==='password'&&identity.emailVerificationRequired&&!identity.authVerified&&member.role!=='admin')throw new AccessError(403,'Verify your email before signing in.');
   if (identity.provider==='password'&&!identity.authVerified&&member.status==='active') {
     if(active)throw new AccessError(403,'Confirm account ownership using an administrator-issued invitation before accessing private records.');
