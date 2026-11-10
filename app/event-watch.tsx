@@ -62,7 +62,8 @@ function EventTimeline({event,ownIds,skaters,now,refreshClock,storageKey,rink,fr
   const own=new Set(ownIds);
   const selectedFriends=choices.filter(c=>!own.has(c.id)&&friends.includes(c.id));
   const search=query.trim().toLocaleLowerCase();
-  const visibleChoices=choosing ? choices.filter(c=>!own.has(c.id)&&[c.name,...c.details].some(s=>s.toLocaleLowerCase().includes(search))) : [];
+  const visibleChoices=choosing ? choices.filter(c=>!own.has(c.id)&&[c.name,...c.details].some(s=>s.toLocaleLowerCase().includes(search)))
+    .sort((a,b)=>Number(friends.includes(b.id))-Number(friends.includes(a.id))||a.name.localeCompare(b.name)) : [];
   const selected=useMemo(()=>new Set([...ownIds,...friends]),[ownIds,friends]);
   const watched=useMemo(()=>watchedRows(event,skaters,selected),[event,skaters,selected]);
   const today=localDate(now,event.timezone);
@@ -92,13 +93,14 @@ function EventTimeline({event,ownIds,skaters,now,refreshClock,storageKey,rink,fr
     </details>
     {saveFailed&&<p role="status">{text('This selection is available until you leave this view.','当前选择可用至离开本页面。')}</p>}
     <div className="watch-toolbar">
-      <div className="watch-mode"><button type="button" aria-pressed={fromNow} onClick={()=>{onFilter({fromNow:true});refreshClock();}}>{text('From now','从现在看')}</button>
+      <div className="watch-mode"><button type="button" aria-pressed={fromNow} onClick={()=>{onFilter({fromNow:true});refreshClock();}}>{text('Remaining groups','当天未结束')}</button>
         <button type="button" aria-pressed={!fromNow} onClick={()=>onFilter({fromNow:false})}>{text('Whole event','整场比赛')}</button></div>
       {rinks.length>0&&<CompactSelect aria-label={text('Ice surface','比赛冰面')} value={activeRink} onChange={e=>onFilter({rink:e.target.value})}>
         <option value="">{text('All rinks','所有冰面')}</option>{rinks.map(r=><option key={r}>{r}</option>)}
       </CompactSelect>}
     </div>
     <p className="watch-date">{fromNow ? day : event.start+(event.end===event.start?'':' – '+event.end)} · {event.timezone || text('Time zone pending','时区待公布')}</p>
+    {fromNow&&<p className="watch-date">{text('Groups still in progress or coming up on this date. Before the event starts, this shows its first day.','仅看这一天进行中和尚未开始的组别；赛前显示比赛第一天。')}</p>}
     {ranked.length>0?<ol className="watch-timeline">{ranked.map(({row,status})=><li key={row.id}>
       <div className="watch-person"><strong>{row.skaterName}</strong><b>{row.uncertain&&row.rink&&text('Possible rink · ','候选冰面 · ')}{row.rink||text('Rink pending','冰面待公布')}</b></div>
       <div>{row.category}{row.activity==='practice'&&' · '+text('Practice','练习')}</div>

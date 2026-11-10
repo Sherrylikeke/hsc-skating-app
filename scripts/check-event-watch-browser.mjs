@@ -92,7 +92,7 @@ async function walk(browser,profile,language,folder) {
     await choose(ui('Ice surface','比赛冰面'),ui('All rinks','所有冰面'));
     await page.getByRole('button',{name:ui('Whole event','整场比赛'),exact:true}).click();
     await row(names[0]).waitFor();
-    await page.getByRole('button',{name:ui('From now','从现在看'),exact:true}).click();
+    await page.getByRole('button',{name:ui('Remaining groups','当天未结束'),exact:true}).click();
     assert.equal(await row(names[0]).count(),0);
     await choose(ui('Competition to watch','关注的比赛'),'Winter Cup · '+day);
     assert.equal(await row(names[4]).count(),0);

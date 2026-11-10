@@ -26,12 +26,16 @@ const workerOptions={cf:false,modules,modulesRoot:root,compatibilityDate:runtime
 },outboundService:request=>{const url=new URL(request.url);
 if(url.hostname==='skatingresults.ca'){if(url.pathname.endsWith('/categories'))return Response.json({Categories:[startingFixture.category]});if(url.pathname.endsWith('/segments'))return Response.json({Segments:startingFixture.segments});const id=url.pathname.match(/segment\/([^/]+)\/entries$/)?.[1];if(id)return Response.json(startingFixture.entries[id]);return new Response(startingHtml);}
 if(url.hostname==='www.skateontario.org'){
+if(url.pathname==='/fixture-max/')return new Response('<a href="https://www.skateontario.org/fixture-keswick-schedule.pdf">Schedule</a><a href="https://www.skateontario.org/fixture-max-entries.html">Entry List</a><a href="https://www.skateontario.org/results/27KES/27KesSTAR5MenU10FP2SO.pdf">Starting Order</a>');
+if(url.pathname==='/fixture-keswick-schedule.pdf')return new Response(fs.readFileSync('tests/fixtures/keswick-2026-oct28-schedule.pdf'));
+if(url.pathname==='/fixture-max-entries.html')return new Response('<table><tr data-category="STAR 5 Men (U10)" data-club="Hamilton SC" data-section="ON"><td>Max Wang</td></tr></table>');
 if(url.pathname==='/fixture-keswick/')return new Response('<a href="https://www.skateontario.org/results/27KES/">Start Orders/Results</a>');
 if(url.pathname==='/results/27KES/')return new Response(fs.readFileSync('tests/fixtures/keswick-2026-starting-order-index.html','utf8'));
 if(url.pathname.startsWith('/results/27KES/')){
   keswickReads.push(url.pathname);
   if(url.pathname.endsWith('27KesPre-JuvenileWomenU11Group2FP2SO.pdf'))return new Response(fs.readFileSync('tests/fixtures/keswick-2026-preju-u11-group2-start.pdf'));
   if(url.pathname.endsWith('27KesSTAR7WomenO12Group1SP2SO.pdf'))return new Response(fs.readFileSync('tests/fixtures/keswick-2026-star7-o12-group1-start.pdf'));
+  if(url.pathname.endsWith('27KesSTAR5MenU10FP2SO.pdf'))return new Response(fs.readFileSync('tests/fixtures/keswick-2026-star5-men-u10-start.pdf'));
   return new Response('Fixture failed read',{status:503});
 }
 if(url.pathname==='/fixture-low-star/')return new Response('<a href="https://www.skateontario.org/fixture-low-star-schedule.pdf">Schedule</a><a href="https://www.skateontario.org/fixture-low-star-entry.pdf">Entry List</a>');
@@ -116,6 +120,14 @@ try {
   assert.equal(reparsedDraw.startingOrders.find(order=>order.skaterIds.includes(sydney.id)).warmupGroup,1);
   assert.equal(reparsedDraw.documents.find(document=>document.url===sydneyOrder.sourceUrl).parserVersion,'starting-draw-3');
   console.log('Keswick combined Start Orders/Results hub expands to 61 PDF documents; the related Sydney group imports first, official #2 is preserved, and failed files rotate within the four-file limit.');
+  const maxEvent={...syncEvent,id:'SO-999996',url:'https://www.skateontario.org/fixture-max/'};
+  await database.prepare('INSERT INTO live_events (id,payload,updated_at) VALUES (?,?,?)').bind(maxEvent.id,JSON.stringify(maxEvent),new Date().toISOString()).run();
+  const maxResponse=await post('/api/sync',{eventId:maxEvent.id},platformHeaders);assert.equal(maxResponse.status,200,await maxResponse.clone().text());
+  const maxSync=await maxResponse.json(),maxRow=maxSync.schedulePreview.find(row=>row.name==='Max Wang');
+  const maxSaved=JSON.parse((await database.prepare('SELECT payload FROM live_events WHERE id=?').bind(maxEvent.id).first()).payload);
+  assert.ok(maxRow,JSON.stringify({entries:maxSaved.participants,blocks:maxSaved.blocks.filter(b=>b.date==='2026-11-20'&&b.start>='17:00'&&b.start<'18:00')}));
+  assert.equal(maxRow.date,'2026-11-20');assert.equal(maxRow.start,'17:35');assert.equal(maxRow.end,'18:10');assert.equal(maxRow.rink,'BLUE RINK');assert.equal(maxRow.startNumber,2);assert.equal(maxRow.warmupGroup,1);
+  console.log('Real Keswick PDF in Worker: Max Wang retains Friday 17:35–18:10 BLUE RINK, official #2 and warm-up 1 in the shared regular/NQ session.');
   const newSkater={name:'Fixture Added Skater',coach:'Jen Jackson/Bryce Davidson',training:true,identityPending:false,profileRevision:null,coachRevision:0};
   assert.equal((await post('/api/skaters',newSkater)).status,401);
   for(const role of ['parent','coach']){
