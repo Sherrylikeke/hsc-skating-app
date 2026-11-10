@@ -99,10 +99,22 @@ try {
   assert.ok(!keswickSaved.documents.some(document=>document.kind==='start-order'&&document.url.endsWith('/27KES/')));
   assert.equal(keswickReads.length,4);assert.ok(keswickReads[0].endsWith('27KesPre-JuvenileWomenU11Group2FP2SO.pdf'));
   const sydneyOrder=keswickSaved.startingOrders.find(order=>order.skaterIds.includes(sydney.id));
-  assert.equal(sydneyOrder.startNumber,2);assert.equal(sydneyOrder.warmupGroup,null);assert.equal(sydneyOrder.individualTime,null);
+  assert.equal(sydneyOrder.startNumber,2);assert.equal(sydneyOrder.warmupGroup,1);assert.equal(sydneyOrder.individualTime,null);
+  assert.equal(keswickSaved.documents.find(document=>document.url===sydneyOrder.sourceUrl).parserVersion,'starting-draw-3');
   const firstReads=[...keswickReads];
   assert.equal((await post('/api/sync',{eventId:keswickEvent.id},platformHeaders)).status,200);
   assert.equal(keswickReads.length,8);assert.ok(keswickReads.slice(4).every(url=>!firstReads.includes(url)));
+  const staleDraw=JSON.parse((await database.prepare('SELECT payload FROM live_events WHERE id=?').bind(keswickEvent.id).first()).payload);
+  for(const document of staleDraw.documents.filter(document=>document.kind==='start-order')){
+    if(document.url===sydneyOrder.sourceUrl)document.parserVersion='starting-draw-2';
+    else {document.parserVersion='starting-draw-3';document.attemptedAt='2099-01-01';document.checkedAt='2099-01-01';}
+  }
+  staleDraw.startingOrders.forEach(order=>order.warmupGroup=null);
+  await database.prepare('UPDATE live_events SET payload=? WHERE id=?').bind(JSON.stringify(staleDraw),keswickEvent.id).run();
+  assert.equal((await post('/api/sync',{eventId:keswickEvent.id},platformHeaders)).status,200);
+  const reparsedDraw=JSON.parse((await database.prepare('SELECT payload FROM live_events WHERE id=?').bind(keswickEvent.id).first()).payload);
+  assert.equal(reparsedDraw.startingOrders.find(order=>order.skaterIds.includes(sydney.id)).warmupGroup,1);
+  assert.equal(reparsedDraw.documents.find(document=>document.url===sydneyOrder.sourceUrl).parserVersion,'starting-draw-3');
   console.log('Keswick combined Start Orders/Results hub expands to 61 PDF documents; the related Sydney group imports first, official #2 is preserved, and failed files rotate within the four-file limit.');
   const newSkater={name:'Fixture Added Skater',coach:'Jen Jackson/Bryce Davidson',training:true,identityPending:false,profileRevision:null,coachRevision:0};
   assert.equal((await post('/api/skaters',newSkater)).status,401);

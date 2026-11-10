@@ -6,7 +6,7 @@ import {importEntries} from './entry-import';
 import {parseStartingOrderPdf,parseStartingOrderHtml} from './starting-order';
 import {importStartingOrderApp,startingOrderApp} from './starting-order-api';
 import {selectStartingOrderDocuments} from './starting-order-selection';
-import {todayToronto,ENTRY_PDF_VERSION} from './club-types';
+import {todayToronto,ENTRY_PDF_VERSION,STARTING_DRAW_VERSION} from './club-types';
 import type {LiveEvent} from './club-types';
 import {drainOutbox} from './member-messages';
 const allowedHosts=new Set(['skateontario.org','www.skateontario.org','dstools.ca','www.dstools.ca','skatingresults.ca','www.skatingresults.ca']);
@@ -29,7 +29,7 @@ const message=(error:unknown)=>error instanceof Error?error.message:'官网读�
 const SCHEDULE_VERSION='schedule-bands-5';
 const readPdfItems=readOfficialPdfItems;
 function entryProgress(event:LiveEvent){const files=event.documents.flatMap(document=>(document.entryFiles||[]).map(file=>({file,rosterHash:document.matchingRosterHash})));const verified=files.filter(({file,rosterHash})=>file.checkedAt&&!file.error&&file.parserVersion===ENTRY_PDF_VERSION&&file.matchingRosterHash===rosterHash).length;return {total:files.length,verified,pending:files.length-verified};}
-function startingOrderProgress(event:LiveEvent){const documents=event.documents.filter(document=>document.kind==='start-order');const verified=documents.filter(document=>document.checkedAt&&!document.error).length;return {total:documents.length,verified,pending:documents.length-verified};}
+function startingOrderProgress(event:LiveEvent){const documents=event.documents.filter(document=>document.kind==='start-order');const verified=documents.filter(document=>document.checkedAt&&!document.error&&(document.parserVersion===STARTING_DRAW_VERSION||document.parserVersion==='starting-api-1')).length;return {total:documents.length,verified,pending:documents.length-verified};}
 async function syncCalendarBody(){
   const now=new Date().toISOString();await putSyncStatus({lastAttempt:now,error:null});
   try{
@@ -101,12 +101,12 @@ async function syncEventBody(id:string){
           if(imported.errors.length){doc.error=imported.errors.join('；');errors.push(doc.error);}else delete doc.error;
           continue;
         }
-        if(previous?.hash!==hash||previous.parserVersion!=='starting-draw-2'||!orders.some(o=>o.sourceUrl===doc.url)||previous.matchingRosterHash!==matchingRosterHash){
+        if(previous?.hash!==hash||previous.parserVersion!==STARTING_DRAW_VERSION||!orders.some(o=>o.sourceUrl===doc.url)||previous.matchingRosterHash!==matchingRosterHash){
           let parsed;if(/\.pdf(?:$|\?)/i.test(doc.url)){parsed=parseStartingOrderPdf(await readPdfItems(bytes),doc.url,roster);}else parsed=parseStartingOrderHtml(new TextDecoder().decode(bytes),doc.url,roster);
           if(!parsed.length)throw new Error('出场顺序格式待核对，保留上次有效资料');if(previous?.hash!==hash||JSON.stringify(parsed)!==JSON.stringify(orders.filter(order=>order.sourceUrl===doc.url)))changed++;orders=[...orders.filter(o=>o.sourceUrl!==doc.url),...parsed];
-        }doc.hash=hash;doc.parserVersion='starting-draw-2';doc.matchingRosterHash=matchingRosterHash;doc.checkedAt=now;delete doc.error;
+        }doc.hash=hash;doc.parserVersion=STARTING_DRAW_VERSION;doc.matchingRosterHash=matchingRosterHash;doc.checkedAt=now;delete doc.error;
       }catch(error){doc.error=message(error);errors.push(doc.error);}}
-      event.startingOrders=orders;const pending=orderDocs.filter(d=>!d.checkedAt||d.error).length;event.startingOrderStatus=pending?`已读取 ${orders.length} 条出场信息，${pending} 份文件待核对`:`已读取 ${orders.length} 条官方出场信息`;
+      event.startingOrders=orders;const pending=orderDocs.filter(d=>!d.checkedAt||d.error||(d.parserVersion!==STARTING_DRAW_VERSION&&d.parserVersion!=='starting-api-1')).length;event.startingOrderStatus=pending?`已读取 ${orders.length} 条出场信息，${pending} 份文件待核对`:`已读取 ${orders.length} 条官方出场信息`;
     }else event.startingOrderStatus=existing.startingOrders?.length?'官网当前未列出出场链接，保留已读取版本':'官网尚未发现 Starting Order 链接';
     event.detailError=errors.join('；')||undefined;await putLiveEvent(event);await putSyncStatus({lastAttempt:now,lastSuccess:errors.length?undefined:now,error:errors.join('；')||null,entries:event.participants.filter(row=>row.skaterIds.length).length,blocks:event.blocks.length});
     return {id:event.id,name:event.name,changed,participants:event.participants.length,matchedSkaters:new Set(event.participants.flatMap(row=>row.skaterIds)).size,blocks:event.blocks.length,entryFiles:entryProgress(event),startingOrderFiles:startingOrderProgress(event),startingOrderStatus:event.startingOrderStatus,entryStatus:event.entryStatus,scheduleStatus:event.scheduleStatus,schedulePreview:scheduleRows([event],roster).filter(row=>row.activity==='competition'&&row.startingOrder).slice(0,40).map(row=>({name:row.skaterName,category:row.category,date:row.date,start:row.start,end:row.end,rink:row.rink,uncertain:row.uncertain,startNumber:row.startingOrder!.startNumber,warmupGroup:row.startingOrder!.warmupGroup,individualTime:row.startingOrder!.individualTime,sourceUrl:row.startingOrder!.sourceUrl})),checkedAt:now,errors};

@@ -14,6 +14,30 @@ export function scheduledProgram(category:string){
 }
 function ids(name:string,roster:Roster){return name.split(/\s*\/\s*/).flatMap(part=>{const matches=roster.filter(s=>!s.identityPending&&normalizeName(s.name)===normalizeName(part));return matches.length===1?[matches[0].id]:[];});}
 function row(name:string,category:string,startNumber:number,warmupGroup:number|null,individualTime:string|null,sourceUrl:string,page:number,roster:Roster):StartingOrder{return {id:`${sourceUrl}|${category}|${name}`,name,category,program:scheduledProgram(category),startNumber,warmupGroup,individualTime,sourceUrl,page,skaterIds:ids(name,roster)};}
+type DrawLine={y:number;items:PdfItem[]};
+type LayoutEntry={order:StartingOrder;y:number;height:number|undefined};
+function applyLayoutWarmups(items:PdfItem[],lines:DrawLine[],entries:LayoutEntry[],headerY:number,nameX:number,clubX:number){
+  // Verified Skate Canada draw layout: aligned # / Name / Club / Section,
+  // a dated footer, regular single-line entries, and larger gaps between heats.
+  // Category titles, a fixed number of skaters, and page breaks are never boundaries.
+  if(!entries.length||!['#','Section'].every(label=>items.some(i=>i.str.trim()===label&&Math.abs(i.y-headerY)<3))||
+    !items.some(i=>i.str.trim()==='Date:'&&i.y<35))return;
+  if(entries.some((entry,index)=>entry.order.startNumber<1||(index>0&&entry.order.startNumber<=entries[index-1].order.startNumber)||entry.order.warmupGroup!==null||!entry.height||entry.height<=0))return;
+  const withdrawn=lines.filter(line=>line.items.some(i=>i.x<nameX-3&&/^(?:WD|DNS)$/i.test(i.str.trim()))&&line.items.some(i=>i.x>=nameX-2&&i.x<clubX-5&&i.str.trim()));
+  if(entries.at(-1)!.order.startNumber-entries.length>withdrawn.length)return;
+  const heights=entries.map(entry=>entry.height!).sort((a,b)=>a-b),height=heights[Math.floor(heights.length/2)];
+  if(heights.some(value=>Math.abs(value-height)>height*.05))return;
+  if(lines.some(line=>line.y<=entries[0].y&&!entries.some(entry=>Math.abs(entry.y-line.y)<2)&&!withdrawn.includes(line)))return;
+  const gaps=entries.slice(1).map((entry,index)=>entries[index].y-entry.y);
+  const regular=gaps.filter(gap=>gap>=height*1.45&&gap<=height*1.75).sort((a,b)=>a-b);
+  if(gaps.length&&!regular.length)return;
+  const baseline=regular[Math.floor(regular.length/2)],tolerance=Math.max(.4,height*.06);
+  const separators=gaps.filter(gap=>Math.abs(gap-baseline)>tolerance);
+  if(separators.some(gap=>gap<baseline*1.25||gap>baseline*1.7)||
+    separators.some(gap=>Math.abs(gap-separators[0])>tolerance))return;
+  let group=1;
+  entries.forEach((entry,index)=>{if(index&&gaps[index-1]>baseline+tolerance)group++;entry.order.warmupGroup=group;entry.order.drawComplete=true;entry.order.withdrawnCount=withdrawn.length;});
+}
 export function parseStartingOrderPdf(pages:PdfItem[][],url:string,roster:Roster):StartingOrder[]{
   const output:StartingOrder[]=[];let warmup:number|null=null;let category='';
   pages.forEach((items,page)=>{const text=items.map(i=>i.str).join(' ');if(!/starting\s*order/i.test(text))return;
@@ -22,13 +46,16 @@ export function parseStartingOrderPdf(pages:PdfItem[][],url:string,roster:Roster
     const nameHeader=items.find(i=>/^name$/i.test(i.str.trim()));const clubHeader=items.find(i=>/^club$/i.test(i.str.trim()));if(!nameHeader||!clubHeader)return;
     const warmHeader=items.find(i=>/warm.?up\s*group/i.test(i.str)&&Math.abs(i.y-nameHeader.y)<3);
     const timeHeader=items.find(i=>/^(?:start\s*)?time$/i.test(i.str.trim())&&Math.abs(i.y-nameHeader.y)<3);
-    const lines:Array<{y:number;items:PdfItem[]}>=[];for(const i of items.filter(i=>i.str.trim()&&i.y<nameHeader.y-3&&i.y>35).sort((a,b)=>b.y-a.y)){let line=lines.find(l=>Math.abs(l.y-i.y)<2);if(!line){line={y:i.y,items:[]};lines.push(line);}line.items.push(i);}
-    for(const line of lines){const lineText=line.items.sort((a,b)=>a.x-b.x).map(i=>i.str).join(' ');const explicit=lineText.match(/^warm[- ]?up\s+group\s*[:#]?\s*(\d+)$/i);if(explicit){warmup=Number(explicit[1]);continue;}
+    const lines:DrawLine[]=[],layout:LayoutEntry[]=[];let explicitWarmup=!!warmHeader;
+    for(const i of items.filter(i=>i.str.trim()&&i.y<nameHeader.y-3&&i.y>35).sort((a,b)=>b.y-a.y)){let line=lines.find(l=>Math.abs(l.y-i.y)<2);if(!line){line={y:i.y,items:[]};lines.push(line);}line.items.push(i);}
+    for(const line of lines){const lineText=line.items.sort((a,b)=>a.x-b.x).map(i=>i.str).join(' ');const explicit=lineText.match(/^warm[- ]?up\s+group\s*[:#]?\s*(\d+)$/i);if(explicit){warmup=Number(explicit[1]);explicitWarmup=true;continue;}
       const number=line.items.find(i=>i.x<nameHeader.x-3&&/^\d+$/.test(i.str.trim()));const name=line.items.filter(i=>i.x>=nameHeader.x-2&&i.x<clubHeader.x-5).map(i=>i.str).join(' ').trim();if(!number||!name)continue;
       const warmCell=warmHeader?line.items.find(i=>Math.abs(i.x-warmHeader.x)<15&&/^\d+$/.test(i.str.trim())):undefined;
       const timeCell=timeHeader?line.items.find(i=>Math.abs(i.x-timeHeader.x)<15&&/^\d{1,2}:\d{2}(?::\d{2})?(?:\s*[AP]M)?$/i.test(i.str.trim())):undefined;
-      output.push(row(name,category,Number(number.str),warmCell?Number(warmCell.str):warmup,timeCell?.str.trim()||null,url,page+1,roster));
+      const order=row(name,category,Number(number.str),warmCell?Number(warmCell.str):warmup,timeCell?.str.trim()||null,url,page+1,roster);
+      output.push(order);layout.push({order,y:line.y,height:number.height});
     }
+    if(pages.length===1&&!explicitWarmup)applyLayoutWarmups(items,lines,layout,nameHeader.y,nameHeader.x,clubHeader.x);
   });return output;
 }
 export function parseStartingOrderHtml(html:string,url:string,roster:Roster):StartingOrder[]{

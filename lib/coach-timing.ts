@@ -48,6 +48,8 @@ export function coachTimingEstimate(row:ScheduleRow, event:Pick<ClubEvent,'id'|'
   const program=order.program||scheduledProgram(order.category);
   const draw=(event.startingOrders??[]).filter(o=>(o.program||scheduledProgram(o.category))===program && sameCategory(o.category));
   if (draw.some(o=>o.category!==order.category || o.sourceUrl!==order.sourceUrl)) return null;
+  const completePdf=draw.length>0&&draw.every(o=>o.drawComplete===true&&typeof o.withdrawnCount==='number'&&Number.isSafeInteger(o.withdrawnCount)&&o.withdrawnCount>=0&&o.withdrawnCount===draw[0].withdrawnCount);
+  const withdrawals=completePdf?draw[0].withdrawnCount!:0;
   const otherBlocks=event.blocks.filter(b=>b.id!==block.id && b.activity==='competition');
   if (otherBlocks.some(b=>b.date===block.date && b.rink===block.rink && b.start<block.end && b.end>block.start)) return null;
   // Two sessions claiming the same part of this draw cannot both identify a skater's start.
@@ -60,17 +62,18 @@ export function coachTimingEstimate(row:ScheduleRow, event:Pick<ClubEvent,'id'|'
     // Without an explicit number range, verify that this entire draw belongs to one session.
     const entered=event.participants.filter(p=>sameCategory(p.category));
     const names=new Set(entered.map(p=>normalizeName(p.name)));
-    if (entered.length!==draw.length || names.size!==draw.length || !draw.every(o=>names.delete(normalizeName(o.name)))) return null;
+    if (entered.length<draw.length || entered.length-draw.length>withdrawals || names.size!==entered.length || !draw.every(o=>names.delete(normalizeName(o.name)))) return null;
   }
-  const [first,last]=block.range??[1,draw.length];
+  const [first,last]=block.range??[1,completePdf?Math.max(...draw.map(o=>o.startNumber)):draw.length];
   const entries=draw.filter(o=>o.startNumber>=first && o.startNumber<=last).sort((a,b)=>a.startNumber-b.startNumber);
-  if (!entries.length || entries.length!==last-first+1) return null;
-  const slot=entries[order.startNumber-first];
+  if (!entries.length || entries.length>last-first+1 || last-first+1-entries.length>withdrawals) return null;
+  const targetIndex=entries.findIndex(entry=>entry.id===order.id&&entry.startNumber===order.startNumber);
+  const slot=entries[targetIndex];
   if (slot?.id!==order.id || slot.warmupGroup!==order.warmupGroup) return null;
   const groups:number[]=[];
   for (const [index,entry] of entries.entries()) {
     const group=entry.warmupGroup;
-    if (entry.startNumber!==first+index || !Number.isSafeInteger(group) || !group || group<1) return null;
+    if ((!completePdf&&entry.startNumber!==first+index) || (index>0&&entry.startNumber<=entries[index-1].startNumber) || !Number.isSafeInteger(group) || !group || group<1) return null;
     if (group===groups.at(-1)) continue;
     if (groups.length && group!==groups[groups.length-1]+1) return null;
     groups.push(group);
@@ -98,6 +101,6 @@ export function coachTimingEstimate(row:ScheduleRow, event:Pick<ClubEvent,'id'|'
   }
   const firstInGroup=entries.findIndex(o=>o.warmupGroup===order.warmupGroup);
   const groupStart=firstInGroup*perSkater+groups.indexOf(order.warmupGroup)*warmup;
-  const position=order.startNumber-first-firstInGroup;
+  const position=targetIndex-firstInGroup;
   return {warmup:localClock(groupStart),start:localClock(groupStart+warmup+position*perSkater)};
 }
