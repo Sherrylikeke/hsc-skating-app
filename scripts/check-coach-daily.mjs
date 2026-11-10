@@ -55,6 +55,19 @@ registerHooks({
   },
 });
 const {default:CoachDailySchedule}=await import('../app/coach-daily-schedule.tsx');
+const {default:SessionTiming}=await import('../app/session-timing.tsx');
+const timingCategory='STAR 6 Women Group 1',timingSource='https://example.test/draw.pdf';
+const timingBlock={id:'timing',category:timingCategory,group:1,range:null,activity:'competition',date:'2026-11-20',start:'09:00',end:'09:20',rink:'BLUE'};
+const timingOrders=['One','Two','Three'].map((name,index)=>({id:name,name,category:timingCategory,program:'free',startNumber:index+1,warmupGroup:1,individualTime:null,sourceUrl:timingSource}));
+const timingEvent={id:'timing-event',blocks:[timingBlock],startingOrders:timingOrders,participants:timingOrders.map(o=>({name:o.name,category:o.category}))};
+const timingRow={...row('timing-row','2026-11-20','09:00'),id:'timing-event|Two|timing',skaterId:'Two',startingOrder:timingOrders[1]};
+const estimateMarkup=renderToStaticMarkup(createElement(SessionTiming,{row:timingRow,event:timingEvent}));
+assert.match(estimateMarkup,/Estimated warm-up/);assert.match(estimateMarkup,/09:00/);assert.match(estimateMarkup,/Estimated skate start/);assert.match(estimateMarkup,/09:10/);assert.ok(!estimateMarkup.includes('pending'));
+const officialMarkup=renderToStaticMarkup(createElement(SessionTiming,{row:{...timingRow,startingOrder:{...timingOrders[1],individualTime:'09:12:30'}},event:timingEvent}));
+assert.match(officialMarkup,/Official individual time/);assert.match(officialMarkup,/09:12:30/);assert.ok(!officialMarkup.includes('Estimated skate start'));
+assert.match(renderToStaticMarkup(createElement(SessionTiming,{row:{...timingRow,startingOrder:undefined},event:timingEvent})),/Individual time pending/);
+assert.equal(renderToStaticMarkup(createElement(SessionTiming,{row:{...timingRow,activity:'practice'},event:timingEvent})), '');
+checks.push('shared personal/profile/watch/calendar timing shows a valid estimate, prioritizes official start and preserves pending for incomplete draws');
 let detailsCalls=0;
 const html=renderToStaticMarkup(createElement(CoachDailySchedule,{rows,conflicts,onSkater:()=>{},renderDetails:()=>{detailsCalls++;return createElement('p',null,'Expanded details');}}));
 assert.ok(html.indexOf('2026.11.20')<html.indexOf('2026.11.21'));

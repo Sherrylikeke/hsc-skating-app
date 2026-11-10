@@ -9,7 +9,7 @@ type View=typeof views[number];
 type Destination=View|'member'|'profile'|'competition';
 const defaults={
   query:'', coachedOnly:false, level:'', eventMode:'upcoming' as 'upcoming'|'history', eventQuery:'',
-  coachFiltersOpen:false, coachFilter:'', coachEventFilter:'', dateFilter:'', onlyAssigned:true,
+  coachFiltersOpen:false, coachFilter:'', coachEventFilter:'', dateFilter:'', onlyAssigned:false,
   personal:'mine' as HomeScope, participantMode:'club' as 'club'|'all'|'blocks',
   rink:'',fromNow:true
 };

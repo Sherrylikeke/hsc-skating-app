@@ -45,3 +45,4 @@
 .cal-pending h3{margin:0 0 8px}
 .cal-pending p+p{margin-top:6px}
 @media(max-width:480px){.cal-toolbar{padding:8px 10px;gap:3px}.cal-nav button{min-width:36px}.cal-month{padding-inline:3px}.cal-agenda{padding-inline:3px}.cal-date{min-height:44px}}
+.cal-individual-time small{display:block;margin:5px 0;font-size:14px}

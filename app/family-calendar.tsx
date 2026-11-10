@@ -9,7 +9,8 @@ import {ChevronLeft,ChevronRight,CalendarDays,Clock3} from 'lucide-react';
 import type {ClubEvent,ClubSkater,ScheduleRow} from '../lib/club-types';
 import {todayToronto} from '../lib/club-types';
 import {familyCalendar,familyOverlaps,rinkGroups,type CalendarDay} from '../lib/family-calendar';
-import {friendStorageKey,readFriends} from '../lib/event-watch';
+import {defaultEventFriends,friendStorageKey,readFriends} from '../lib/event-watch';
+import SessionTiming from './session-timing';
 import {text,useLanguage} from '../lib/i18n';
 import CompactSelect from './compact-select';
 import '@fullcalendar/react/skeleton.css';
@@ -73,7 +74,10 @@ export default function FamilyCalendar({events,skaters,ownIds,memberId,onNavigat
     onNavigate(url,replace);
     setWhere({date,day,rink});setDetails('');
   }
-  const calendar=useMemo(()=>familyCalendar(events,skaters,ownIds,id=>readFriends(friendStorageKey(memberId,id))),[events,skaters,ownIds,memberId]);
+  const calendar=useMemo(()=>familyCalendar(events,skaters,ownIds,id=>{
+    const event=events.find(event=>event.id===id);
+    return readFriends(friendStorageKey(memberId,id),event?defaultEventFriends(event,skaters,ownIds):[]);
+  }),[events,skaters,ownIds,memberId]);
   const {date,day}=where, data=calendar.days.get(date)??empty;
   const title=new Intl.DateTimeFormat(locale,day?{month:'long',day:'numeric',weekday:'short',timeZone:'UTC'}:{month:'long',year:'numeric',timeZone:'UTC'}).format(utcDay(date));
   const summaryTitle=text('Schedule calendar','赛程日历');
@@ -171,7 +175,7 @@ export default function FamilyCalendar({events,skaters,ownIds,memberId,onNavigat
         {visible.length===0&&<p className="cal-empty"><CalendarDays size={17}/>{text('No scheduled groups for this selection.','当前选择暂无已排组别。')}</p>}
         {selectedRow&&<div className="cal-detail" tabIndex={-1} id="calendar-session-detail"><strong>{selectedRow.skaterName} · {selectedRow.category}</strong>
           <p>{selectedRow.eventName} · {selectedRow.rink} · {selectedRow.activity==='practice'?text('Practice','官方练习'):text('Group time','组别时段')} {selectedRow.start}–{selectedRow.end}</p>
-          <p>{selectedRow.startingOrder?.individualTime?text('Official individual time · ','官方个人时间 · ')+selectedRow.startingOrder.individualTime:text('Individual time pending','个人时间待公布')}</p>
+          <div className="cal-individual-time"><SessionTiming row={selectedRow} event={events.find(event=>event.id===selectedRow.eventId)}/></div>
           <a href={selectedRow.sourceUrl+(selectedRow.page?'#page='+selectedRow.page:'')} target="_blank" rel="noreferrer">{text('Official group schedule ↗','官方组别赛程 ↗')}</a>
           {selectedRow.startingOrder&&<a href={selectedRow.startingOrder.sourceUrl+(selectedRow.startingOrder.page?'#page='+selectedRow.startingOrder.page:'')} target="_blank" rel="noreferrer">{text('Starting order #','官方出场顺序 #')}{selectedRow.startingOrder.startNumber} ↗</a>}</div>}
       </>}

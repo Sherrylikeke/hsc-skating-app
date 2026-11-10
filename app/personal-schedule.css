@@ -15,9 +15,10 @@
 .family-pending .club-candidate-times small{display:block;padding:5px 0}
 .family-pending .club-candidate-times .club-source{display:inline-flex;margin-inline-start:6px}
 @media(max-width:720px){
-  .club-page-heading.family-heading{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px}
+  .club-page-heading.family-heading{display:flex;flex-direction:column;align-items:stretch;gap:8px}
+  .club-page-heading.family-heading h1{font-size:clamp(21px,6vw,26px);line-height:1.3;letter-spacing:0}
   .family-heading .club-eyebrow{display:none}
-  .club-page-heading.family-heading .club-data-controls{width:auto;max-width:155px;justify-content:flex-end}
+  .club-page-heading.family-heading .club-data-controls{width:100%;max-width:none;justify-content:flex-start}
   .club-page-heading.family-heading p:last-child{font-size:12px;margin-top:4px}
   .family-controls .family-filter{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr)}
   .family-filter .club-compact-select{min-width:0}

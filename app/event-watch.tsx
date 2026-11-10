@@ -1,10 +1,11 @@
 'use client';
 import {useEffect,useMemo,useState} from 'react';
 import type {ClubEvent,ClubSkater} from '../lib/club-types';
-import {friendStorageKey,readFriends,watchChoices,watchedRows,watchTiming} from '../lib/event-watch';
+import {defaultEventFriends,friendStorageKey,readFriends,watchChoices,watchedRows,watchTiming} from '../lib/event-watch';
 import {text} from '../lib/i18n';
 import CompactSelect from './compact-select';
 import {followWorkspaceLink} from './workspace-navigation';
+import SessionTiming from './session-timing';
 
 type WatchControls={rink:string;fromNow:boolean;onFilter:(changes:{rink?:string;fromNow?:boolean})=>void;onCalendar:()=>void};
 type Props = WatchControls & {events:ClubEvent[]; eventId:string; memberId:string; ownIds:string[]; skaters:ClubSkater[]; onEvent:(id:string,replace?:boolean)=>void};
@@ -53,7 +54,7 @@ export default function EventWatch({events,eventId,memberId,ownIds,skaters,onEve
 }
 
 function EventTimeline({event,ownIds,skaters,now,refreshClock,storageKey,rink,fromNow,onFilter,onCalendar}:WatchControls & Pick<Props,'ownIds'|'skaters'>&{event:ClubEvent;now:number;refreshClock:()=>void;storageKey:string}) {
-  const [friends,setFriends]=useState(()=>readFriends(storageKey));
+  const [friends,setFriends]=useState(()=>readFriends(storageKey,defaultEventFriends(event,skaters,ownIds)));
   const [query,setQuery]=useState('');
   const [choosing,setChoosing]=useState(false);
   const [saveFailed,setSaveFailed]=useState(false);
@@ -82,7 +83,7 @@ function EventTimeline({event,ownIds,skaters,now,refreshClock,storageKey,rink,fr
   return <>
     <details className="watch-friends" onToggle={e=>{setChoosing(e.currentTarget.open);if(!e.currentTarget.open)setQuery('');}}>
       <summary>{text('Follow friends at this event','关注本场朋友')} · {selectedFriends.length}</summary>
-      <p>{text('Your home skaters are included. Friend selections stay in this tab for this event.','已包含主页选手。朋友只保存在当前标签页的这场比赛中。')}</p>
+      <p>{text('Club skaters at this event are selected by default. Uncheck anyone or add other friends. Your home skaters are always included; selections stay in this tab for this event.','默认关注本场所有本俱乐部选手，可取消勾选或增选其他朋友。主页选手始终包含；选择保存在当前标签页的这场比赛中。')}</p>
       <input type="search" aria-label={text('Search entries','搜索参赛名单')} placeholder={text('Name, club or category','姓名、俱乐部或项目')} value={query} onChange={e=>setQuery(e.target.value)}/>
       <div className="watch-choices">{visibleChoices.map(c=><label key={c.id}>
         <input type="checkbox" checked={friends.includes(c.id)} onChange={()=>toggle(c.id)}/>
@@ -104,8 +105,8 @@ function EventTimeline({event,ownIds,skaters,now,refreshClock,storageKey,rink,fr
       <div className={'watch-time '+status}>{!fromNow&&row.date+' · '}{status==='pending'?text('Group time pending','组别时段待确认'):
         <>{status==='ongoing'?text('Group in progress','组别进行中'):status==='ended'?text('Group ended','组别已结束'):text('Group time','组别时间')} · {row.start}–{row.end}</>}</div>
       <small>{row.startingOrder && <>{text('Start #','出场 #')}{row.startingOrder.startNumber}
-        {row.startingOrder.warmupGroup!=null&&' · '+text('Warm-up ','热身组 ')+row.startingOrder.warmupGroup} · </>}
-        {row.startingOrder?.individualTime?text('Official individual time · ','官方个人时间 · ')+row.startingOrder.individualTime:text('Individual time pending','个人时间待公布')}</small>
+        {row.startingOrder.warmupGroup!=null&&' · '+text('Warm-up ','热身组 ')+row.startingOrder.warmupGroup}</>}</small>
+      <SessionTiming row={row} event={event}/>
     </li>)}</ol>:<p className="watch-empty">{fromNow?text('No remaining groups in this selection for this day.','所选名单和冰面在这一天暂无接下来的组别。'):text('No groups match this selection.','当前选择暂无对应组别。')}</p>}
     {missing.length>0&&<p>{text('Awaiting a matched group time: ','尚待匹配组别时段：')}{missing.map(c=>c.name).join('、')}</p>}
     {event.needsReview&&<p>{text('Some official details are awaiting confirmation.','部分官方资料待核对。')}</p>}

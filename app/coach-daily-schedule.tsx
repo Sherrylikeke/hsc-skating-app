@@ -2,12 +2,13 @@
 import {Fragment,useId,useState} from 'react';
 import type {ReactNode} from 'react';
 import {ChevronDown} from 'lucide-react';
-import type {ScheduleRow} from '../lib/club-types';
+import type {ClubEvent,ScheduleRow} from '../lib/club-types';
+import SessionTiming from './session-timing';
 import {groupCoachSchedule,hasCoachGroupTime,type CoachOverlap} from '../lib/coach-schedule';
 import {currentLocale,text,useLanguage} from '../lib/i18n';
 
-type Props={rows:ScheduleRow[];conflicts:ReadonlyMap<string,CoachOverlap[]>;onSkater:(id:string)=>void;renderDetails:(row:ScheduleRow)=>ReactNode};
-function ComparedSession({row}:{row:ScheduleRow}) {
+type Props={rows:ScheduleRow[];events:ClubEvent[];conflicts:ReadonlyMap<string,CoachOverlap[]>;onSkater:(id:string)=>void;renderDetails:(row:ScheduleRow)=>ReactNode};
+function ComparedSession({row,event}:{row:ScheduleRow;event?:ClubEvent}) {
   const order=row.startingOrder;
   return <div className="coach-compared-session">
     <strong>{row.skaterName}</strong><span>{row.category}</span>
@@ -15,7 +16,7 @@ function ComparedSession({row}:{row:ScheduleRow}) {
     <span>{row.eventName} · {row.date} · {row.start}–{row.end} ({row.timezone})</span>
     <span>{order ? text('Start #','出场 #')+order.startNumber : text('Start order pending','出场顺序待公布')}
       {order?.warmupGroup!=null && ' · '+text('Warm-up ','热身组 ')+order.warmupGroup}</span>
-    <span>{order?.individualTime ? text('Individual start · ','个人出场 · ')+order.individualTime : text('Individual time pending','个人时间待公布')}</span>
+    <SessionTiming row={row} event={event}/>
     <a href={row.sourceUrl+(row.page?'#page='+row.page:'')} target="_blank" rel="noreferrer">{text('Group schedule','组别赛程')}</a>
     {order && <a href={order.sourceUrl+(order.page?'#page='+order.page:'')} target="_blank" rel="noreferrer">{text('Starting order','官方出场顺序')}</a>}
   </div>;
@@ -25,7 +26,7 @@ function dayTitle(date:string){
   const weekday=new Intl.DateTimeFormat(currentLocale()==='en'?'en-CA':'zh-CN',{weekday:'short',timeZone:'UTC'}).format(new Date(date+'T12:00:00Z'));
   return date.replaceAll('-','.')+' · '+weekday;
 }
-export default function CoachDailySchedule({rows,conflicts,onSkater,renderDetails}:Props){
+export default function CoachDailySchedule({rows,events:clubEvents=[],conflicts,onSkater,renderDetails}:Props){
   useLanguage();
   const prefix=useId(),[expanded,setExpanded]=useState<string|null>(null),[comparing,setComparing]=useState<string|null>(null);
   const days=groupCoachSchedule(rows);
@@ -54,7 +55,7 @@ export default function CoachDailySchedule({rows,conflicts,onSkater,renderDetail
                 {peers.length>0&&<tr className="coach-overlap-row" hidden={!showPeers}><td colSpan={4} id={detailId+'-pairs'}>
                   {showPeers&&peers.map(({peer,start,end,coaches})=><section key={peer.id}>
                     <h4>{coaches.join(' / ')} · {text('Group overlap','组别重叠')} {clock(start)}–{clock(end)}</h4>
-                    <div className="coach-comparison"><ComparedSession row={row}/><ComparedSession row={peer}/></div>
+                    <div className="coach-comparison"><ComparedSession row={row} event={clubEvents.find(event=>event.id===row.eventId)}/><ComparedSession row={peer} event={clubEvents.find(event=>event.id===peer.eventId)}/></div>
                   </section>)}
                 </td></tr>}
                 <tr className="coach-day-details" hidden={!opened}><td colSpan={4}><div id={detailId}>{opened&&renderDetails(row)}</div></td></tr>

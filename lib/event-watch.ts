@@ -4,11 +4,13 @@ import {scheduleInstant} from './schedule-time.ts';
 
 type Choice = {id:string; name:string; details:string[]; entries:Participant[]};
 export const friendStorageKey=(memberId:string,eventId:string)=>'hsc-watch-friends:'+JSON.stringify([memberId,eventId]);
-export function readFriends(key:string):string[] {
+export function readFriends(key:string,defaults:string[]=[]):string[] {
   try {
-    const ids:unknown=JSON.parse(sessionStorage.getItem(key) ?? '[]');
-    return Array.isArray(ids) ? ids.filter((id):id is string=>typeof id==='string') : [];
-  } catch { return []; }
+    const saved=sessionStorage.getItem(key);
+    if(saved===null)return [...defaults];
+    const ids:unknown=JSON.parse(saved);
+    return Array.isArray(ids) ? ids.filter((id):id is string=>typeof id==='string') : [...defaults];
+  } catch { return [...defaults]; }
 }
 // When the source omits the club, keep separate entry records distinct.
 const entryKey = (p:Participant) => 'entry:' + JSON.stringify([normalizeName(p.name),p.club,p.section,p.club?'':p.id]);
@@ -27,6 +29,12 @@ export function watchChoices(event:ClubEvent, skaters:ClubSkater[]) {
     }
   }
   return [...choices.values()].sort((a,b) => a.name.localeCompare(b.name));
+}
+
+export function defaultEventFriends(event:ClubEvent,skaters:ClubSkater[],ownIds:string[]=[]){
+  const roster=new Set(skaters.map(skater=>skater.id)),own=new Set(ownIds);
+  return watchChoices(event,skaters).filter(choice=>!own.has(choice.id)&&
+    (roster.has(choice.id)||choice.entries.some(entry=>/^hamilton\s+(?:sc|skating\s+club)$/i.test(entry.club.trim())))).map(choice=>choice.id);
 }
 
 // Guests have no club profile. Scope their identity to this official entry and event.
