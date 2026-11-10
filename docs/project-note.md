@@ -2,13 +2,18 @@
 
 这是项目负责人的持续维护记录，不属于会员网页内容。后续会话先读取本文件与 AGENTS.md，在完成实质修改或验收后更新；不自动轮询、不新增定时任务。下列运行数据是查询快照，不是实时监控。
 
+## 2026-11-10 V36 GitHub 提交推送完成
+
+- 用户明确要求“提交并推送”。原工作区干净，修复及验收记录已提交为0db04f7、d7240c0；重新fetch确认原GitHub main为d7daa1a，可以正常快进。检查本次13个文件差异及diff --check通过后，正常推送main至d7240c05686c8c1a1af0d294ff9f3d992e0bed4c，ls-remote已独立确认一致。
+- 本次包含PDF视觉热身分组、明确WD退赛跳号估算、相关回归及官方公开PDF夹具，没有强推、新分支、运行密钥或本地交付包上传。随后仅提交本条及交接状态记录；运行代码未改，不重复运行已通过的18项功能、类型、构建和Worker检查，也不重新部署或发送邮件。V36网站与客户端验收沿用下方带时间的记录，本轮未重新查询生产。
+
 ## 2026-11-10 PDF 版面热身分组修复（V36已上线）
 
 - V36运行源码0db04f7ec9d19b69fac0005d1f2246914eaee733，保存版本appgprj_6ad76ca2dba481919ba883865cbd5a0d~appgver_1c5ddd10c0748191b34daa67127bfa8c，部署appgdep_6af2bc93d10c8191b7f8dbebad2a9a60于2026-11-10T06:41:34.137147Z succeeded、env revision9、MCP ready。原站域名、public范围、注册/邮箱验证开关及既有账号兼容秘密配置保留，没有新发信或数据库迁移。
 - 使用原HSC工具顺序补同步15轮，每轮至多四份。最后2026-11-10T06:53:47.172Z确认604条出场信息、57/61份已按新版本核对、4份特殊Level3/4仍待核对，651参赛记录及40组别时段保留，不报全量成功。线上preview已确认Fiora #1/热身1、Sydney #2/热身1、Annie #7/热身2、Shirley #11/热身3，个人官方时间仍null。
 - 2026-11-10T06:54:09.1583376Z自定义域名实际送达含drawComplete/withdrawnCount的新客户端资源_next/static/chunks/BKkz6bET.js，SHA256与最终本地构建一致；首页200、匿名club/results仍401，公开注册/邮件投递配置仍true。本轮没有代登生产账号、发送邮件或把估算写成官方时间。
 - Android新调试APK编译、Lint、签名及应用ID/SDK验证通过；iOS资源sync通过。Android/iOS/dist的13份静态资源逐字节一致，已确认含退赛估算代码。APK SHA256=2677B81B750C5D811E3F4A7937E668C7557ECB3172AC46C5AE0279CF7052C0DF；iOS资源zip SHA256=017AAB65C89D84BA1A98A4946C329C7F135335C1AA4F977A26D132CD40D935FF（57个文件）。交付位于本会话outputs/2026-11-10，未装真机、未构建IPA/上架；旧安装包需安装新版才能使用退赛估算逻辑，单纯刷新旧APK只能更新服务端资料。
-- 实际补同步、正式资源校验及客户端资源证明分别在keswick-warmup-sync.json、warmup-live-checks.json、warmup-client-checks.json；四位真实来源复算在keswick-layout-time-check.json。Sites应用源码已同步；本轮新增payload没有推送公开GitHub，旧的推送记录仍指当时main。最终仅同步验收文档，不为文档变动重新部署。
+- 实际补同步、正式资源校验及客户端资源证明分别在keswick-warmup-sync.json、warmup-live-checks.json、warmup-client-checks.json；四位真实来源复算在keswick-layout-time-check.json。Sites应用源码已同步；公开GitHub随后经用户明确授权完成推送，见上方记录。最终仅同步验收文档，不为文档变动重新部署。
 
 - 用户指出Starting Order中的分隔就是热身组。重新核对原PDF版面及文字坐标确认：普通相邻选手基线间距14.25pt，热身组间距19.55pt；Sydney文件第5名之后分组，STAR7 15人文件第5/10名之后分组。此前只检查文字热身组列便认定官方没有提供分组，结论不完整，已纠正；下面只读诊断条目为历史判断。
 - 为已验证的Skate Canada单页导出格式新增版面读取：核对#、Name、Club、Section、日期页脚、连续完整出场编号及一致字高/行距，按明确加大的块间空白顺序读取热身组；不按固定人数拆组，不把类别Group2当热身组2。文字明确热身组优先。异常间距、换行、不完整编号、不明格式和跨页边界不直接生成组号，官方个人时间继续保留原值。
