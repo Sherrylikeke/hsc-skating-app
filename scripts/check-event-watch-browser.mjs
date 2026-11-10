@@ -72,7 +72,7 @@ async function walk(browser,profile,language,folder) {
     assert.match(await row(names[2]).innerText(),/Group in progress|组别进行中/);
     assert.match(await row(names[2]).innerText(),/12:03/);
     assert.match(await row(names[4]).innerText(),/#18/);
-    assert.match(await row(names[4]).innerText(),/Individual time pending|个人时间待公布/);
+    assert.match(await row(names[4]).innerText(),/Individual estimate needs confirmation|个人预计时间待核对/);
     const firstBottom=await row(names[2]).evaluate(el=>Math.round(el.getBoundingClientRect().bottom));
     const usableBottom=await page.locator('.club-sidebar').evaluate(el=>el.getBoundingClientRect().top);
     assert.ok(firstBottom<=usableBottom,'First complete row must fit above the bottom navigation: '+firstBottom+' / '+usableBottom);

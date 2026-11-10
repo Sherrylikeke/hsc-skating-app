@@ -27,7 +27,7 @@ const workerOptions={cf:false,modules,modulesRoot:root,compatibilityDate:runtime
 if(url.hostname==='skatingresults.ca'){if(url.pathname.endsWith('/categories'))return Response.json({Categories:[startingFixture.category]});if(url.pathname.endsWith('/segments'))return Response.json({Segments:startingFixture.segments});const id=url.pathname.match(/segment\/([^/]+)\/entries$/)?.[1];if(id)return Response.json(startingFixture.entries[id]);return new Response(startingHtml);}
 if(url.hostname==='www.skateontario.org'){
 if(url.pathname==='/fixture-max/')return new Response('<a href="https://www.skateontario.org/fixture-keswick-schedule.pdf">Schedule</a><a href="https://www.skateontario.org/fixture-max-entries.html">Entry List</a><a href="https://www.skateontario.org/results/27KES/27KesSTAR5MenU10FP2SO.pdf">Starting Order</a>');
-if(url.pathname==='/fixture-keswick-schedule.pdf')return new Response(fs.readFileSync('tests/fixtures/keswick-2026-oct28-schedule.pdf'));
+if(url.pathname==='/fixture-keswick-schedule.pdf')return new Response(fs.readFileSync('tests/fixtures/keswick-2026-nov10-schedule.pdf'));
 if(url.pathname==='/fixture-max-entries.html')return new Response('<table><tr data-category="STAR 5 Men (U10)" data-club="Hamilton SC" data-section="ON"><td>Max Wang</td></tr></table>');
 if(url.pathname==='/fixture-keswick/')return new Response('<a href="https://www.skateontario.org/results/27KES/">Start Orders/Results</a>');
 if(url.pathname==='/results/27KES/')return new Response(fs.readFileSync('tests/fixtures/keswick-2026-starting-order-index.html','utf8'));

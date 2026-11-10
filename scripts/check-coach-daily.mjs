@@ -65,7 +65,7 @@ const estimateMarkup=renderToStaticMarkup(createElement(SessionTiming,{row:timin
 assert.match(estimateMarkup,/Estimated warm-up/);assert.match(estimateMarkup,/09:00/);assert.match(estimateMarkup,/Estimated skate start/);assert.match(estimateMarkup,/09:10/);assert.ok(!estimateMarkup.includes('pending'));
 const officialMarkup=renderToStaticMarkup(createElement(SessionTiming,{row:{...timingRow,startingOrder:{...timingOrders[1],individualTime:'09:12:30'}},event:timingEvent}));
 assert.match(officialMarkup,/Official individual time/);assert.match(officialMarkup,/09:12:30/);assert.ok(!officialMarkup.includes('Estimated skate start'));
-assert.match(renderToStaticMarkup(createElement(SessionTiming,{row:{...timingRow,startingOrder:undefined},event:timingEvent})),/Starting order not yet available/);
+assert.match(renderToStaticMarkup(createElement(SessionTiming,{row:{...timingRow,startingOrder:undefined},event:timingEvent})),/Starting order needs matching/);
 assert.equal(renderToStaticMarkup(createElement(SessionTiming,{row:{...timingRow,activity:'practice'},event:timingEvent})), '');
 checks.push('shared personal/profile/watch/calendar timing shows a valid estimate, prioritizes official start and preserves pending for incomplete draws');
 let detailsCalls=0;

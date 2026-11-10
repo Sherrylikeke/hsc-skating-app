@@ -8,9 +8,10 @@ export default function SessionTiming({row,event}:{row:ScheduleRow;event?:ClubEv
   const estimate=event?coachTimingEstimate(row,event):null;
   if(!official&&!estimate){
     const order=row.startingOrder;
-    const reason=!order?text('Starting order not yet available','出场顺序尚未读取或公布'):
+    const reason=!order?text('Starting order needs matching','出场顺序待匹配'):
       !order.warmupGroup?text('Warm-up group needs confirmation','热身分组待确认'):
       row.uncertain?text('Group time needs confirmation','组别时段待确认'):
+      /\/\s*STAR\s*\d+\b/i.test(row.category)?text('Shared session, individual time needs confirmation','共用组别时段，个人时间待确认'):
       text('Individual estimate needs confirmation','个人预计时间待核对');
     return <small>{reason}</small>;
   }

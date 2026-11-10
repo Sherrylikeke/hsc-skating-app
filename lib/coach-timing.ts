@@ -7,7 +7,7 @@ import {scheduledProgram} from './starting-order.ts';
 function warmupMinutes(category:string, order:StartingOrder) {
   const label=(category+' '+order.category).toUpperCase();
   if (/\b(?:SHARED|ROTATION|ROTATING|ELEMENTS|SYNCHRO\w*|SHOWCASE|IMPROV|SPECIAL OLYMPICS|WARM[ -]?UP)\b/.test(label)) return null;
-  if (/\bSTAR\s*\d+\s*\/\s*\d+\b/i.test(category) || category.split('/').filter(part=>categoryKey(part)).length>1) return null;
+  if (/\bSTAR\s*\d+\s*\/\s*\d+\b|\/\s*STAR\s*\d+\b/i.test(category) || category.split('/').filter(part=>categoryKey(part)).length>1) return null;
   // Ordinary STAR 1–2 events use elements/stations, not a sequence of individual music programs.
   if (/\bSTAR\s*[12]\b/.test(label) && !/\b(?:DANCE|ARTISTIC)\b/.test(label)) return null;
   if (order.warmupSeconds && order.warmupSeconds>0) return order.warmupSeconds/60;

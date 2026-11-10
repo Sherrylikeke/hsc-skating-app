@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import {parseStartingOrderPdf,parseStartingOrderHtml,orderFor} from '../lib/starting-order.ts';
-import {discoverDocuments,scheduleRows} from '../lib/official-parser.ts';
+import {discoverDocuments,parseScheduleDocument,scheduleRows} from '../lib/official-parser.ts';
 import {readOfficialPdfItems} from '../lib/official-pdf.ts';
 import {selectStartingOrderDocuments} from '../lib/starting-order-selection.ts';
 import {coachTimingEstimate} from '../lib/coach-timing.ts';
@@ -76,6 +76,14 @@ assert.equal(coachTimingEstimate(annie,{...sharedWithdrawalEvent,startingOrders:
 assert.equal(coachTimingEstimate(annie,{...sharedWithdrawalEvent,startingOrders:withdrawnDraw.filter(o=>o.startNumber!==8)}),null);
 assert.equal(coachTimingEstimate(annie,{...sharedWithdrawalEvent,participants:withdrawalEvent.participants.filter(p=>p.name!=='Annie Dong')}),null);
 console.log('Verified full PDF draws retain explicit WD counts: #5 withdrawal preserves visual heats 1/2/3; Annie #7 estimates 13:39 / 13:48 and Shirley #11 14:07 / 14:12, while unknown missing rows still prevent estimation.');
+const maxRoster=[{id:'max',name:'Max Wang',coach:'Jen Jackson/Bryce Davidson'}];
+const maxDraw=parseStartingOrderPdf(await readOfficialPdfItems(new Uint8Array(fs.readFileSync('tests/fixtures/keswick-2026-star5-men-u10-start.pdf'))),keswickBase+'27KesSTAR5MenU10FP2SO.pdf',maxRoster);
+const novemberBlocks=parseScheduleDocument(await readOfficialPdfItems(new Uint8Array(fs.readFileSync('tests/fixtures/keswick-2026-nov10-schedule.pdf'))),'https://skateontario.org/wp-content/uploads/2026/07/Kes-Schedule-NOV-10.pdf').blocks;
+const maxEvent={...sydneyEvent,blocks:novemberBlocks,startingOrders:maxDraw,participants:maxDraw.map(o=>({name:o.name,category:o.category,skaterIds:o.skaterIds}))};
+const [maxRow]=scheduleRows([maxEvent],maxRoster);
+assert.equal(maxRow.date,'2026-11-20');assert.equal(maxRow.start,'17:35');assert.equal(maxRow.end,'18:10');assert.equal(maxRow.rink,'BLUE RINK');assert.equal(maxRow.startingOrder.startNumber,2);assert.equal(maxRow.startingOrder.warmupGroup,1);
+assert.equal(coachTimingEstimate(maxRow,maxEvent),null); // Shared regular/NQ block is not a standalone draw's duration.
+console.log('Nov 10 official revision: omitted Men in the repeated same-level/age NQ label preserves Max Friday, without guessing an individual minute from the shared block.');
 const documents=Array.from({length:9},(_,index)=>({kind:'start-order',url:keswickBase+'27KesSTAR5WomenU13Group'+index+'FP2SO.pdf',label:'Starting Order'}));
 const participants=[{skaterIds:['sydney'],sourceUrl:keswickBase.replace('https://','https://www.')+'27KesSTAR5WomenU13Group8EL.pdf'}];
 const firstBatch=selectStartingOrderDocuments(documents,participants);

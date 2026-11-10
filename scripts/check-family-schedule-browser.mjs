@@ -177,7 +177,7 @@ async function walk(width, language, browser) {
     assert.equal(await rows.count(),1);
     assert.ok((await rows.first().innerText()).includes('Ben Reed'));
     assert.match(await current.first().locator('.family-arrival').innerText(), /12:00/);
-    assert.match(await current.first().innerText(), /Individual time pending|个人时间待公布/);
+    assert.match(await current.first().innerText(), /Starting order needs matching|Individual estimate needs confirmation|Warm-up group needs confirmation|出场顺序待匹配|个人预计时间待核对|热身分组待确认/);
     await rows.first().evaluate(el => el.scrollIntoView({block:'start'}));
     await shot('ben');
     await rows.getByRole('button',{name:'Ben Reed',exact:true}).click();

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {categoryKey,scheduleRows} from '../lib/official-parser.ts';
+import {categoryCompatible,categoryKey,scheduleRows} from '../lib/official-parser.ts';
 import {orderFor} from '../lib/starting-order.ts';
 
 const checks=[];
@@ -30,6 +30,13 @@ checks.push('the same separation applies across STAR levels, age groups and men/
 const shared='STAR 5 Men U10 / STAR 5 Men U10 Non-Qualifying';
 const sharedRows=scheduleRows([{...event,participants:[participant('regular','STAR 5 Men U10'),participant('nq','STAR 5 Men U10 NQ')],blocks:[block('shared',shared)]}],skaters);
 assert.equal(sharedRows.length,2);assert.ok(sharedRows.every(row=>!row.uncertain));
+const abbreviated='STAR 5 Men U10 / STAR 5 U10 Non-Qualifying';
+const abbreviatedRows=scheduleRows([{...event,participants:[participant('regular','STAR 5 Men U10'),participant('nq','STAR 5 Men U10 NQ')],blocks:[block('abbreviated',abbreviated)]}],skaters);
+assert.equal(abbreviatedRows.length,2);assert.ok(abbreviatedRows.every(row=>!row.uncertain));
+assert.equal(categoryCompatible('STAR 5 Women U10',abbreviated),false);
+assert.equal(categoryCompatible('STAR 5 Men U13',abbreviated),false);
+assert.equal(categoryCompatible('STAR 5 Men U10 NQ','STAR 5 Men U10 / STAR 6 U10 Non-Qualifying'),false);
+assert.equal(categoryCompatible('STAR 5 Men U13 NQ','STAR 5 Men U10 / STAR 5 U13 Non-Qualifying'),false);
 const sharedAgeRows=scheduleRows([{...event,participants:[participant('regular','STAR 7 Women U12'),participant('nq','STAR 7 Women O12 NQ')],blocks:[block('shared-age','STAR 7 Women U12/O12 Non Qualifying')]}],skaters);
 assert.deepEqual(sharedAgeRows.map(row=>row.skaterId),['nq']);
 checks.push('explicit regular/NQ shared sessions remain valid while shared ages keep the NQ qualifier');

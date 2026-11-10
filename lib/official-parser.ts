@@ -113,7 +113,20 @@ function categoryVariants(value:string){
   const parts=value.split(/\s*\/\s*/);
   // Full category names joined by a slash are explicit shared sessions.
   // Keep age alternatives such as U12/O12 together with their NQ qualifier.
-  return parts.length>1&&parts.every(part=>categoryKey(part))?parts:[value];
+  const [level,discipline]=categoryKey(parts[0]).split(':'),first=categoryDetails(parts[0]);
+  const variants=parts.map(part=>{
+    if(categoryKey(part)||!['MEN','WOMEN'].includes(discipline))return part;
+    const repeated=part.match(/^(STAR\s*(?:10|[1-9]))\b(.*)$/i),details=categoryDetails(part);
+    // The Nov 10 Keswick revision repeats the same STAR level and age but
+    // omits Men in the second half. Inherit only that explicitly shared sex.
+    if(!repeated||repeated[1].replace(/\s/g,'').toUpperCase()!==level.replace(/\s/g,'')||
+      !first.ages.length||first.ages.join('|')!==details.ages.join('|')||first.program!==details.program)return part;
+    return repeated[1]+' '+discipline+repeated[2];
+  });
+  if(parts.length>1&&variants.every(part=>categoryKey(part)))return variants;
+  // An unrecognized repeated category must not attach its NQ label to the first.
+  if(parts.length>1&&categoryKey(parts[0])&&parts.slice(1).every(part=>/^STAR\s*(?:10|[1-9])\b/i.test(part)))return variants.filter(part=>categoryKey(part));
+  return [value];
 }
 export function categoryCompatible(first:string,second:string){
   return categoryVariants(first).some(entryCategory=>categoryVariants(second).some(blockCategory=>{
