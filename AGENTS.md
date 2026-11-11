@@ -17,7 +17,7 @@
 - 原私人站点：https://hsc-coach-roster.sherrylikeke.chatgpt.site/
 - 自定义域名：`hamiltonskatingclub.memberportal.dev`，用户于 2026-11-03 购买父域并授权绑定；Sites 已于 2026-11-03 接通，域名／SSL active，新网址 HTTPS 200；后续状态以原生工具重新读取为准。应用密码登录仅允许该确切 HTTPS origin 与既有域名／开发入口，不使用任意 Host 放宽校验。
 - Sites project：`appgprj_6ad76ca2dba481919ba883865cbd5a0d`。复用既有项目、数据库和访问范围，不新建替代站点或云账号。
-- 原私人 GitHub：`https://github.com/Sherrylikeke/hsc-skating-app.git`，remote 为 `github`。Sites 源仓库与 GitHub 是两个远端，不要混称。
+- 原 GitHub（2026-11-11 只读核对当前为 public；不更改可见性）：`https://github.com/Sherrylikeke/hsc-skating-app.git`，remote 为 `github`。Sites 源仓库与 GitHub 是两个远端，不要混称。
 - 当前由 Sites 管理托管；不能断言已迁入用户个人 Cloudflare 账号，也不能从公开价推断用户实际账单或数据库固定地域。
 
 ## 数据与权限
@@ -48,7 +48,7 @@
 
 - 保留现有官网每小时同步任务 `Automation_a2b3ae8946b48191937bd484365e1ec2`，不要重复创建。
 - 已删除的会话续做 heartbeat `hsc` 不得恢复、复制或另建周期检查；正常完成交付即可。
-- Skate Ontario 同步读取未来约 183 天日历，详细检查未来 45 天每轮最多三场：最近两场优先，第三场按上次检查时间轮换，避免 STAR 1–4 等较远赛事长期遗漏；同链接修订以哈希识别，失败保留最后有效资料。
+- Skate Ontario 同步读取未来约 183 天日历，详细检查在未来 183 天日历内每轮最多三场：最近两场优先，第三场按上次检查时间轮换，覆盖提前开放报名的远期赛事；首页按 My Skaters 展示正式／Interim 名单相关赛事，按官方开放日期前14天至截止日展示类别匹配的报名入口；同链接修订以哈希识别，失败保留最后有效资料。
 - 未支持的 PDF/扫描件和失败来源须标待核对，不承诺实时或全量成功。Skate Canada 自动同步尚未实施。
 - 普通用户页面不显示 PDF 文件名、批次进度和原始解析错误；保留简短不确定提示及官方来源链接。详细诊断仅有效管理员在页面末尾默认收起的 Reference 查看，回归 `node scripts/check-source-reference.mjs`。
 - Carson 的 SHORT/FREE 是两项；序号区间为候选时段，不能显示成四项。没有对应官方 Starting Order 时显示待定。

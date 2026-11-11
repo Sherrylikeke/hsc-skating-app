@@ -1,8 +1,10 @@
 import type {Participant} from './club-types';
 import type {PdfItem} from './official-parser';
 import {normalizeName} from './official-parser.ts';
+import {parseInterimEntryPdf} from './interim-entry-pdf.ts';
 
 export function parseEntryPdf(pages:PdfItem[][],sourceUrl:string,roster:Array<{id:string;name:string;identityPending?:boolean}>):Participant[]{
+  if(pages[0]?.some(item=>/^Interim Entry Lists?(?: by Category)?$/i.test(item.str.trim()))&&!pages[0].some(item=>item.str.trim()==='Name'))return parseInterimEntryPdf(pages,sourceUrl,roster);
   const rows:Participant[]=[];const expected=new Set<number>();
   const names=new Map<string,string[]>();
   for(const skater of roster){if(skater.identityPending)continue;const name=normalizeName(skater.name);names.set(name,[...(names.get(name)||[]),skater.id]);}

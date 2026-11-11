@@ -37,10 +37,10 @@ const failedCalendar=mock([Response.json({error:'Calendar unavailable'},{status:
 await assert.rejects(checkOfficialSources(failedCalendar.request,'2026-10-23'),/Calendar unavailable/);
 assert.equal(failedCalendar.calls.length,1);checks.push('failed calendar stops details and cannot report success');
 
-const distant=mock([Response.json({events:2,nextEvents:[{id:'SO-6',start:'2026-12-08'}]})]);
+const distant=mock([Response.json({events:2,nextEvents:[{id:'SO-6',start:'2027-04-25'}]})]);
 assert.deepEqual(await checkOfficialSources(distant.request,'2026-10-23'),{events:2,checkedEvents:0,errors:[]});
-assert.equal(distant.calls.length,1);checks.push('events beyond the 45-day detail window are not checked');
+assert.equal(distant.calls.length,1);checks.push('events beyond the 183-day calendar window are not checked');
 
-const boundary=mock([Response.json({events:1,nextEvents:[{id:'SO-7',start:'2026-12-07'}]}),Response.json({errors:[]})]);
-assert.equal((await checkOfficialSources(boundary.request,'2026-10-23')).checkedEvents,1);checks.push('45-day boundary remains inclusive across Toronto daylight-saving transition');
+const boundary=mock([Response.json({events:1,nextEvents:[{id:'SO-7',start:'2027-04-24'}]}),Response.json({errors:[]})]);
+assert.equal((await checkOfficialSources(boundary.request,'2026-10-23')).checkedEvents,1);checks.push('183-day boundary includes distant competition announcements for registration reminders');
 console.log(JSON.stringify({passed:checks.length,checks,fixtureOnly:true,productionWrites:0},null,2));

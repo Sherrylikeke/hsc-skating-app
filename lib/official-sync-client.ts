@@ -12,7 +12,7 @@ export async function checkOfficialSources(request:RequestSync,today:string,even
   const first=await check(eventId);
   const errors=[...(first.errors||[])];
   if(eventId)return {events:0,checkedEvents:1,errors};
-  const cutoff=new Date(today+'T12:00:00Z');cutoff.setUTCDate(cutoff.getUTCDate()+45);
+  const cutoff=new Date(today+'T12:00:00Z');cutoff.setUTCDate(cutoff.getUTCDate()+183);
   const selected=(first.nextEvents||[]).filter(event=>event.start<=cutoff.toISOString().slice(0,10)).slice(0,3);
   for(const [index,event] of selected.entries()){
     onProgress?.(index+1,selected.length);

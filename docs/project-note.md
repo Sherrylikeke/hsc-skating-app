@@ -2,6 +2,13 @@
 
 这是项目负责人的持续维护记录，不属于会员网页内容。后续会话先读取本文件与 AGENTS.md，在完成实质修改或验收后更新；不自动轮询、不新增定时任务。下列运行数据是查询快照，不是实时监控。
 
+## 2026-11-11 我的选手赛事与报名入口
+
+- 基于用户指定4b770f5/V42实现四项需求：概览移除总数统计；会员首页、概览、个人赛程展示My Skaters相关的未来正式/Interim名单赛事；重复Starting Order顶部链接移除、保留类别顺序表；报名阶段开放日前14天至截止日展示类别匹配及SkateReg/Uplifter入口，各赛事有明确Skate Ontario详情外链。逻辑与解析范围见docs/home-events.md。
+- 实际Niagara/Bowmanville两种Interim PDF解析547/372条，保留跨页类别与完整姓名安全匹配。网页/Announcement读取assigned/public日期，音乐截止日和不明确年份不作为报名日期。未来183天轮换第三场详情，保留每轮三场和原小时任务；不变更schema、账号/关系、邮件配置、访问范围。
+- 已通过20个回归文件（含31组核心权限）、Web类型、10项native检查、Capacitor构建与Android/iOS sync；后来补充公告类别跨行与第二种Interim真实样本回归，最终构建/Worker结果待补。Chrome/WebKit、320/390/1280px、中英文、三个首页入口36个隔离样本视图通过，手机静态入口漏载已有样式导致的WebKit320px溢出已修正。浏览器报告在本次会话outputs/home-events-review；不是生产用户登录/真机安装。
+- 本轮重新读Sites为V42/public、原小时任务启用。GitHub工具核对同名原仓库当前visibility=public、push/admin=true；不更改可见性，后续正常同步同一仓库。本次上线、实际官网再同步、APK/iOS资源和Git结果待后续补记，不沿用V42作为本轮成功结论。
+
 ## 2026-11-11 十位密码及重置入口
 
 - 用户要求注册密码最低10位并开放密码重置。新共享password-policy用于Better Auth服务端、注册及重置输入框，范围10–128字符；登录继续兼容已有密码。登录页“忘记密码？”改为直接链接/reset-password；直接进入该页是申请邮箱链接表单，无token不再误报链接失效。明确错误/空token及服务端失效仍提示重新申请。

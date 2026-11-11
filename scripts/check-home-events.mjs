@@ -1,0 +1,76 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {registrationDetails,registrationLink,homeEventCards,announcementLinks,REGISTRATION_PORTAL} from '../lib/event-registration.ts';
+import {calendarEvent,discoverDocuments,scheduleRows} from '../lib/official-parser.ts';
+import {parseEntryPdf} from '../lib/entry-pdf.ts';
+import {readOfficialPdfItems} from '../lib/official-pdf.ts';
+import {selectDetailEvents} from '../lib/sync-selection.ts';
+
+const source='https://skateontario.org/event/test/',checks=[];
+const description=`<p>Advanced Registration: Registration for assigned athletes will open at 10:00 AM ET Monday, November 9, 2026 and will close at 11:59 PM ET Wednesday, November 11, 2026.</p>
+<p>Public Registration: The public registration waitlist will open at 12:00 PM ET Thursday, November 12, 2026, and will close at 11:59 PM ET Monday, November 16, 2026.</p>
+<p>Music registration closes December 16, 2026.</p>`;
+const info=registrationDetails(description,'STAR 1-4 Test',source);
+assert.deepEqual(info.registrations.map(({kind,opens,closes})=>({kind,opens,closes})),[{kind:'assigned',opens:'2026-11-09',closes:'2026-11-11'},{kind:'public',opens:'2026-11-12',closes:'2026-11-16'}]);
+assert.equal(info.registrations[0].url,REGISTRATION_PORTAL);assert.deepEqual(info.offeredCategories,['STAR 1','STAR 2','STAR 3','STAR 4']);
+checks.push('official prose separates assigned/public windows and excludes music deadlines');
+const table=registrationDetails('ASSIGNED ATHLETE REGISTRATION OPENS: 10:00 AM ET November 9, 2026\nASSIGNED ATHLETE REGISTRATION CLOSES: 11:59 PM ET November 11, 2026\nREGISTRATION OPENS: 12:00 PM ET November 12, 2026\nREGISTRATION CLOSES: 11:59 PM ET November 16, 2026\nMUSIC REGISTRATION CLOSES: December 16, 2026','STAR 1-4 Test',source);
+assert.deepEqual(table.registrations,info.registrations);
+assert.equal(registrationDetails('REGISTRATION OPENS: February 30, 2027','Test',source).registrations.length,0);
+assert.equal(registrationDetails('REGISTRATION OPENS: November 12','Test',source).registrations.length,0);
+checks.push('announcement tables agree with prose; invalid or year-less dates stay unconfirmed');
+const categoryAnnouncement=registrationDetails('CATEGORIES\nThe following categories are to be held at Test:\nSTAR 2 Freeskate Must not have passed STAR 6 assessment.\nSTAR 2/3 Solo Dance Each skater must have passed the STAR 1 assessment.\nMUSIC REQUIREMENTS\nSTAR 9 Women','Test',source);
+assert.deepEqual(categoryAnnouncement.offeredCategories,['STAR 2 Freeskate','STAR 2/3 Solo Dance']);
+checks.push('announcement categories span lines and exclude assessment thresholds and later unrelated sections');
+const event=calendarEvent({id:1,title:'STAR 1-4 Test',url:source,start_date:'2027-01-15',end_date:'2027-01-17',description},'2026-11-11T00:00:00Z');
+const skater={id:'mine',name:'Fixture Skater',categories:['STAR 2'],coach:'',identityPending:false};
+const cards=(today,events=[event],ids=['mine'],skaters=[skater])=>homeEventCards(events,skaters,ids,today);
+assert.equal(cards('2026-10-25').length,0);assert.equal(cards('2026-10-26').length,1);
+assert.deepEqual(cards('2026-10-28')[0].windows.map(window=>window.kind),['assigned']);
+assert.deepEqual(cards('2026-10-29')[0].windows.map(window=>window.kind),['assigned','public']);
+assert.deepEqual(cards('2026-11-12')[0].windows.map(window=>window.kind),['public']);
+assert.equal(cards('2026-11-16').length,1);assert.equal(cards('2026-11-17').length,0);
+checks.push('14 calendar days before each opening, inclusive closing date, expired windows hidden');
+assert.equal(cards('2026-11-11',[event],[]).length,0);
+assert.equal(cards('2026-11-11',[event],['other']).length,0);
+assert.equal(cards('2026-11-11',[event],['mine'],[{...skater,categories:['Pre-Novice Men']}]).length,0);
+assert.equal(cards('2026-11-11',[event],['mine'],[{...skater,categories:['STAR 2 Elements']}]).length,0);
+assert.equal(cards('2026-11-11',[event],['mine'],[{...skater,identityPending:true}]).length,0);
+checks.push('My Skaters preferences, level/discipline and unresolved identities cannot produce unrelated reminders');
+const entry={id:'p',name:skater.name,category:'Pre-Novice Men',skaterIds:['mine'],sourceUrl:source+'interim.pdf'};
+const interim={...event,id:'interim',name:'Interim Cup',start:'2026-12-04',end:'2026-12-06',registrations:[],participants:[entry],blocks:[]};
+assert.equal(cards('2026-11-11',[interim]).length,1);assert.equal(cards('2026-12-07',[interim]).length,0);
+assert.equal(cards('2026-11-11',[event,interim]).length,1,'Current official categories supersede older profile categories');
+assert.ok(scheduleRows([interim],[skater]).every(row=>!row.start&&!row.end),'Interim lists do not manufacture times');
+checks.push('interim-only entries appear without schedules; newer official categories take priority over historical levels');
+const january={...event,registrations:[{kind:'public',opens:'2027-01-04',closes:'2027-01-07',url:REGISTRATION_PORTAL,sourceUrl:source}]};
+assert.equal(cards('2026-12-20',[january]).length,0);assert.equal(cards('2026-12-21',[january]).length,1);
+assert.equal(registrationLink('javascript:alert(1)'),null);assert.equal(registrationLink('https://skatereg.ca.attacker.test/'),null);
+assert.equal(cards('2026-11-11',[{...event,registrations:[{...info.registrations[0],url:'https://other.test/'}]}]).length,0);
+assert.equal(announcementLinks('<a href="/announcement.pdf">Announcement</a><a href="https://other.test/announcement.pdf">Announcement</a>',source).length,1);
+assert.equal(registrationDetails('<a href="https://skatereg.ca/#!/events/test-cup">Register</a>'+description,'Test',source).registrations[0].url,'https://skatereg.ca/#!/events/test-cup');
+checks.push('year rollover and official platform links are bounded; external announcement sources are not fetched');
+assert.equal(discoverDocuments('<a href="/interim.pdf">Interim List</a>',source)[0].kind,'entries');
+assert.equal(discoverDocuments('<a href="/interim.pdf">Interim Entry Lists</a>',source)[0].kind,'entries');
+const item=(str,x,y)=>({str,x,y});
+const pages=[[
+ item('Interim Entry Lists',230,750),item('STAR 2',280,710),
+ item('Fixture',55,690),item('Skater',170,690),item('Hamilton SC',288,690),
+], [item('Second',55,720),item('Athlete',170,720),item('Hamilton SC',288,720),item('STAR 3',280,690),item('Third',55,670),item('Athlete',170,670),item('Hamilton SC',288,670)]];
+const parsed=parseEntryPdf(pages,source,[skater]);assert.equal(parsed.length,3);assert.equal(parsed[1].category,'STAR 2');assert.equal(parsed[2].category,'STAR 3');assert.deepEqual(parsed[0].skaterIds,['mine']);
+assert.deepEqual(parseEntryPdf(pages,source,[{...skater,identityPending:true}])[0].skaterIds,[]);
+assert.deepEqual(parseEntryPdf(pages,source,[skater,{...skater,id:'duplicate'}])[0].skaterIds,[]);
+const broken=structuredClone(pages);broken[1][1].x=200;assert.throws(()=>parseEntryPdf(broken,source,[skater]),/分列/);
+const categoryColumn=[[item('Interim Entry Lists by Category',200,750),item('Creative Improv 1',55,700),item('Fixture',194,700),item('Skater',282,700),item('Hamilton SC',374,700),item('STAR 2 Elements',55,680),item('Second',194,680),item('Athlete',282,680),item('Hamilton SC',374,680)],[item('Third',194,720),item('Athlete',282,720),item('Hamilton SC',374,720)]];
+const columnEntries=parseEntryPdf(categoryColumn,source,[skater]);assert.equal(columnEntries.length,3);assert.equal(columnEntries[0].category,'Creative Improv 1');assert.equal(columnEntries[2].category,'STAR 2 Elements');assert.deepEqual(columnEntries[0].skaterIds,['mine']);
+checks.push('interim spreadsheet columns, page continuation and category boundaries preserve exact-name safeguards');
+for(const [file,count,category] of [['niagara-2026-interim-entry',547,'STAR 2/3 Solo Dance'],['bowmanville-2026-interim-entry',372,'STAR 3 Team Elements']]){
+ const pages=await readOfficialPdfItems(new Uint8Array(fs.readFileSync('tests/fixtures/'+file+'.pdf'))),rows=parseEntryPdf(pages,source,[]);
+ assert.equal(rows.length,count);assert.ok(rows.some(row=>row.category===category));
+}
+checks.push('two current official interim PDF exports preserve all 547 / 372 aligned records');
+const future=[{id:'near1',name:'Near',start:'2026-11-15'},{id:'near2',name:'Near',start:'2026-11-20'},{id:'later',name:'January',start:'2027-01-15'},{id:'outside',name:'Outside',start:'2027-08-01'}];
+assert.deepEqual(selectDetailEvents(future,'2026-11-11').map(event=>event.id),['near1','near2','later']);
+const app=fs.readFileSync('app/club-app.tsx','utf8');assert.ok(!app.includes('className="club-metrics"'));assert.ok(app.includes("documents.filter(document=>document.kind!=='start-order')"));assert.ok(app.includes('Skate Ontario event details'));
+checks.push('distant registration announcements rotate into three-event sync; stats and duplicate order links removed');
+console.log(JSON.stringify({passed:checks.length,checks,fixtureOnly:true,productionWrites:0},null,2));

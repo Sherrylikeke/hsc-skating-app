@@ -1,4 +1,5 @@
 import type {LiveEvent,Participant,ScheduleBlock,OfficialDocument,ClubSkater,ScheduleRow} from './club-types';
+import {registrationDetails} from './event-registration.ts';
 import {orderFor} from './starting-order.ts';
 export type PdfItem={str:string;x:number;y:number;height?:number};
 export function plain(value:string){return value.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'').replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,'').replace(/<[^>]*>/g,' ').replace(/&nbsp;|&#160;/g,' ').replace(/&amp;|&#0*38;/g,'&').replace(/&quot;|&#34;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(Number(n))).replace(/&#x([0-9a-f]+);/gi,(_,n)=>String.fromCodePoint(parseInt(n,16))).replace(/\s+/g,' ').trim();}
@@ -19,7 +20,7 @@ export function discoverDocuments(html:string,base:string):OfficialDocument[]{
     let url:URL;try{url=new URL(href,base);}catch{continue;}
     if(!/^https?:$/.test(url.protocol))continue;
     const label=plain(match[2]);const signal=label+' '+url.pathname;
-    const kind=/schedule/i.test(signal)?'schedule':/start(?:ing)?[ -]*order|SO\.pdf$/i.test(signal)?'start-order':/entry\s*list|cssEntryList|entries/i.test(signal)?'entries':/result/i.test(signal)?'results':null;
+    const kind=/schedule/i.test(signal)?'schedule':/start(?:ing)?[ -]*order|SO\.pdf$/i.test(signal)?'start-order':/(?:entry|interim)[\s_-]*list|cssEntryList|entries/i.test(signal)?'entries':/result/i.test(signal)?'results':null;
     if(!kind || (!/\.pdf$/i.test(url.pathname) && !/dstools\.ca$|skatingresults\.ca$|skateontario\.org$/.test(url.hostname)))continue;
     // Keep entry lists and actual schedule files, not navigation/category pages.
     if(kind==='schedule' && !/\.pdf$/i.test(url.pathname))continue;
@@ -31,7 +32,7 @@ export function discoverDocuments(html:string,base:string):OfficialDocument[]{
 export function competitionSchedule(documents:OfficialDocument[]){return documents.find(document=>document.kind==='schedule'&&!/\bAWARDS?\b|AWARDS?[-_ ]SCHEDULE/i.test(document.label+' '+new URL(document.url).pathname));}
 export function calendarEvent(raw:Record<string,unknown>,checkedAt:string):LiveEvent{
   const venue=raw.venue as Record<string,string>|undefined;
-  return {id:`SO-${raw.id}`,name:plain(String(raw.title||'')),url:String(raw.url||''),start:String(raw.start_date||'').slice(0,10),end:String(raw.end_date||'').slice(0,10),timezone:String(raw.timezone||'America/Toronto'),venue:venue?.venue||'',city:venue?.city||'',updateText:plain(String(raw.description||'')).slice(0,450),officialModified:String(raw.modified||''),checkedAt,documents:[],participants:[],blocks:[],entryStatus:'尚未读取名单',scheduleStatus:'尚未读取赛程',source:'Skate Ontario'};
+  return {...registrationDetails(String(raw.description||''),plain(String(raw.title||'')),String(raw.url||'')),id:`SO-${raw.id}`,name:plain(String(raw.title||'')),url:String(raw.url||''),start:String(raw.start_date||'').slice(0,10),end:String(raw.end_date||'').slice(0,10),timezone:String(raw.timezone||'America/Toronto'),venue:venue?.venue||'',city:venue?.city||'',updateText:plain(String(raw.description||'')).slice(0,450),officialModified:String(raw.modified||''),checkedAt,documents:[],participants:[],blocks:[],entryStatus:'尚未读取名单',scheduleStatus:'尚未读取赛程',source:'Skate Ontario'};
 }
 export function parseEntries(html:string,sourceUrl:string,roster:Array<{id:string;name:string;identityPending?:boolean}>):Participant[]{
   const names=new Map<string,string[]>();

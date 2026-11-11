@@ -1,14 +1,16 @@
 'use client';
 import {useEffect, useMemo, useState} from 'react';
 import type {ReactNode} from 'react';
-import type {ClubSkater, ScheduleRow} from '../lib/club-types';
+import type {ClubEvent,ClubSkater, ScheduleRow} from '../lib/club-types';
 import {filterHomeSchedule, groupHomeSchedule, type HomeScope} from '../lib/home-schedule';
 import {text} from '../lib/i18n';
 import CompactSelect from './compact-select';
 import HomeSkaters from './home-skaters';
+import HomeEvents from './home-events';
 import './personal-schedule.css';
 
 type Props = {
+  events?:ClubEvent[];
   limit?:number;editableIds?:string[];onCoachChange?:()=>void;
   onSkater:(id:string)=>void;
   onWatch:()=>void;
@@ -22,7 +24,7 @@ type Props = {
   renderRows:(rows:ScheduleRow[], showArrival?:boolean)=>ReactNode;
 };
 
-export default function PersonalSchedule({rows,skaters,ownIds,scope,onScope,onChange,renderRows,onWatch,onCalendar,onSkater,limit,editableIds,onCoachChange}:Props) {
+export default function PersonalSchedule({events,rows,skaters,ownIds,scope,onScope,onChange,renderRows,onWatch,onCalendar,onSkater,limit,editableIds,onCoachChange}:Props) {
   const [now,setNow] = useState(Date.now);
   useEffect(() => {
     const update = () => setNow(Date.now());
@@ -56,6 +58,7 @@ export default function PersonalSchedule({rows,skaters,ownIds,scope,onScope,onCh
       <button type="button" className="cal-entry" onClick={onCalendar}>{text('Schedule calendar','赛程日历')}</button>
       <button type="button" className="watch-entry" onClick={onWatch}>{text('Cheer from now','从现在看 · 给朋友加油')}</button>
     </section>
+    {events&&<HomeEvents events={events} skaters={skaters} ownIds={ownIds}/>}
     <section className="club-panel family-upcoming">
       <div className="club-panel-heading"><h2>{title}</h2><span>{text('Current & upcoming','当前及接下来')} · {upcoming.length}</span></div>
       {upcoming.length ? renderRows(upcoming,true) :

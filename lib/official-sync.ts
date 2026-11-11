@@ -6,6 +6,7 @@ import {importEntries} from './entry-import';
 import {parseStartingOrderPdf,parseStartingOrderHtml} from './starting-order';
 import {importStartingOrderApp,startingOrderApp} from './starting-order-api';
 import {selectStartingOrderDocuments} from './starting-order-selection';
+import {announcementLinks,registrationDetails} from './event-registration';
 import {todayToronto,ENTRY_PDF_VERSION,STARTING_DRAW_VERSION} from './club-types';
 import type {LiveEvent} from './club-types';
 import {drainOutbox} from './member-messages';
@@ -41,7 +42,7 @@ async function syncCalendarBody(){
     }
     const existing=new Map((await readLiveEvents()).map(event=>[event.id,event]));const incoming:LiveEvent[]=[];
     for(const raw of gathered){const item=calendarEvent(raw,now);if(!item.name||!/^20\d\d-\d\d-\d\d$/.test(item.start)||!allowedHosts.has(new URL(item.url).hostname))continue;const previous=existing.get(item.id);
-      if(previous){incoming.push({...previous,...item,documents:previous.documents,participants:previous.participants,blocks:previous.blocks,entryStatus:previous.entryStatus,scheduleStatus:previous.scheduleStatus,detailCheckedAt:previous.detailCheckedAt,detailError:previous.officialModified!==item.officialModified?'官网页面有修订，名单与赛程等待复核':previous.detailError});}else incoming.push(item);
+      if(previous){incoming.push({...previous,...item,registrations:item.registrations?.length?item.registrations:previous.registrations,offeredCategories:[...new Set([...(previous.offeredCategories||[]),...(item.offeredCategories||[])])],documents:previous.documents,participants:previous.participants,blocks:previous.blocks,entryStatus:previous.entryStatus,scheduleStatus:previous.scheduleStatus,detailCheckedAt:previous.detailCheckedAt,detailError:previous.officialModified!==item.officialModified?'官网页面有修订，名单与赛程等待复核':previous.detailError});}else incoming.push(item);
     }
     for(const event of incoming)await putLiveEvent(event);
     await putSyncStatus({lastSuccess:now,lastCalendarSuccess:now,events:incoming.length,error:null});
@@ -55,6 +56,21 @@ async function syncEventBody(id:string){
   const now=new Date().toISOString();let event={...existing,detailCheckedAt:now};const errors:string[]=[];let changed=0;
   try{
     const html=new TextDecoder().decode(await source(event.url));const discovered=discoverDocuments(html,event.url);
+    const details=registrationDetails(html,event.name,event.url);
+    // Page updates take priority; announcements fill missing windows and offered categories.
+    for(const url of announcementLinks(html,event.url))try{
+      const pages=await readPdfItems(await source(url,8_000_000));
+      const text=pages.map(items=>{
+        const lines:Array<{y:number;items:typeof items}>=[];
+        for(const item of [...items].sort((a,b)=>b.y-a.y||a.x-b.x)){let line=lines.find(line=>Math.abs(line.y-item.y)<3);if(!line){line={y:item.y,items:[]};lines.push(line);}line.items.push(item);}
+        return lines.map(line=>line.items.sort((a,b)=>a.x-b.x).map(item=>item.str).join(' ')).join('\n');
+      }).join('\n');
+      const announcement=registrationDetails(text,event.name,url);
+      details.registrations.push(...announcement.registrations.filter(window=>!details.registrations.some(current=>current.kind===window.kind)));
+      details.offeredCategories.push(...announcement.offeredCategories);
+    }catch(error){errors.push('报名公告：'+message(error));}
+    event.registrations=details.registrations.length?details.registrations:existing.registrations;
+    event.offeredCategories=[...new Set(details.offeredCategories.length?details.offeredCategories:existing.offeredCategories||[])];
     for(const hub of discovered.filter(d=>(d.kind==='results'||d.kind==='start-order')&&!/\.pdf(?:$|\?)/i.test(d.url)).slice(0,2)){
       try{
         const linked=discoverDocuments(new TextDecoder().decode(await source(hub.url)),hub.url).filter(document=>document.kind==='start-order'&&document.url!==hub.url);
@@ -65,7 +81,7 @@ async function syncEventBody(id:string){
     const documents=discovered.map(document=>({...existing.documents.find(old=>old.url===document.url),...document}));
     for(const document of documents)if(document.kind==='schedule'&&/AWARDS?/i.test(document.label+document.url))delete document.error;
     event={...event,documents};
-    const entries=documents.find(document=>document.kind==='entries');const schedule=competitionSchedule(documents);
+    const entries=documents.filter(document=>document.kind==='entries').sort((a,b)=>Number(/interim/i.test(a.label+' '+a.url))-Number(/interim/i.test(b.label+' '+b.url)))[0];const schedule=competitionSchedule(documents);
     if(entries){
       try{
         const imported=await importEntries(entries,existing.participants,roster,matchingRosterHash,now,source,readPdfItems);
@@ -112,7 +128,7 @@ async function syncEventBody(id:string){
     return {id:event.id,name:event.name,changed,participants:event.participants.length,matchedSkaters:new Set(event.participants.flatMap(row=>row.skaterIds)).size,blocks:event.blocks.length,entryFiles:entryProgress(event),startingOrderFiles:startingOrderProgress(event),startingOrderStatus:event.startingOrderStatus,entryStatus:event.entryStatus,scheduleStatus:event.scheduleStatus,scheduleSource:schedule?{url:schedule.url,hash:schedule.hash,parserVersion:schedule.parserVersion}:undefined,scheduleBlocksPreview:event.blocks.map(block=>({date:block.date,start:block.start,end:block.end,category:block.category,rink:block.rink})),clubEntriesPreview:event.participants.filter(entry=>entry.skaterIds.length).slice(0,80).map(entry=>({name:entry.name,category:entry.category,skaterIds:entry.skaterIds})),schedulePreview:scheduleRows([event],roster).filter(row=>row.activity==='competition').slice(0,40).map(row=>({name:row.skaterName,category:row.category,date:row.date,start:row.start,end:row.end,rink:row.rink,uncertain:row.uncertain,startNumber:row.startingOrder?.startNumber,warmupGroup:row.startingOrder?.warmupGroup,individualTime:row.startingOrder?.individualTime,sourceUrl:row.startingOrder?.sourceUrl})),checkedAt:now,errors};
   }catch(error){event.detailError=message(error);await putLiveEvent(event);await putSyncStatus({lastAttempt:now,error:message(error)});throw error;}
 }
-export async function syncStatus(){return {status:await readSyncStatus(),events:(await readLiveEvents()).map(event=>({id:event.id,name:event.name,start:event.start,end:event.end,detailCheckedAt:event.detailCheckedAt,error:event.detailError,matched:event.participants.filter(row=>row.skaterIds.length).length,participants:event.participants.length,blocks:event.blocks.length,entryFiles:entryProgress(event),entryStatus:event.entryStatus,scheduleStatus:event.scheduleStatus})),scope:'Skate Ontario 官方日历；DSTools HTML 名单；同源目录内 Name/Club/Section 与总人数可核对的报名 PDF，每场每轮最多四份；明确日期分区、START/END 与 RINK 表头的赛程 PDF。其他格式或未完成批次保留链接并提示核对。',instructions:'先同步日历，再依次检查返回的 nextEvents（未来45天，最近两场加一场按上次检查时间轮换，最多三场，包含 STAR 1–4）。PDF 名单分批轮转，待处理不等于全量成功。读取失败不删除旧数据。官方时段是组别时间，不推算个人时间；教练集合与备注独立保存。'};}
+export async function syncStatus(){return {status:await readSyncStatus(),events:(await readLiveEvents()).map(event=>({id:event.id,name:event.name,start:event.start,end:event.end,detailCheckedAt:event.detailCheckedAt,error:event.detailError,matched:event.participants.filter(row=>row.skaterIds.length).length,participants:event.participants.length,blocks:event.blocks.length,entryFiles:entryProgress(event),entryStatus:event.entryStatus,scheduleStatus:event.scheduleStatus})),scope:'Skate Ontario 官方日历与网页／Announcement报名日期；DSTools HTML 名单；已验证的三列Interim PDF；同源目录内 Name/Club/Section 与总人数可核对的报名 PDF，每场每轮最多四份；明确日期分区、START/END 与 RINK 表头的赛程 PDF。其他格式或未完成批次保留链接并提示核对。',instructions:'先同步日历，再依次检查返回的 nextEvents（未来183天，最近两场加一场按上次检查时间轮换，最多三场，包含 STAR 1–4）。PDF 名单分批轮转，待处理不等于全量成功。读取失败不删除旧数据。官方时段是组别时间，不推算个人时间；教练集合与备注独立保存。'};}
 async function withSyncLock<T>(operation:()=>Promise<T>):Promise<T>{
   const lock=JSON.stringify({token:crypto.randomUUID(),expiresAt:Date.now()+300000});
   const acquired=await db().prepare("INSERT INTO app_meta (key,value) VALUES ('official-source-lock',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value WHERE CAST(json_extract(app_meta.value,'$.expiresAt') AS INTEGER) <= ? RETURNING value").bind(lock,Date.now()).first();

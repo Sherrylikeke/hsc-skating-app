@@ -26,6 +26,8 @@ const workerOptions={cf:false,modules,modulesRoot:root,compatibilityDate:runtime
 },outboundService:request=>{const url=new URL(request.url);
 if(url.hostname==='skatingresults.ca'){if(url.pathname.endsWith('/categories'))return Response.json({Categories:[startingFixture.category]});if(url.pathname.endsWith('/segments'))return Response.json({Segments:startingFixture.segments});const id=url.pathname.match(/segment\/([^/]+)\/entries$/)?.[1];if(id)return Response.json(startingFixture.entries[id]);return new Response(startingHtml);}
 if(url.hostname==='www.skateontario.org'){
+if(url.pathname==='/fixture-home/')return new Response('<p>Public Registration: Registration opens November 12, 2026 and closes November 16, 2026.</p><a href="https://www.skateontario.org/fixture-interim.pdf">Interim List</a>');
+if(url.pathname==='/fixture-interim.pdf')return new Response(fs.readFileSync('tests/fixtures/niagara-2026-interim-entry.pdf'));
 if(url.pathname==='/fixture-max/')return new Response('<a href="https://www.skateontario.org/fixture-keswick-schedule.pdf">Schedule</a><a href="https://www.skateontario.org/fixture-max-entries.html">Entry List</a><a href="https://www.skateontario.org/results/27KES/27KesSTAR5MenU10FP2SO.pdf">Starting Order</a>');
 if(url.pathname==='/fixture-keswick-schedule.pdf')return new Response(fs.readFileSync('tests/fixtures/keswick-2026-nov10-schedule.pdf'));
 if(url.pathname==='/fixture-max-entries.html')return new Response('<table><tr data-category="STAR 5 Men (U10)" data-club="Hamilton SC" data-section="ON"><td>Max Wang</td></tr></table>');
@@ -166,6 +168,12 @@ try {
   console.log('Admin roster: create/edit, new skaters in bulk coaches, duplicate and stale-write rejection, concurrent writes, retained admission/club data and audit; anonymous, parent, coach and cross-origin writes blocked.');
 
   // Fiona is already in the original roster. Reuse that profile rather than creating an ambiguous duplicate.
+  const homeEvent={...syncEvent,id:'SO-999994',name:'STAR 1-4 Homepage Fixture',url:'https://www.skateontario.org/fixture-home/',start:'2027-01-15',end:'2027-01-17',documents:[],participants:[],blocks:[],startingOrders:[]};
+  await database.prepare('INSERT INTO live_events (id,payload,updated_at) VALUES (?,?,?)').bind(homeEvent.id,JSON.stringify(homeEvent),new Date().toISOString()).run();
+  const homeSync=await post('/api/sync',{eventId:homeEvent.id},platformHeaders);assert.equal(homeSync.status,200,await homeSync.clone().text());assert.equal((await homeSync.json()).participants,547);
+  const homeSaved=JSON.parse((await database.prepare('SELECT payload FROM live_events WHERE id=?').bind(homeEvent.id).first()).payload);
+  assert.equal(homeSaved.registrations[0].opens,'2026-11-12');assert.equal(homeSaved.registrations[0].closes,'2026-11-16');assert.equal(homeSaved.registrations[0].url,'https://uplifterfigureskating.com/');assert.ok(homeSaved.offeredCategories.includes('STAR 2'));assert.equal(homeSaved.blocks.length,0);
+  console.log('Worker homepage: current interim PDF persists 547 records without invented times, plus official registration windows and category metadata.');
   const lowEvent={...syncEvent,id:'SO-999992',name:'Isolated STAR 1-4 Fixture',url:'https://www.skateontario.org/fixture-low-star/',start:'2026-01-16',end:'2026-01-18'};await database.prepare('INSERT INTO live_events (id,payload,updated_at) VALUES (?,?,?)').bind(lowEvent.id,JSON.stringify(lowEvent),new Date().toISOString()).run();
   const lowResponse=await post('/api/sync',{eventId:lowEvent.id},platformHeaders);assert.equal(lowResponse.status,200,await lowResponse.clone().text());const lowResult=await lowResponse.json();assert.equal(lowResult.participants,7);assert.equal(lowResult.matchedSkaters,1);assert.equal(lowResult.blocks,78);const lowSaved=JSON.parse((await database.prepare('SELECT payload FROM live_events WHERE id=?').bind(lowEvent.id).first()).payload);assert.ok(lowSaved.blocks.some(row=>row.category==='STAR 1 - Group 2'&&row.rink==='WEST PAD'&&row.start==='08:30'));
   console.log('Worker STAR 1-4: real rotated schedule PDF and STAR3 entry PDF import 78 blocks / 7 entrants, explicit shared time and PAD preserved.');
