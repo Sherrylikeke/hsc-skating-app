@@ -4,6 +4,13 @@
 
 ## 目前线上状态
 
+### 首页public报名筛选与赛事排序（2026-11-11，V44已上线）
+
+- 用户确认以公开报名截止为准：仅为尚未列入本场名单的My Skaters显示未截止、日期可确认的公开报名提醒；缺失截止日期不回退到比赛日期。Interim/正式名单中已有的选手保留比赛，不重复提醒报名。首页显示可确认的官方日期、组别时间和冰场，分组未定继续待确认。首页及比赛中心按比赛开始日期由近到远排列。
+- 源码5983230；V44于Toronto11:42 succeeded，env9/MCP ready。13组定向回归、20/20完整测试、Web类型、36个Chrome/WebKit视图及真实Worker/D1通过，正式域名资源SHA匹配。Lake Superior已重新同步：public截止11月12日、无参赛名单；按用户确认规则在公开截止后隐藏，当前11月11日不硬编码提前隐藏。
+- 新APK和iOS构建资源在本次会话outputs/registration-filter-release，未真机/IPA/上架；最终事实与Git远端校验见docs/project-note.md。下列V43及此前记录为历史。
+
+
 ### My Skaters首页赛事与报名（2026-11-11，V43已上线）
 
 - 用户指定4b770f5基线的四项功能已实现：移除概览统计，正式/Interim名单匹配即可展示未来比赛，类别匹配的报名开放日前14天至截止日附SkateReg/Uplifter入口，Skate Ontario详情外链；顶部重复Starting Order链接移除。说明见docs/home-events.md。
