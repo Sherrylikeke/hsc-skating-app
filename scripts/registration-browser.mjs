@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 export async function checkRegistrationFeedback(browser,profile,origin){
   const context=await browser.newContext({...profile,locale:'en-CA'});
   const email='registration@example.test';
-  let outcome='requested',resends=0,mail='enabled';
+  let outcome='requested',resends=0,mail='enabled',childName='Fixture Skater',listed=true,registrations=0;
   try{
     await context.route('**/api/**',async route=>{
       const request=route.request(),url=new URL(request.url());
@@ -14,8 +14,13 @@ export async function checkRegistrationFeedback(browser,profile,origin){
         if(mail==='unavailable')return route.fulfill({status:503,json:{message:'Configuration unavailable'}});
         return route.fulfill({json:{deliveryConfigured:mail==='enabled',registrationConfigured:mail==='enabled'}});
       }
-      if(url.pathname==='/api/auth/sign-up/email')return route.fulfill({json:{user:{email},token:null,registrationMode:'verification',verificationDelivery:outcome}});
-      if(url.pathname==='/api/auth/registration-skaters')return route.fulfill({json:{names:['Fixture Skater'],hasMore:false}});
+      if(url.pathname==='/api/auth/sign-up/email'){
+        const body=request.postDataJSON();
+        assert.equal(body.role,'parent');assert.equal(body.skaterName,childName,'Parent registration submits the child name for server review');
+        registrations++;
+        return route.fulfill({json:{user:{email},token:null,registrationMode:'verification',verificationDelivery:outcome}});
+      }
+      if(url.pathname==='/api/auth/registration-skaters')return route.fulfill({json:{names:listed?['Fixture Skater']:[],hasMore:false}});
       if(url.pathname==='/api/auth/send-verification-email'&&request.method()==='POST'){
         assert.equal(request.postDataJSON().email,email);
         resends++;
@@ -24,7 +29,8 @@ export async function checkRegistrationFeedback(browser,profile,origin){
       return route.fulfill({status:404,json:{message:'Unknown test route'}});
     });
     const page=await context.newPage();
-    for(outcome of ['requested','retry-needed']){
+    for(const scenario of [{delivery:'requested',child:'Fixture Skater',listed:true},{delivery:'retry-needed',child:'Fixture Skater',listed:true},{delivery:'requested',child:'Unlisted Fixture Child',listed:false}]){
+      outcome=scenario.delivery;childName=scenario.child;listed=scenario.listed;
       const sharedLink=new URL('/?schedule=view%3Dcoach',origin).href;
       await page.goto(sharedLink);
       await page.getByRole('button',{name:'Create an account',exact:true}).tap();
@@ -32,8 +38,9 @@ export async function checkRegistrationFeedback(browser,profile,origin){
       await page.getByLabel('Password',{exact:true}).fill('Registration-Fixture-Only');
       await page.getByLabel('Confirm password',{exact:true}).fill('Registration-Fixture-Only');
       await page.getByLabel('Your email',{exact:true}).fill(email);
-      await page.getByLabel("Skater's name on the club list",{exact:true}).fill('Fixture Skater');
-      await page.getByRole('option',{name:'Fixture Skater',exact:true}).tap();
+      await page.getByLabel("Child's full name",{exact:true}).fill(childName);
+      if(listed)await page.getByRole('option',{name:childName,exact:true}).tap();
+      else await page.getByRole('status').filter({hasText:'an administrator must verify skater admission'}).waitFor();
       await page.getByRole('button',{name:'Create account',exact:true}).tap();
       const heading=page.getByRole('heading',{name:'Verify your email',exact:true});
       await heading.waitFor();
@@ -55,6 +62,7 @@ export async function checkRegistrationFeedback(browser,profile,origin){
       assert.equal(await page.url(),sharedLink,'Returning to sign in retains the original schedule destination');
       assert.equal(await identifier.evaluate(el=>el===document.activeElement),true);
     }
+    assert.equal(registrations,3,'Listed, retry-delivery and unlisted-child registrations all complete');
     mail='unavailable';
     await page.goto(origin);
     await page.getByRole('link',{name:'Forgot your password?',exact:true}).tap();

@@ -107,8 +107,9 @@ async function walk(width, language, browser) {
   const desktop = width >= 1000;
   const device = desktop ? (engine === webkit ? 'Desktop Safari':'Desktop Chrome') : (engine === webkit ? 'iPhone 13':'Pixel 7');
   const context = await browser.newContext({...devices[device], viewport:{width,height:844}, deviceScaleFactor:1});
+  let page;
   try {
-    const page = await context.newPage();
+    page = await context.newPage();
     let savedClub = club;
     const writes = [];
     const errors = [];
@@ -156,7 +157,11 @@ async function walk(width, language, browser) {
     assert.ok(firstRow.includes('11:15–12:00') && firstRow.includes('11:38') && firstRow.includes('#8'));
     assert.match(await current.first().locator('.family-arrival').innerText(), /10:15/);
     const navTop = desktop ? 844 : await page.locator('.club-sidebar').evaluate(el=>el.getBoundingClientRect().top);
-    assert.ok(firstRowY >= 0 && firstRowY < navTop, 'The first current session must be visible without scrolling');
+    // Upcoming competition cards now precede the detailed schedule. Check the
+    // actual scrolling journey, while the member-home entry stays above the fold.
+    await rows.first().evaluate(el=>el.scrollIntoView({block:'start',behavior:'instant'}));
+    const visibleRowTop=await rows.first().evaluate(el=>el.getBoundingClientRect().top);
+    assert.ok(visibleRowTop>=0&&visibleRowTop<navTop,'The current session must be reachable above the bottom navigation');
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth > innerWidth+1),false,'No page-wide scrolling');
     const pending = page.locator('.family-pending tbody tr');
     assert.equal(await pending.count(),1);
@@ -223,18 +228,19 @@ async function walk(width, language, browser) {
     const nav = page.locator('.club-sidebar nav');
     const overview = nav.getByRole('button',{name:/Club overview|俱乐部概览/i});
     await overview.click();
-    await page.locator('.club-metrics').waitFor();
+    await page.locator('.home-events-empty').waitFor();
+    assert.equal(await page.locator('.home-events .home-event').count(),0,'No homepage skaters means no personalized upcoming cards');
     assert.equal(await page.locator('a[href="/coaches"]').count(),0,'Parent navigation must not offer administrator maintenance');
     assert.equal(new URL(page.url()).searchParams.get('view'),'home','Overview needs its own restorable URL');
     const historyLength = await page.evaluate(()=>history.length);
     await overview.click();
     assert.equal(await page.evaluate(()=>history.length),historyLength,'Repeated taps must not add duplicate history entries');
     await page.reload();
-    await page.locator('.club-metrics').waitFor();
+    await page.locator('.home-events').waitFor();
     await nav.getByRole('button',{name:/Personal schedule|个人赛程/i}).click();
     await page.getByRole('heading',{name:language==='en'?'All my skaters':'我的全部',exact:true}).waitFor();
     await page.goBack();
-    await page.locator('.club-metrics').waitFor();
+    await page.locator('.home-events').waitFor();
     await page.goto(origin+'/');
     const tabs=page.locator('.member-tabs');
     await tabs.getByRole('button',{name:/Notification|通知中心/}).click();
@@ -263,6 +269,9 @@ async function walk(width, language, browser) {
     await checkMembershipControls(page,language);
     assert.deepEqual(errors,[]);
     return {width,language,entryY,firstRowY,firstRow};
+  } catch(error) {
+    await page?.screenshot({path:path.join(output,width+'-'+language+'-failure.png'),fullPage:true,animations:'disabled'}).catch(()=>{});
+    throw error;
   } finally {
     await context.close();
   }

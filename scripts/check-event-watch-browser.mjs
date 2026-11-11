@@ -38,6 +38,19 @@ async function walk(browser,profile,language,folder) {
     await page.getByRole('combobox',{name:label}).click();
     await page.getByRole('option',{name:option,exact:true}).click();
   };
+  const readableRow=async locator=>{
+    // Controls and timing details can legitimately make the page taller than a
+    // phone. Check that a user can read a complete row after scrolling, including
+    // the area covered by the fixed navigation (not just the browser viewport).
+    await locator.evaluate(el=>el.scrollIntoView({block:'center',inline:'nearest',behavior:'instant'}));
+    const geometry=await locator.evaluate(el=>{
+      const rect=el.getBoundingClientRect(),navigation=document.querySelector('.club-sidebar').getBoundingClientRect();
+      return {firstTop:rect.top,firstBottom:rect.bottom,usableBottom:navigation.top,height:rect.height};
+    });
+    assert.ok(geometry.height<=geometry.usableBottom,'An entire watch row must fit within the usable viewport');
+    assert.ok(geometry.firstTop>=0&&geometry.firstBottom<=geometry.usableBottom,'Complete watch row must be readable above the fixed navigation: '+JSON.stringify(geometry));
+    return geometry;
+  };
   try {
     await page.clock.setFixedTime(new Date('2026-11-08T17:15:00Z'));
     await page.addInitScript(lang=>localStorage.setItem('hsc-language',lang),language);
@@ -73,9 +86,7 @@ async function walk(browser,profile,language,folder) {
     assert.match(await row(names[2]).innerText(),/12:03/);
     assert.match(await row(names[4]).innerText(),/#18/);
     assert.match(await row(names[4]).innerText(),/Individual estimate needs confirmation|个人预计时间待核对/);
-    const firstBottom=await row(names[2]).evaluate(el=>Math.round(el.getBoundingClientRect().bottom));
-    const usableBottom=await page.locator('.club-sidebar').evaluate(el=>el.getBoundingClientRect().top);
-    assert.ok(firstBottom<=usableBottom,'First complete row must fit above the bottom navigation: '+firstBottom+' / '+usableBottom);
+    const {firstBottom,usableBottom}=await readableRow(row(names[2]));
     await shot('from-now');
     await choose(ui('Ice surface','比赛冰面'),'Red');
     assert.deepEqual(await timeline.locator('.watch-person strong').allTextContents(),[names[1]]);
@@ -105,7 +116,7 @@ async function walk(browser,profile,language,folder) {
     await page.locator('.family-controls .watch-entry').click();
     await row(names[4]).waitFor();
     assert.equal(await page.evaluate(()=>scrollY),0);
-    assert.ok(await row(names[2]).evaluate(el=>el.getBoundingClientRect().bottom)<=usableBottom);
+    await readableRow(row(names[2]));
     await page.locator('.club-sidebar nav button').last().click();
     const coachRow=page.locator('.coach-day-row').filter({has:page.getByRole('button',{name:names[1],exact:true})}).first();
     await coachRow.locator('.coach-overlap-toggle').click();
@@ -122,11 +133,21 @@ async function walk(browser,profile,language,folder) {
     await page.goto(origin+'/workspace?view=events&event=autumn');
     await page.locator('.club-documents .watch-entry').click();
     await row(names[4]).waitFor();
-    await summary.click();await page.getByRole('checkbox',{name:/Jules Ray/}).uncheck();await summary.click();
+    await summary.click();
+    await page.getByRole('checkbox',{name:/Jules Ray/}).uncheck();
+    await page.getByRole('checkbox',{name:/Nora Lin/}).uncheck();
+    await summary.click();
+    await row(names[4]).waitFor({state:'hidden'});await row(names[2]).waitFor({state:'hidden'});
     assert.equal(await row(names[4]).count(),0);
+    await summary.click();await page.getByRole('checkbox',{name:/Jules Ray/}).check();await summary.click();
+    await row(names[4]).waitFor();
     member={...parent,id:'family-b'};
     await page.reload();await row(names[1]).waitFor();
-    assert.equal(await row(names[2]).count(),0);
+    await row(names[2]).waitFor();
+    assert.equal(await row(names[4]).count(),0,'A different account starts with club defaults, without the first account’s guest');
+    member=parent;
+    await page.reload();await row(names[4]).waitFor();
+    assert.equal(await row(names[2]).count(),0,'Returning to the first account restores its explicit club-skater exclusion');
     assert.deepEqual(writes,[]); assert.deepEqual(errors,[]);
     return {firstBottom,usableBottom};
   } catch(error) {
