@@ -411,9 +411,9 @@ for(const role of ['skater','parent','coach'])assert.deepEqual((await registrati
 for(const skaterName of ['External Skater','Unknown Identity','Candidate Only'])assert.equal((await registrationEligibility(registrationDatabase,{role:'parent',skaterName},skaterName)).skaterIds.length,1);
 assert.equal((await registrationEligibility(registrationDatabase,{role:'parent',skaterName:'Same Name'},'duplicates')).skaterIds.length,2);
 assert.equal((await registrationEligibility(registrationDatabase,{role:'parent',skaterName:'CARSON WANG'},'roster-only')).skaterIds.length,1);
-await assert.rejects(()=>registrationEligibility(registrationDatabase,{role:'parent',skaterName:'Missing Name'},'missing'),error=>error.status===403);
+await assert.rejects(()=>registrationEligibility(registrationDatabase,{role:'skater',skaterName:'Missing Name'},'missing'),error=>error.status===403);
 const isolatedAuth=createPasswordAuth(registrationDatabase,'isolated-tests-only-secret-0123456789-abcdef','http://127.0.0.1:5173',undefined,testDelivery);
-const limitedRequest=authRequest('sign-up/email',{...registrationBody,skaterName:'Missing Name'},{'cf-connecting-ip':'192.0.2.120'});
+const limitedRequest=authRequest('sign-up/email',{...registrationBody,role:'skater',skaterName:'Missing Name'},{'cf-connecting-ip':'192.0.2.120'});
 for(let attempt=0;attempt<8;attempt++)assert.equal((await isolatedAuth.handler(limitedRequest.clone())).status,403);
 assert.equal((await isolatedAuth.handler(limitedRequest.clone())).status,403,'A typo must not exhaust the hourly creation allowance');
 for(let attempt=9;attempt<40;attempt++)assert.equal((await isolatedAuth.handler(limitedRequest.clone())).status,403);
@@ -424,9 +424,9 @@ assert.equal(suggestions.status,200);const suggested=await suggestions.json();as
 assert.deepEqual((await registrationSuggestions(registrationDatabase,'Club')).names,['Club Skater']);
 assert.equal((await isolatedAuth.handler(authRequest('registration-skaters',{query:'Mike'},{origin:'https://evil.test'}))).status,403);
 const recoveryAddress='192.0.2.122';
-for(let attempt=0;attempt<12;attempt++)assert.equal((await isolatedAuth.handler(authRequest('sign-up/email',{...registrationBody,skaterName:'Mike procheav'},{'cf-connecting-ip':recoveryAddress}))).status,403);
+for(let attempt=0;attempt<12;attempt++)assert.equal((await isolatedAuth.handler(authRequest('sign-up/email',{...registrationBody,role:'skater',skaterName:'Mike procheav'},{'cf-connecting-ip':recoveryAddress}))).status,403);
 registrationDatabase.database.prepare('INSERT INTO hsc_rate_limits (id,count,expires_at) VALUES (?,12,?)').run('registration:'+recoveryAddress+':'+Math.floor(Date.now()/3600000),Date.now()+3600000);
-const recoveredName=await isolatedAuth.handler(authRequest('sign-up/email',{...registrationBody,email:'name-recovery@example.test',username:'name.recovery',skaterName:'Mike Pochaev'},{'cf-connecting-ip':recoveryAddress}));
+const recoveredName=await isolatedAuth.handler(authRequest('sign-up/email',{...registrationBody,email:'name-recovery@example.test',username:'name.recovery',role:'skater',skaterName:'Mike Pochaev'},{'cf-connecting-ip':recoveryAddress}));
 assert.equal(recoveredName.status,200,await recoveredName.clone().text());
 assert.equal(registrationDatabase.database.prepare("SELECT status FROM hsc_members WHERE email='name-recovery@example.test'").get().status,'club-viewer');
 assert.equal(registrationDatabase.database.prepare("SELECT count(*) AS count FROM hsc_relations WHERE member_id IN (SELECT id FROM hsc_members WHERE email='name-recovery@example.test')").get().count,0);
@@ -439,7 +439,7 @@ for(const route of ['sign-up/email/','sign-up/email//','sign-up%2Femail','SIGN-U
   const rejected=await auth.handler(authRequest(route,{...registrationBody,role:'admin'}));
   assert.equal(rejected.ok,false,'Registration gate bypass at '+route);
 }
-for(const [index,invalid] of [{role:'admin'},{role:'outsider'},{skaterName:''},{skaterName:'Not In Club'},{role:'admin',linkExisting:true}].entries()) {
+for(const [index,invalid] of [{role:'admin'},{role:'outsider'},{skaterName:''},{role:'skater',skaterName:'Not In Club'},{role:'admin',linkExisting:true}].entries()) {
   const rejected=await auth.handler(authRequest('sign-up/email',{...registrationBody,...invalid},{'cf-connecting-ip':'192.0.2.'+(80+index)}));
   assert.ok([400,403].includes(rejected.status),await rejected.text());
 }
@@ -871,9 +871,7 @@ assert.equal((await parentCall(parentFixture,'me')).value.preferredSkaterIds.len
 const parentDefaultLimit=await schedulePreferences(parentDatabase,(await parentCall(parentFixture,'me')).value.member,candidates.map(candidate=>candidate.id));assert.equal(parentDefaultLimit.preferredSkaterIds.length,4);
 await parentCall(parentFixture,'parent-coach&skaterId=SK-A',undefined,403);
 await parentCall(parentOwner,'member',{id:parentFixture.identity.userId,role:'parent',status:'active'});
-const missingAdmission=await parentCall(parentOwner,'review-claim',{id:'parent-name-claim',approve:true},400);assert.match(missingAdmission.value.error,/准入/);
-assert.equal(parentDatabase.database.prepare('SELECT status FROM hsc_claims WHERE id=?').get('parent-name-claim').status,'pending');
-await parentCall(parentOwner,'admission',{skaterId:'SK-A',name:'Test Alpha',admitted:true});
+assert.equal(parentDatabase.database.prepare('SELECT count(*) AS count FROM hsc_admissions WHERE skater_id=?').get('SK-A').count,0);
 await parentCall(parentOwner,'review-claim',{id:'parent-name-claim',approve:true});
 await parentCall(parentOwner,'review-claim',{id:'parent-name-claim',approve:true},409);
 const approvedSession=await parentCall(parentFixture,'session',{role:'parent'});parentFixture.cookie=approvedSession.response.headers.get('Set-Cookie').split(';')[0];
@@ -914,6 +912,39 @@ await parentCall(scheduleCoach,'self-coach',{skaterId:'SK-B',coachName:'Jen Jack
 assert.equal(parentDatabase.database.prepare('SELECT coach FROM coach_assignments WHERE skater_id=?').get('SK-B').coach,'Jen Jackson');
 await assert.rejects(registrationEligibility(parentDatabase,{role:'coach',coachName:'Unlisted Coach'},'fixture-coach-registration'),error=>error.status===400);
 check('active parents finish pending same-role claims after admission, role conflicts cannot approve; coaches register without child links and self-assign only their canonical name while preserving other coaches and private access boundaries');
+// Parent registrations accept an unlisted full name without creating a skater or granting a relationship.
+const missingParent=await registrationEligibility(registrationDatabase,{role:'parent',skaterName:'  Unlisted Child  ',registrationMatch:'matched',skaterIds:['approved']},'unlisted-parent');
+assert.deepEqual(missingParent.skaterIds,[]);assert.equal(missingParent.skaterName,'Unlisted Child');assert.equal(missingParent.registrationMatch,'missing');
+assert.equal((await registrationEligibility(registrationDatabase,{role:'parent',skaterName:'Same Name'},'ambiguous-parent')).registrationMatch,'ambiguous');
+const unknownSignup=await isolatedAuth.handler(authRequest('sign-up/email',{...registrationBody,email:'unlisted.parent@example.test',username:'unlisted.parent',skaterName:'Unlisted Child'},{'cf-connecting-ip':'192.0.2.124'}));
+assert.equal(unknownSignup.status,200,await unknownSignup.clone().text());
+const unknownUser=(await unknownSignup.json()).user;
+const unknownClaim=JSON.parse(registrationDatabase.database.prepare('SELECT payload FROM hsc_claims WHERE member_id=?').get('password:'+unknownUser.id).payload);
+assert.equal(unknownClaim.registrationMatch,'missing');assert.deepEqual(unknownClaim.skaterIds,[]);assert.equal(unknownClaim.name,'Unlisted Child');
+assert.equal(registrationDatabase.database.prepare("SELECT count(*) AS count FROM hsc_admissions WHERE json_extract(payload,'$.name')=?").get('Unlisted Child').count,0);
+assert.equal(registrationDatabase.database.prepare('SELECT count(*) AS count FROM hsc_relations WHERE member_id=?').get('password:'+unknownUser.id).count,0);
+const pendingParent=(claimId,payload)=>{const memberId='member-'+claimId;parentDatabase.database.prepare("INSERT INTO hsc_members(id,email,name,requested_role,status,created_at) VALUES (?,?,?,'parent','club-viewer',?)").run(memberId,memberId+'@example.test',memberId,nowISO());parentDatabase.database.prepare("INSERT INTO hsc_claims(id,member_id,kind,payload,status,created_at) VALUES (?,?,'membership',?,'pending',?)").run(claimId,memberId,JSON.stringify({role:'parent',...payload}),nowISO());return memberId;};
+const missingMember=pendingParent('missing-parent-child',{name:'Unlisted Child',skaterIds:[],registrationMatch:'missing'});
+await parentCall(parentOwner,'review-claim',{id:'missing-parent-child',approve:true},400);
+await parentCall(parentOwner,'review-claim',{id:'missing-parent-child',approve:true,skaterIds:['SK-B']},400);
+assert.equal(parentDatabase.database.prepare('SELECT count(*) AS count FROM hsc_relations WHERE member_id=?').get(missingMember).count,0);
+await parentCall(parentOwner,'admission',{skaterId:'SK-B',name:'Test Beta',admitted:true});
+await parentCall(parentOwner,'review-claim',{id:'missing-parent-child',approve:true,skaterIds:['SK-B']});
+assert.equal(parentDatabase.database.prepare('SELECT skater_id FROM hsc_relations WHERE member_id=?').get(missingMember).skater_id,'SK-B');
+const ambiguousMember=pendingParent('ambiguous-parent-child',{name:'Same Name',skaterIds:['SK-C','SK-D'],registrationMatch:'ambiguous'});
+assert.deepEqual((await schedulePreferences(parentDatabase,parentDatabase.database.prepare('SELECT * FROM hsc_members WHERE id=?').get(ambiguousMember),[])).preferredSkaterIds,[]);
+await parentCall(parentOwner,'review-claim',{id:'ambiguous-parent-child',approve:true},400);
+await parentCall(parentOwner,'review-claim',{id:'ambiguous-parent-child',approve:true,skaterIds:['SK-C','SK-D']},400);
+await parentCall(parentOwner,'review-claim',{id:'ambiguous-parent-child',approve:true,skaterIds:['SK-C']});
+assert.deepEqual(parentDatabase.database.prepare('SELECT skater_id FROM hsc_relations WHERE member_id=?').all(ambiguousMember).map(row=>row.skater_id),['SK-C']);
+assert.deepEqual((await schedulePreferences(parentDatabase,parentDatabase.database.prepare('SELECT * FROM hsc_members WHERE id=?').get(ambiguousMember),['SK-C'])).preferredSkaterIds,['SK-C']);
+parentDatabase.database.prepare('INSERT INTO hsc_admissions(skater_id,admitted,payload,updated_by,updated_at) VALUES (?,0,?,?,?)').run('SK-D',JSON.stringify({name:'Same Name',representedClubs:'Keep Club',training:true,identityPending:false}),'test',nowISO());
+pendingParent('existing-parent-child',{name:'Same Name',skaterIds:['SK-D'],registrationMatch:'matched'});
+parentDatabase.database.prepare("INSERT INTO hsc_relations(id,member_id,skater_id,kind,active,approved_by,updated_at) VALUES (?,?,?,'parent',1,?,?)").run('old-unadmitted-child-link',missingMember,'SK-D','test',nowISO());
+await parentCall(parentOwner,'review-claim',{id:'existing-parent-child',approve:true});
+assert.equal(parentDatabase.database.prepare('SELECT active FROM hsc_relations WHERE id=?').get('old-unadmitted-child-link').active,0);
+const retained=parentDatabase.database.prepare('SELECT admitted,payload FROM hsc_admissions WHERE skater_id=?').get('SK-D');assert.equal(retained.admitted,1);assert.equal(JSON.parse(retained.payload).representedClubs,'Keep Club');
+check('parent signup accepts missing names without profile creation or private access; existing HSC children need one relationship approval, unlisted children require admission and explicit selection, duplicate names require one chosen profile, saved profile fields are retained');
 const result = {passed: checks.length, checks, migrations, fixtureOnly: true, externalMessagesSent: 0, legacyDataPreserved: true};
 fs.mkdirSync('work', {recursive: true});
 fs.writeFileSync('work/phase2-test-results.json', JSON.stringify(result, null, 2));

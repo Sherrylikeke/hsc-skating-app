@@ -85,7 +85,7 @@ export default function PasswordPanel({role,onComplete,allowAdminLink=false}:{ro
   async function submit(event:React.FormEvent) {
     event.preventDefault();
     if(busy||retrySeconds>0)return;
-    if(register&&!adminLink&&(requestedRole==='coach'?!coachName:!selectedSkater||selectedSkater!==skaterName)){setError('SELECT_SKATER');return;}
+    if(register&&!adminLink&&(requestedRole==='coach'?!coachName:requestedRole==='parent'?!skaterName.trim():!selectedSkater||selectedSkater!==skaterName)){setError('SELECT_SKATER');return;}
     if(register&&password!==confirm){setError('PASSWORD_MISMATCH');return;}
     setBusy(true);setError('');
     try {
@@ -148,13 +148,13 @@ export default function PasswordPanel({role,onComplete,allowAdminLink=false}:{ro
         <label>{text('Your email','你的邮箱')}<input required type="email" value={email} onChange={event=>setEmail(event.target.value)} readOnly={!!pilot} autoComplete="email" maxLength={254}/></label>
         {!adminLink&&<><label htmlFor={id+'-role'}>{text('Role','身份')}</label><select id={id+'-role'} required value={requestedRole} onChange={event=>setRequestedRole(event.target.value as Role)}>
           {(!pilot||pilot.role==='skater')&&<option value="skater">{text('Skater','选手')}</option>}{(!pilot||pilot.role==='parent')&&<option value="parent">{text('Parent','家长')}</option>}{(!pilot||pilot.role==='coach')&&<option value="coach">{text('Coach','教练')}</option>}
-        </select>{requestedRole==='coach'?<RegistrationCoachPicker value={coachName} onChange={setCoachName} disabled={busy} pilotInvitation={pilot?.token}/>:<><RegistrationSkaterPicker value={skaterName} selected={!!selectedSkater&&selectedSkater===skaterName} disabled={busy} pilotInvitation={pilot?.token}
+        </select>{requestedRole==='coach'?<RegistrationCoachPicker value={coachName} onChange={setCoachName} disabled={busy} pilotInvitation={pilot?.token}/>:<><RegistrationSkaterPicker allowUnlisted={requestedRole==='parent'} value={skaterName} selected={!!selectedSkater&&selectedSkater===skaterName} disabled={busy} pilotInvitation={pilot?.token}
           onChange={value=>{setSkaterName(value);setSelectedSkater('');if(error==='SELECT_SKATER'||error==='SKATER_NOT_FOUND')setError('');}}
           onChoose={name=>{setSkaterName(name);setSelectedSkater(name);if(error==='SELECT_SKATER'||error==='SKATER_NOT_FOUND')setError('');}}/>
-        <p id={id+'-skater'} className="member-muted">{text('Skaters choose their own name; parents choose their child.','选手选择本人姓名，家长选择孩子姓名。')}</p></>}</>}
+        <p id={id+'-skater'} className="member-muted">{requestedRole==='parent'?text('Enter your child’s full name. An HSC match needs parent relationship approval only; an unlisted child also needs skater admission review.','请输入孩子完整姓名。匹配 HSC 档案后只需审批亲子关系；名单外孩子另需管理员核验选手准入。'):text('Skaters choose their own name.','选手请选择本人姓名。')}</p></>}</>}
       </>}
       {allowAdminLink&&<div className="member-check-row"><label><input type="checkbox" checked={link} onChange={event=>setLink(event.target.checked)}/>{text('Link these credentials to my current administrator account','将这些登录凭据关联到我当前的管理员账号')}</label><small>{text('Only for the signed-in administrator using the same email.','仅限已登录管理员使用同一邮箱。')}</small></div>}
-      <button className="primary" disabled={busy||retrySeconds>0||(register&&!adminLink&&(requestedRole==='coach'?!coachName:!selectedSkater||selectedSkater!==skaterName))}>{busy?text('Please wait…','请稍候…'):register?text('Create account','创建账号'):text('Sign in','登录')}</button>
+      <button className="primary" disabled={busy||retrySeconds>0||(register&&!adminLink&&(requestedRole==='coach'?!coachName:requestedRole==='parent'?!skaterName.trim():!selectedSkater||selectedSkater!==skaterName))}>{busy?text('Please wait…','请稍候…'):register?text('Create account','创建账号'):text('Sign in','登录')}</button>
     </form>}
     {error&&<p role="alert" className="password-error">{authFeedback(error)}{error==='RATE_LIMITED'&&retrySeconds>0&&' '+(retrySeconds>=60?text('Try again in '+Math.ceil(retrySeconds/60)+' minute(s).','请在 '+Math.ceil(retrySeconds/60)+' 分钟后重试。'):text('Try again in '+retrySeconds+' seconds.','请在 '+retrySeconds+' 秒后重试。'))}</p>}
     {register&&error==='ACCOUNT_ALREADY_EXISTS'&&<div className="member-actions">

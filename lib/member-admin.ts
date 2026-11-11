@@ -4,6 +4,7 @@ import {drainOutbox, listNotifications, markNotification, listRequirements, writ
 import {listReminders,saveReminder} from './reminders.ts';
 import {coachNames,parentCoach,saveHomeSkater,saveParentCoach} from './parent-skaters';
 import {PARENT_SKATER_LIMIT} from './parent-skater-policy';
+import {parentClaimExistingSkater,type ParentClaimPayload} from './parent-claim-review';
 import {scheduleCoachProfile,saveCoachProfile,selfCoachAssignment} from './coach-profile';
 
 type Context = {database: D1Database; identity: Identity | null; candidates: Candidate[]; ownerEmail: string};
@@ -210,22 +211,34 @@ async function adminWrite(database: D1Database, member: Member, operation: strin
     const id = stringField(body.id, 100);
     const claim = await database.prepare("SELECT * FROM hsc_claims WHERE id=? AND status='pending'").bind(id).first<Claim>();
     if (!claim) throw new AccessError(409, '申请已处理或不存在');
-    const requested = JSON.parse(claim.payload) as {role: Role; skaterIds: string[]};
+    const requested = JSON.parse(claim.payload) as ParentClaimPayload & {role:Role};
     const accepted = body.approve === true;
     const ids = idsField(body.skaterIds ?? requested.skaterIds);
+    const existingParentIds:string[]=[];
     const target = await database.prepare('SELECT * FROM hsc_members WHERE id=?').bind(claim.member_id).first<Member>();
     if(!target||!['pending','club-viewer','active'].includes(target.status))throw new AccessError(400,'申请账号已停用或不存在，请重新核对');
     if (accepted) {
       roleField(requested.role);
       if(!['membership','coach-link'].includes(claim.kind)||requested.role==='admin'||(claim.kind==='membership'&&target.status==='active'&&target.role!==requested.role)||(claim.kind==='coach-link'&&(target.status!=='active'||target.role!=='coach'||requested.role!=='coach')))throw new AccessError(400,'申请身份与当前身份不同，请重新核对');
       if (requested.role === 'skater' && ids.length !== 1) throw new AccessError(400, '请明确选手账号的唯一资料');
+      if(requested.role==='parent'&&(!ids.length||requested.registrationMatch&&ids.length!==1||requested.registrationMatch==='ambiguous'&&body.skaterIds===undefined))throw new AccessError(400,'请先核对并选择该家长申请关联的唯一选手资料');
       if(requested.role==='parent'&&new Set([...(await accessibleSkaters(database,target)),...ids]).size>PARENT_SKATER_LIMIT)throw new AccessError(400,'家长最多关联4位选手，请先核对现有关系。');
-      try{await admittedIDs(database,ids);}catch(error){if(error instanceof AccessError&&error.status===400)throw new AccessError(400,'请先在“会员准入与选手资料”确认选手准入，再批准此申请：'+ids.map(id=>candidates.find(candidate=>candidate.id===id)?.name??id).join('、'));throw error;}
+      if(requested.role==='parent'&&claim.kind==='membership')existingParentIds.push(...ids.filter(id=>parentClaimExistingSkater(requested,candidates.find(candidate=>candidate.id===id))));
+      const admissionIds=ids.filter(id=>!existingParentIds.includes(id));
+      try{await admittedIDs(database,admissionIds);}catch(error){if(error instanceof AccessError&&error.status===400)throw new AccessError(400,'请先在“会员准入与选手资料”确认选手准入，再批准此申请：'+admissionIds.map(id=>candidates.find(candidate=>candidate.id===id)?.name??id).join('、'));throw error;}
     }
     const operationId = crypto.randomUUID();
     const gate = 'EXISTS (SELECT 1 FROM hsc_audit WHERE id=?)';
     const statements = [database.prepare("INSERT INTO hsc_audit (id,actor_id,action,subject_id,payload,created_at) SELECT ?,?,'claim-review',?,?,? WHERE EXISTS (SELECT 1 FROM hsc_claims WHERE id=? AND status='pending') AND EXISTS(SELECT 1 FROM hsc_members WHERE id=? AND status=? AND role IS ? AND auth_version=?)").bind(operationId, member.id, id, JSON.stringify({accepted, ids}), nowISO(), id,target.id,target.status,target.role,target.auth_version),database.prepare(`UPDATE hsc_claims SET status=?,reviewed_by=? WHERE id=? AND ${gate}`).bind(accepted ? 'approved' : 'rejected', member.id, id, operationId)];
     if (accepted) {
+      // Preserve effective revocations when an existing skater was previously unadmitted.
+      statements.push(...existingParentIds.map(id=>database.prepare(`UPDATE hsc_relations SET active=0 WHERE skater_id=? AND EXISTS(SELECT 1 FROM hsc_admissions WHERE skater_id=? AND admitted=0) AND ${gate}`).bind(id,id,operationId)));
+      // Existing HSC skaters require one relationship approval; retain all saved profile fields.
+      statements.push(...existingParentIds.map(id=>{
+        const candidate=candidates.find(candidate=>candidate.id===id)!;
+        const payload={name:candidate.name,training:candidate.training===true,identityPending:false,representedClubs:'clubs' in candidate&&Array.isArray(candidate.clubs)?candidate.clubs.join('; '):''};
+        return database.prepare(`INSERT INTO hsc_admissions(skater_id,admitted,payload,updated_by,updated_at) SELECT ?,1,?,?,? WHERE ${gate} ON CONFLICT(skater_id) DO UPDATE SET admitted=1,updated_by=excluded.updated_by,updated_at=excluded.updated_at`).bind(id,JSON.stringify(payload),member.id,nowISO(),operationId);
+      }));
       if (claim.kind === 'membership') statements.push(database.prepare(`UPDATE hsc_members SET role=?,status='active',auth_version=auth_version+1 WHERE id=? AND ${gate}`).bind(requested.role, claim.member_id, operationId));
       statements.push(...ids.map(skaterId => database.prepare(`INSERT INTO hsc_relations (id,member_id,skater_id,kind,active,approved_by,updated_at) SELECT ?,?,?,?,1,?,? WHERE ${gate} ON CONFLICT(id) DO UPDATE SET active=1,approved_by=excluded.approved_by,updated_at=excluded.updated_at`).bind(`${claim.member_id}|${requested.role}|${skaterId}`, claim.member_id, skaterId, requested.role, member.id, nowISO(), operationId)));
     }

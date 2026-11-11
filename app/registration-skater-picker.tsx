@@ -5,8 +5,8 @@ import {text} from '../lib/i18n';
 import {authRetrySeconds} from './auth-feedback';
 import './registration-skater-picker.css';
 
-type Props={value:string;selected:boolean;onChange:(value:string)=>void;onChoose:(name:string)=>void;pilotInvitation?:string;disabled?:boolean};
-export default function RegistrationSkaterPicker({value,selected,onChange,onChoose,pilotInvitation,disabled}:Props){
+type Props={value:string;selected:boolean;onChange:(value:string)=>void;onChoose:(name:string)=>void;pilotInvitation?:string;disabled?:boolean;allowUnlisted?:boolean};
+export default function RegistrationSkaterPicker({value,selected,onChange,onChoose,pilotInvitation,disabled,allowUnlisted=false}:Props){
   const id=useId(),[open,setOpen]=useState(false),[names,setNames]=useState<string[]>([]),[busy,setBusy]=useState(false);
   const [error,setError]=useState(''),[hasMore,setHasMore]=useState(false),[active,setActive]=useState(0),[attempt,setAttempt]=useState(0);
   useEffect(()=>{
@@ -32,9 +32,9 @@ export default function RegistrationSkaterPicker({value,selected,onChange,onChoo
     error.startsWith('rate:')?text('Name search is busy. Retry in '+Math.ceil(Number(error.slice(5))/60)+' minute(s).','姓名查询暂时繁忙，请在 '+Math.ceil(Number(error.slice(5))/60)+' 分钟后重试。'):
     error?text('Names could not be loaded. Please retry.','暂时无法读取姓名，请重试。'):
     value.trim().length<2?text('Type a first name, then choose the skater below.','输入 first name，然后选择下方的选手。'):
-    names.length?text('Choose the correct full name.','请选择正确的完整姓名。'):text('No matching skater. Try the first name or a different spelling.','未找到匹配选手，请试试 first name 或其他拼法。');
+    names.length?text('Choose the correct full name.','请选择正确的完整姓名。'):allowUnlisted?text('No matching skater. You can register with the full name; an administrator must verify skater admission.','未找到匹配选手。可填写完整姓名继续注册，选手准入将交由管理员核验。'):text('No matching skater. Try the first name or a different spelling.','未找到匹配选手，请试试 first name 或其他拼法。');
   return <div className="registration-skater-picker" onBlur={event=>{if(!event.currentTarget.contains(event.relatedTarget))setOpen(false);}}>
-    <label htmlFor={id}>{text("Skater's name on the club list","俱乐部名单中的选手姓名")}</label>
+    <label htmlFor={id}>{allowUnlisted?text("Child's full name","孩子的完整姓名"):text("Skater's name on the club list","俱乐部名单中的选手姓名")}</label>
     <input id={id} type="text" role="combobox" required value={value} disabled={disabled} maxLength={120} autoComplete="off" spellCheck={false} autoCapitalize="words"
       placeholder={text('First name, e.g. Mike','输入 first name，例如 Mike')} aria-autocomplete="list" aria-expanded={expanded} aria-controls={expanded?id+'-choices':undefined} aria-activedescendant={expanded?id+'-choice-'+active:undefined} aria-describedby={id+'-hint'}
       onFocus={()=>{if(!selected)setOpen(true);}} onChange={event=>{setNames([]);setOpen(true);setActive(0);onChange(event.target.value);}}

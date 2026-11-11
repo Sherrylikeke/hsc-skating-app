@@ -88,7 +88,8 @@ export async function assertSkater(database: D1Database, member: Member, skaterI
 }
 export async function schedulePreferences(database:D1Database,member:Member,approvedSkaterIds:string[]) {
   const claim=await database.prepare("SELECT payload,status FROM hsc_claims WHERE member_id=? AND kind='membership' ORDER BY created_at DESC LIMIT 1").bind(member.id).first<{payload:string;status:string}>();
-  const ids=claim?JSON.parse(claim.payload).skaterIds:[];
+  const payload=claim?JSON.parse(claim.payload):null;
+  const ids=payload?.registrationMatch==='ambiguous'?[]:payload?.skaterIds??[];
   const defaults=[...approvedSkaterIds,...(Array.isArray(ids)?ids.filter((id:unknown):id is string=>typeof id==='string'):[])];
   const {results}=await database.prepare('SELECT skater_id,pinned FROM hsc_home_skaters WHERE member_id=?').bind(member.id).all<{skater_id:string;pinned:number}>();
   const hidden=new Set(results.filter(row=>!row.pinned).map(row=>row.skater_id));

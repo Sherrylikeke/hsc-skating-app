@@ -314,4 +314,30 @@ try {
   assert.deepEqual(adminRecent.recent.map(record=>record.record_id),Array.from({length:6},(_,index)=>'recent-foreign-'+index));
   assert.ok(adminRecent.reviews.length>0);
   console.log('Recent records: all four ordinary account types receive their own latest six before LIMIT, empty preferences return none, changing pins changes results without private relations, administrator retains all records and reviews.');
+  const addParentClaim=async(claimId,payload)=>{
+    const memberId='member-'+claimId;
+    await database.prepare("INSERT INTO hsc_members(id,email,name,requested_role,status,created_at) VALUES (?,?,?,'parent','club-viewer',?)").bind(memberId,memberId+'@example.test',memberId,new Date().toISOString()).run();
+    await database.prepare("INSERT INTO hsc_claims(id,member_id,kind,payload,status,created_at) VALUES (?,?,'membership',?,'pending',?)").bind(claimId,memberId,JSON.stringify({role:'parent',...payload}),new Date().toISOString()).run();
+    return memberId;
+  };
+  await database.prepare('UPDATE hsc_admissions SET admitted=0 WHERE skater_id=?').bind(created.id).run();
+  const unconfirmedProfile=(await database.prepare('SELECT payload FROM hsc_admissions WHERE skater_id=?').bind(created.id).first()).payload;
+  const knownParentId=await addParentClaim('known-child-parent',{name:editBody.name,skaterIds:[created.id],registrationMatch:'matched'});
+  assert.equal((await post('/api/member?action=review-claim',{id:'known-child-parent',approve:true},platformHeaders)).status,400,'Identity-pending profiles require admission review');
+  const savedProfile=JSON.stringify({...JSON.parse(unconfirmedProfile),identityPending:false});
+  await database.prepare('UPDATE hsc_admissions SET payload=? WHERE skater_id=?').bind(savedProfile,created.id).run();
+  assert.equal((await post('/api/member?action=review-claim',{id:'known-child-parent',approve:true},platformHeaders)).status,200);
+  const parentKnownAdmission=await database.prepare('SELECT admitted,payload FROM hsc_admissions WHERE skater_id=?').bind(created.id).first();
+  assert.equal(parentKnownAdmission.admitted,1);assert.equal(parentKnownAdmission.payload,savedProfile);
+  assert.equal((await database.prepare('SELECT skater_id FROM hsc_relations WHERE member_id=?').bind(knownParentId).first()).skater_id,created.id);
+  const missingParentId=await addParentClaim('unlisted-child-parent',{name:'Unlisted Fixture Child',skaterIds:[],registrationMatch:'missing'});
+  assert.equal((await post('/api/member?action=review-claim',{id:'unlisted-child-parent',approve:true},platformHeaders)).status,400);
+  const addedChildId='HSC-NEW-'+crypto.randomUUID();
+  assert.equal((await post('/api/member?action=review-claim',{id:'unlisted-child-parent',approve:true,skaterIds:[addedChildId]},platformHeaders)).status,400);
+  assert.equal((await database.prepare('SELECT count(*) AS count FROM hsc_relations WHERE member_id=?').bind(missingParentId).first()).count,0);
+  assert.equal((await post('/api/member?action=admission',{skaterId:addedChildId,name:'Unlisted Fixture Child',admitted:true},platformHeaders)).status,200);
+  assert.equal((await post('/api/member?action=review-claim',{id:'unlisted-child-parent',approve:true,skaterIds:[addedChildId]},platformHeaders)).status,200);
+  assert.equal((await database.prepare('SELECT skater_id FROM hsc_relations WHERE member_id=?').bind(missingParentId).first()).skater_id,addedChildId);
+  assert.equal((await post('/api/member?action=review-claim',{id:'unlisted-child-parent',approve:true,skaterIds:[addedChildId]},platformHeaders)).status,409);
+  console.log('Worker parent review: existing HSC child needs one relationship approval preserving profile; unlisted child remains unlinked until an administrator creates/admit-selects the profile; duplicate review is rejected.');
 }finally{await mf.dispose();}
