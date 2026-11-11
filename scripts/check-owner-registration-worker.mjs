@@ -287,4 +287,31 @@ try {
   assert.equal((await database.prepare("SELECT count(*) AS count FROM hsc_relations WHERE member_id=? AND kind='parent' AND active=1").bind(activeParentId).first()).count,1);
   assert.equal((await post('/api/member?action=review-claim',{id:'fixture-preactivated-claim',approve:true},platformHeaders)).status,409);
   console.log('Worker coach schedule: no-child coach sees all official skaters/events, self-assigns only own name preserving other labels, cannot read/write private plans or edit full profiles. Active same-role parent completes a pending claim once after admission.');
+  // Recent records are selected per homepage before LIMIT, independently of private relationships.
+  const recordBase={name:'Same Fixture Name',club:'Hamilton SC',section:'ON',event_name:'Fixture Recent Cup',event_url:'https://skateontario.org/fixture/',event_key:'fixture-recent',category:'STAR 2',result_level:'category',rank:1,total_score:20,status:'result',source_url:'https://skateontario.org/fixture.pdf',entity_type:'skater'};
+  for(const [prefix,count,year,ids] of [['foreign',8,2099,[fixtureCarson.id]],['mine',7,2090,[created.id]]])for(let index=0;index<count;index++){
+    const record={...recordBase,record_id:'recent-'+prefix+'-'+index,start_date:year+'-01-'+String(20-index).padStart(2,'0'),skater_ids:index===0&&prefix==='mine'?[...ids,fixtureCarson.id]:ids};
+    await database.prepare('INSERT INTO history_records(id,event_id,payload) VALUES (?,?,?)').bind(record.record_id,record.event_key,JSON.stringify(record)).run();
+  }
+  const clubFor=async headers=>{const response=await mf.dispatchFetch(origin+'/api/club',{headers});assert.equal(response.status,200,await response.clone().text());return response.json();};
+  for(const role of [null,'parent','skater','coach']){
+    const recentId='recent-member-'+(role??'viewer'),email=recentId+'@example.test',token=recentId+'-fixture';
+    await database.prepare('INSERT INTO hsc_members(id,email,name,role,requested_role,status,auth_version,created_at) VALUES (?,?,?,?,?,?,1,?)').bind(recentId,email,recentId,role,role??'parent',role?'active':'club-viewer',new Date().toISOString()).run();
+    await database.prepare('INSERT INTO hsc_sessions(hash,member_id,auth_version,expires_at,created_at) VALUES (?,?,1,?,?)').bind(hash(token),recentId,new Date(Date.now()+3600000).toISOString(),new Date().toISOString()).run();
+    await database.prepare('INSERT INTO hsc_home_skaters(id,member_id,skater_id,pinned,updated_at) VALUES (?,?,?,1,?)').bind(recentId+'|'+created.id,recentId,created.id,new Date().toISOString()).run();
+    const headers={'oai-authenticated-user-id':recentId,'oai-authenticated-user-email':email,cookie:'__Host-hsc_session='+token};
+    const own=await clubFor(headers);
+    assert.deepEqual(own.recent.map(record=>record.record_id),Array.from({length:6},(_,index)=>'recent-mine-'+index));
+    assert.deepEqual(own.reviews,[]);
+    assert.equal((await database.prepare('SELECT count(*) AS count FROM hsc_relations WHERE member_id=?').bind(recentId).first()).count,0);
+    await database.prepare('DELETE FROM hsc_home_skaters WHERE member_id=?').bind(recentId).run();
+    assert.deepEqual((await clubFor(headers)).recent,[]);
+    await database.prepare('INSERT INTO hsc_home_skaters(id,member_id,skater_id,pinned,updated_at) VALUES (?,?,?,1,?)').bind(recentId+'|'+fixtureCarson.id,recentId,fixtureCarson.id,new Date().toISOString()).run();
+    const switched=await clubFor(headers);
+    assert.equal(switched.recent.length,6);assert.ok(switched.recent.every(record=>record.skater_ids.includes(fixtureCarson.id)));
+  }
+  const adminRecent=await clubFor(platformHeaders);
+  assert.deepEqual(adminRecent.recent.map(record=>record.record_id),Array.from({length:6},(_,index)=>'recent-foreign-'+index));
+  assert.ok(adminRecent.reviews.length>0);
+  console.log('Recent records: all four ordinary account types receive their own latest six before LIMIT, empty preferences return none, changing pins changes results without private relations, administrator retains all records and reviews.');
 }finally{await mf.dispose();}

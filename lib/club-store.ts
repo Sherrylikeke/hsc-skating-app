@@ -28,7 +28,13 @@ export async function putLiveEvent(event:LiveEvent){await db().batch(eventWriteS
 export async function readPlans():Promise<CoachPlan[]>{const {results}=await db().prepare('SELECT id,skater_id AS skaterId,event_id AS eventId,meeting_time AS meetingTime,note,revision FROM coach_plans').all<Omit<CoachPlan,'slotKey'>>();return results.map(row=>({...row,slotKey:row.id.split('|').slice(2).join('|')}));}
 export async function readSyncStatus():Promise<SyncStatus>{const row=await db().prepare('SELECT value FROM app_meta WHERE key = ?').bind('official-sync-status').first<{value:string}>();return row?JSON.parse(row.value):{};}
 export async function putSyncStatus(update:SyncStatus){const old=await readSyncStatus();const defined=Object.fromEntries(Object.entries(update).filter(([,value])=>value!==undefined));await db().prepare('INSERT INTO app_meta (key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').bind('official-sync-status',JSON.stringify({...old,...defined})).run();}
-export async function recentRecords():Promise<HistoryRecord[]>{const {results}=await db().prepare("SELECT payload FROM history_records ORDER BY json_extract(payload,'$.start_date') DESC,id LIMIT 6").all<{payload:string}>();return results.map(row=>JSON.parse(row.payload));}
+export async function recentRecords(skaterIds?:string[]):Promise<HistoryRecord[]>{
+  if(skaterIds?.length===0)return [];
+  const filter=skaterIds===undefined?'':" WHERE EXISTS (SELECT 1 FROM json_each(history_records.payload,'$.skater_ids') AS skater WHERE skater.value IN (SELECT value FROM json_each(?)))";
+  const query=db().prepare("SELECT payload FROM history_records"+filter+" ORDER BY json_extract(payload,'$.start_date') DESC,id LIMIT 6");
+  const {results}=await (skaterIds===undefined?query:query.bind(JSON.stringify(skaterIds))).all<{payload:string}>();
+  return results.map(row=>JSON.parse(row.payload));
+}
 export async function recordsFor({skater,event}:{skater?:string;event?:string}):Promise<HistoryRecord[]>{
   let query='SELECT payload FROM history_records';const args:string[]=[];
   if(skater){query+=' WHERE EXISTS (SELECT 1 FROM json_each(history_records.payload,\'$.skater_ids\') WHERE value = ?)';args.push(skater);}else if(event){query+=' WHERE event_id = ?';args.push(event);}
