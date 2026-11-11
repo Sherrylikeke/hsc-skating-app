@@ -12,7 +12,7 @@ import CompactSelect from './compact-select';
 import {historyCategories,historyRecordCategories} from '../lib/athlete-history';
 import PersonalSchedule from './personal-schedule';
 import HomeEvents from './home-events';
-import {registrationLink} from '../lib/event-registration';
+import {registrationLink,compareEventDates} from '../lib/event-registration';
 import MembershipReviewNotice from './membership-review-notice';
 import EventWatch from './event-watch';
 import OfficialSourceReference from './official-source-reference';
@@ -87,7 +87,7 @@ export default function ClubApp(){
   useEffect(()=>{if(!historyKey){setRecordRows([]);return;}let active=true;setRecordError('');const saved=cache.current.get(historyKey);if(saved){setRecordRows(saved);setRecordLoading(false);return;}setRecordRows([]);setRecordLoading(true);fetch('/api/club?'+historyKey,{cache:'no-store'}).then(async response=>{if(!response.ok)throw new Error(translate("比赛记录读取失败"));return await response.json() as {records:HistoryRecord[]};}).then(result=>{cache.current.set(historyKey,result.records);if(active)setRecordRows(result.records);}).catch(e=>{if(active)setRecordError(e.message);}).finally(()=>{if(active)setRecordLoading(false);});return()=>{active=false;};},[historyKey]);
   useEffect(()=>{if(!editing&&!selectedRecord)return;const close=(event:KeyboardEvent)=>{if(event.key==='Escape'){setEditing(null);setSelectedRecord(null);}};window.addEventListener('keydown',close);return()=>window.removeEventListener('keydown',close);},[editing,selectedRecord]);
   const allSchedule=useMemo(()=>data?scheduleRows(data.events.filter(event=>event.end>=today),data.skaters):[],[data,today]);
-  const futureEvents=data?.events.filter(event=>event.end>=today)||[];
+  const futureEvents=data?.events.filter(event=>event.end>=today).sort(compareEventDates)||[];
   const coaches=useMemo(()=>data?[...new Set(data.skaters.flatMap(row=>splitCoaches(row.coach)))].sort():[],[data]);
   const baseSchedule=orderCoachSchedule(filterCoachSchedule(allSchedule,{event:coachEventFilter,coach:coachFilter,date:dateFilter,assignedOnly:onlyAssigned}));
   const filteredSchedule=coaching&&myCoach?coachScheduleRows(baseSchedule,myCoach,hideOthers,extraCoaches):baseSchedule;

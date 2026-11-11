@@ -170,7 +170,7 @@ try {
   // Fiona is already in the original roster. Reuse that profile rather than creating an ambiguous duplicate.
   const homeEvent={...syncEvent,id:'SO-999994',name:'STAR 1-4 Homepage Fixture',url:'https://www.skateontario.org/fixture-home/',start:'2027-01-15',end:'2027-01-17',documents:[],participants:[],blocks:[],startingOrders:[]};
   await database.prepare('INSERT INTO live_events (id,payload,updated_at) VALUES (?,?,?)').bind(homeEvent.id,JSON.stringify(homeEvent),new Date().toISOString()).run();
-  const homeSync=await post('/api/sync',{eventId:homeEvent.id},platformHeaders);assert.equal(homeSync.status,200,await homeSync.clone().text());assert.equal((await homeSync.json()).participants,547);
+  const homeSync=await post('/api/sync',{eventId:homeEvent.id},platformHeaders);assert.equal(homeSync.status,200,await homeSync.clone().text());const homeResult=await homeSync.json();assert.equal(homeResult.participants,547);assert.equal(homeResult.registrationPreview.find(window=>window.kind==='public').closes,'2026-11-16');
   const homeSaved=JSON.parse((await database.prepare('SELECT payload FROM live_events WHERE id=?').bind(homeEvent.id).first()).payload);
   assert.equal(homeSaved.registrations[0].opens,'2026-11-12');assert.equal(homeSaved.registrations[0].closes,'2026-11-16');assert.equal(homeSaved.registrations[0].url,'https://uplifterfigureskating.com/');assert.ok(homeSaved.offeredCategories.includes('STAR 2'));assert.equal(homeSaved.blocks.length,0);
   console.log('Worker homepage: current interim PDF persists 547 records without invented times, plus official registration windows and category metadata.');
