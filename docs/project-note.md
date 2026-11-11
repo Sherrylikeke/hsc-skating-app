@@ -6,7 +6,10 @@
 
 - 用户要求注册密码最低10位并开放密码重置。新共享password-policy用于Better Auth服务端、注册及重置输入框，范围10–128字符；登录继续兼容已有密码。登录页“忘记密码？”改为直接链接/reset-password；直接进入该页是申请邮箱链接表单，无token不再误报链接失效。明确错误/空token及服务端失效仍提示重新申请。
 - 手机静态路由及原生本地链接支持/reset-password；邮件仍使用受信任HTTPS站点回跳，未扩大deep-link令牌支持或删除Origin保护。保留一小时、单次重置链接、请求限速、未知邮箱不泄露、重置后撤销旧会话；验证邮箱及私人权限规则不变。
-- 31组隔离会员回归通过，包括9位注册/重置拒绝、10位成功、旧密码拒绝/新密码登录及会话撤销。Web类型、语言、13项member-client及10项native检查、Capacitor生产构建和Android/iOS sync通过。390px实际运行静态客户端样本：独立申请页、邮件申请提示、10位新密码成功、10位注册进入验证页通过；未创建生产测试账号、发送新测试邮件或改变真实用户密码。截图/样本捕获在outputs/2026-11-11/password-review。生产构建、Worker、发布及新APK结果待本轮后续补充，不能沿用V41当作本轮上线结论。
+- 31组隔离会员回归通过，包括9位注册/重置拒绝、10位成功、旧密码拒绝/新密码登录及会话撤销。Web类型、语言、13项member-client及10项native检查、Capacitor生产构建和Android/iOS sync通过。390px实际运行静态客户端样本：独立申请页、邮件申请提示、10位新密码成功、10位注册进入验证页通过；未创建生产测试账号、发送新测试邮件或改变真实用户密码。截图/样本捕获在outputs/2026-11-11/password-review。
+- 官方Sites助手生产构建及临时D1真实Worker回归通过；源码3dd9233bf4c1b351f7067dd22621348e5ff653b3。V42版本appgprj_6ad76ca2dba481919ba883865cbd5a0d~appgver_bd98d427a5ac8191bb3284a0f97af0c8，部署appgdep_6af469da646881919b9bdc3b6f6cf543于2026-11-11T13:13:11.560551Z（Toronto 08:13）succeeded，env9/MCP ready。没有更改环境变量、域名/访问范围、迁移或小时任务。
+- 正式域名13:13:49Z只读HTTP验收：首页、/reset-password、auth/config为200，匿名club为401，邮件及注册配置true。B96awuvD.js与DFMLHxGU.js的10位政策资源SHA与本地最终构建相同，详见password-live-checks.json；实际手机浏览器确认重置申请表可用且不误报失效，注册密码/确认字段minlength均10。未发送新的真实测试邮件或修改任何真实密码。临时测试页和服务器已关闭。
+- Android编译/Lint/签名通过，APK SHA256=789E93A901A41C8BCCA9D0F05EAFD7DFF6882EE39992F2F79C9865A67372C877；iOS仅sync及57文件ZIP，SHA256=FE749B57F3BC982B4FF6223367BD0AAB4BEC61C1989C0A6F362D94585165303B。13份dist/APK/iOS资源逐字节一致，客户端同3dd9233运行源码；未装真机、未生成IPA或上架。旧Android仍限制12位，需要安装新包；网站刷新即可。最后只补文档及正常同步GitHub，不重复部署；Sites远端运行源码为3dd9233，最终文档GitHub提交以Git结果为准。
 
 ## 2026-11-11 手机身份注册浏览器复核
 

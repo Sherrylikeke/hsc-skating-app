@@ -4,6 +4,14 @@
 
 ## 目前线上状态
 
+### 十位密码与密码重置（2026-11-11，V42已上线）
+
+- 注册及重置密码统一10–128字符，Better Auth和Web/Capacitor表单共用password-policy；旧密码登录不变。登录页直接点击“忘记密码？”进入/reset-password，输入注册邮箱申请；无token的直接访问不再误报链接失效，明确失效链接仍提示重申。手机本地路由也支持，邮件保持受信任HTTPS回跳，不扩大原生deep-link令牌能力。
+- 31组核心权限/认证回归、Web类型/语言、13项member-client、10项native、手机生产构建/sync及真实Worker/D1均通过；9位注册/重置被拒、10位成功、旧密码和会话失效。390px样本UI实际走通申请/重置成功与10位注册验证页；没有真实新测试邮件、真实密码修改、生产测试账号或schema变更。
+- 运行源码3dd9233bf4c1b351f7067dd22621348e5ff653b3；V42 saved version appgprj_6ad76ca2dba481919ba883865cbd5a0d~appgver_bd98d427a5ac8191bb3284a0f97af0c8，部署appgdep_6af469da646881919b9bdc3b6f6cf543于Toronto 11月11日08:13 succeeded，env9/MCP ready。正式域名页面200、匿名club401、邮件和注册配置true，10位资源SHA匹配，线上实际输入框minlength=10。未改环境变量、访问范围、域名或现有小时任务。
+- 最新交付为outputs/2026-11-11/password-review：Android debug APK编译/Lint/签名通过，SHA256=789E93A901A41C8BCCA9D0F05EAFD7DFF6882EE39992F2F79C9865A67372C877；iOS仅sync与57文件ZIP，SHA256=FE749B57F3BC982B4FF6223367BD0AAB4BEC61C1989C0A6F362D94585165303B。13份静态资源在dist/APK/iOS一致。未装真机/产出IPA/上架。网站刷新；旧Android需更新新包才解除12位前端限制。证据和截图在同目录；临时服务器/页面已关闭。
+- 本轮已按官方助手同步运行源码至Sites，最后仅补文档并按既有授权正常推送原GitHub。原GitHub上次7a44999可正常快进，最终文档HEAD以本轮Git结果为准；Sites远端仍为3dd9233，不为文档再次部署。下列V39–V41及此前GitHub记录为历史状态，以本节为准。
+
 ### GitHub已同步（2026-11-11）
 
 - 用户明确要求提交推送后，原GitHub main从508f4cf正常快进到9afd322199dc028e0125b1891fff1bd8a82807a4，包含下列V39–V41全部功能和验收记录；ls-remote确认，未强推。随后仅补本交接记录，最终文档提交以Git为准。
