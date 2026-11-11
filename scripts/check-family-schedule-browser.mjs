@@ -159,9 +159,11 @@ async function walk(width, language, browser) {
     const navTop = desktop ? 844 : await page.locator('.club-sidebar').evaluate(el=>el.getBoundingClientRect().top);
     // Upcoming competition cards now precede the detailed schedule. Check the
     // actual scrolling journey, while the member-home entry stays above the fold.
-    await rows.first().evaluate(el=>el.scrollIntoView({block:'start',behavior:'instant'}));
-    const visibleRowTop=await rows.first().evaluate(el=>el.getBoundingClientRect().top);
-    assert.ok(visibleRowTop>=0&&visibleRowTop<navTop,'The current session must be reachable above the bottom navigation');
+    await rows.first().evaluate(el=>el.scrollIntoView({block:'center',behavior:'instant'}));
+    const visibleRow=await rows.first().evaluate(el=>{
+      const rect=el.getBoundingClientRect();return {top:rect.top,bottom:rect.bottom};
+    });
+    assert.ok(visibleRow.top>=0&&visibleRow.bottom<=navTop,'The entire current session must be readable above the bottom navigation: '+JSON.stringify({visibleRow,navTop}));
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth > innerWidth+1),false,'No page-wide scrolling');
     const pending = page.locator('.family-pending tbody tr');
     assert.equal(await pending.count(),1);
