@@ -6,7 +6,9 @@
 
 - 用户反馈Ava Medeiros已是Juvenile，首页未显示开放的Provincial。复现V48问题：最新个人记录Juvenile / Singles省略Women及年龄，Lake Superior已存offeredCategories使用Juvenile简写，两者均无完整赛程category key，被上一轮严格检查漏掉。只读D1投影确认Lake Superior公开报名11月10日至12日及Juvenile类别，与官方Announcement核对；未读取或修改账号、私人关系或生产数据。
 - 报名推荐兼容明确级别的通用单人滑类别；最新个人简写只从本人近期同级别/项目明确记录补充性别，同一赛季补充年龄，冲突不推断。使用Ava真实已收录历史及官方赛事类别/日期子集复现；不把STAR9/Pre-Juvenile旧级别重新并入，不放宽官方赛程匹配。Senior/新手、公开报名7日窗口/关闭规则、Interim赛事及权限均保留。
-- 首页17组及Web类型已通过；最终构建、相关回归、浏览器、发布及推送结果完成后补记。
+- 完整回归20/20、首页17组、Web类型及官方助手生产构建/真实Worker+临时D1均通过。Chrome/WebKit×320/1280px×中英文×Juvenile通用/完整类别共16个实际页面检查通过，无溢出；使用隔离API及已收录公开历史，无真实会员登录或生产写入。预览已停止，本轮未重建原生包。
+- 运行源码0b20d652a82092e6f8c9e87a609bda09c24ca317已推送原GitHub main。V49保存版本appgprj_6ad76ca2dba481919ba883865cbd5a0d~appgver_efe271a50a1c81918065a7d4a8049bdd，部署appgdep_6af4d7e567588191b77415795eb4f4ac于2026-11-11T21:02:42.267329Z（Toronto16:02）succeeded，env9/MCP ready；原public范围、数据库/邮件配置、小时任务保留。
+- 正式域名21:03:00Z只读验证首页200、匿名club401，线上5UZil52g.js与最终本地构建SHA256一致（76e59ba334b18ff147c959aad9705eaf2ee3c618859610fc88e659fa7057bd3f），7日窗口仍在。证据为本会话outputs/ava-juvenile-release/live-checks.json及outputs/ava-juvenile-browser/report.json；后续仅补文档并推送，不重复部署。
 
 ## 2026-11-11 首页按近期报名组别推荐
 
