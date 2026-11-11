@@ -2,6 +2,12 @@
 
 这是项目负责人的持续维护记录，不属于会员网页内容。后续会话先读取本文件与 AGENTS.md，在完成实质修改或验收后更新；不自动轮询、不新增定时任务。下列运行数据是查询快照，不是实时监控。
 
+## 2026-11-11 Ava Juvenile开放报名漏显示修复
+
+- 用户反馈Ava Medeiros已是Juvenile，首页未显示开放的Provincial。复现V48问题：最新个人记录Juvenile / Singles省略Women及年龄，Lake Superior已存offeredCategories使用Juvenile简写，两者均无完整赛程category key，被上一轮严格检查漏掉。只读D1投影确认Lake Superior公开报名11月10日至12日及Juvenile类别，与官方Announcement核对；未读取或修改账号、私人关系或生产数据。
+- 报名推荐兼容明确级别的通用单人滑类别；最新个人简写只从本人近期同级别/项目明确记录补充性别，同一赛季补充年龄，冲突不推断。使用Ava真实已收录历史及官方赛事类别/日期子集复现；不把STAR9/Pre-Juvenile旧级别重新并入，不放宽官方赛程匹配。Senior/新手、公开报名7日窗口/关闭规则、Interim赛事及权限均保留。
+- 首页17组及Web类型已通过；最终构建、相关回归、浏览器、发布及推送结果完成后补记。
+
 ## 2026-11-11 首页按近期报名组别推荐
 
 - 用户要求Upcoming for my skaters参考选手近一年报名category；Breken已是Senior Women，不推荐Provincial或STAR 1–4；没有比赛记录者默认STAR 1–4，不推荐Provincial/Sectional。本轮复用V47/public站点，小时任务只读核对仍启用，未修改。

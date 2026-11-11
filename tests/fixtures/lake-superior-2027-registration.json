@@ -1,0 +1,30 @@
+{
+  "provenance": {
+    "source": "https://skateontario.org/wp-content/uploads/2026/07/Provincial-Series-8-Lake-Superior-26-27-Announcement-1.pdf",
+    "checkedOn": "2026-11-11",
+    "note": "Public registration dates and the Juvenile singles category verified against the official announcement and the existing live event. Category subset for regression, not the full category catalogue."
+  },
+  "event": {
+    "id": "SO-325476",
+    "name": "Provincial Series #8 – Lake Superior",
+    "url": "https://skateontario.org/event/provincial-series-8-sault-ste-marie/",
+    "start": "2027-01-08",
+    "end": "2027-01-10",
+    "timezone": "America/Toronto",
+    "venue": "John Rhodes Community Centre",
+    "city": "Sault Ste. Marie",
+    "source": "Skate Ontario",
+    "documents": [],
+    "participants": [],
+    "blocks": [],
+    "needsReview": false,
+    "offeredCategories": ["Pre-Juvenile", "Juvenile"],
+    "registrations": [{
+      "kind": "public",
+      "opens": "2026-11-10",
+      "closes": "2026-11-12",
+      "url": "https://uplifterfigureskating.com/#!/events/provincial-series-8-lake-superior-2027",
+      "sourceUrl": "https://skateontario.org/event/provincial-series-8-sault-ste-marie/"
+    }]
+  }
+}

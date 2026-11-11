@@ -1,6 +1,6 @@
 import type {ClubEvent,ClubSkater,EventRegistration} from './club-types.ts';
 import {categoryCompatible,categoryKey,categoryKeys,plain,scheduleRows} from './official-parser.ts';
-import {homeRegistrationCategories,registrationLevel} from './registration-categories.ts';
+import {homeRegistrationCategories,registrationLevel,registrationDiscipline} from './registration-categories.ts';
 
 // Skate Ontario now directs existing SkateReg accounts to Uplifter.
 export const REGISTRATION_PORTAL='https://uplifterfigureskating.com/';
@@ -60,7 +60,18 @@ function categoryMatches(own:string,offered:string){
   if(!levels(own).some(level=>levels(offered).includes(level)))return false;
   // Level-only series titles cover freeskate; other disciplines require an explicit category.
   if(/^STAR\s*\d+$/i.test(offered)||/^STAR\s*\d+$/i.test(own))return !/dance|solo|pair|elements|showcase|\bart\b|artistic|synchro/i.test(own+' '+offered);
-  if(!categoryKey(own)||!categoryKey(offered))return false;
+  if(!categoryKey(own)||!categoryKey(offered)){
+    // Announcement tables often publish a gender-neutral singles level such as
+    // "Juvenile" under a Men & Women heading. A confirmed level is still required.
+    if(registrationDiscipline(own)!=='SINGLES'||registrationDiscipline(offered)!=='SINGLES')return false;
+    const ownGender=own.match(/\b(WOMEN|GIRLS|MEN|BOYS)\b/i)?.[0];
+    const offeredGender=offered.match(/\b(WOMEN|GIRLS|MEN|BOYS)\b/i)?.[0];
+    if(offeredGender&&!ownGender)return false;
+    // A shared comparison token lets the schedule matcher check age and NQ;
+    // it does not assign or save a gender when both labels are gender-neutral.
+    const token=ownGender||'Women';
+    return categoryCompatible(categoryKey(own)?own:own+' '+token,categoryKey(offered)?offered:offered+' '+token);
+  }
   return categoryCompatible(own,offered);
 }
 export const compareEventDates=(a:Pick<ClubEvent,'start'|'name'|'id'>,b:Pick<ClubEvent,'start'|'name'|'id'>)=>a.start.localeCompare(b.start)||a.name.localeCompare(b.name)||a.id.localeCompare(b.id);

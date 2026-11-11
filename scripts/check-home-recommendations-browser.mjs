@@ -26,22 +26,30 @@ const scenarios=[
  {id:'progressed',skaters:[progressed],expected:['Provincial Series Fixture Cup','Solo Dance Fixture Cup']},
  {id:'siblings',skaters:[breken,beginner],expected:['Sectional Series Fixture Cup','STAR 1-4 Fixture Cup']},
 ];
+const historyMeta=JSON.parse(await fs.readFile('data/history-meta.json','utf8')).skaters.find(row=>row.name==='Ava Medeiros');
+const ava={...base,id:historyMeta.skater_id,name:historyMeta.name,categories:historyMeta.categories,recordCount:historyMeta.record_count,hasRegistrationHistory:true,registrationHistory:JSON.parse(await fs.readFile('data/history-records.json','utf8')).filter(row=>row.skater_ids.includes(historyMeta.skater_id)&&row.status!=='withdrawn'&&row.start_date>='2025-11-11'&&row.start_date<='2026-11-11').map(row=>({date:row.start_date,category:row.category}))};
+const lake=JSON.parse(await fs.readFile('tests/fixtures/lake-superior-2027-registration.json','utf8')).event;
+const avaScenarios=[
+ {id:'ava-generic',skaters:[ava],events:[{...lake,offeredCategories:['Juvenile']}],expected:[lake.name]},
+ {id:'ava-specific',skaters:[ava],events:[{...lake,offeredCategories:['Juvenile Women U14']}],expected:[lake.name]},
+];
+const activeScenarios=process.env.HSC_RECOMMENDATION_CASE==='ava'?avaScenarios:scenarios;
 const report=[];
 for(const engine of [chromium,webkit]){
  const browser=await engine.launch({headless:true,...(engine===chromium?{executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe'}:{})});
  try{for(const width of [320,1280])for(const language of ['en','zh']){
-  let scenario=scenarios[0];
+  let scenario=activeScenarios[0];
   const context=await browser.newContext({viewport:{width,height:844}}),page=await context.newPage(),errors=[];
   page.setDefaultNavigationTimeout(90000);page.on('pageerror',error=>errors.push(error.message));
   await page.clock.setFixedTime(new Date('2026-11-11T15:00:00Z'));
   await page.addInitScript(language=>localStorage.setItem('hsc-language',language),language);
   await context.route('**/api/**',route=>{
    const url=new URL(route.request().url()),action=url.searchParams.get('action'),ownIds=scenario.skaters.map(skater=>skater.id);let data={};
-   if(url.pathname==='/api/club')data={member,ownSkaterIds:ownIds,writableSkaterIds:[],skaters:[breken,beginner,progressed],events,plans:[],sync:{},historyEvents:[],recent:[],asOf:'2026-11-11',summary:{category_records:0,team_records:0},reviews:[],limitations:[]};
+   if(url.pathname==='/api/club')data={member,ownSkaterIds:ownIds,writableSkaterIds:[],skaters:[breken,beginner,progressed,ava],events:scenario.events||events,plans:[],sync:{},historyEvents:[],recent:[],asOf:'2026-11-11',summary:{category_records:0,team_records:0},reviews:[],limitations:[]};
    else if(url.pathname==='/api/member')data=action==='identity'?{identity:{name:member.name,email:member.email,provider:'password'}}:action==='me'?{member,skaterIds:[],preferredSkaterIds:ownIds,claims:[]}:action==='requirements'?{requirements:[]}:action==='notifications'?{notifications:[]}:{};
    return route.fulfill({json:data});
   });
-  for(scenario of scenarios){
+  for(scenario of activeScenarios){
    await page.goto(origin+'/workspace?view=home',{waitUntil:'networkidle'});
    await page.locator('.home-event').first().waitFor();
    assert.deepEqual(await page.locator('.home-event h3').allTextContents(),scenario.expected,scenario.id);
@@ -49,7 +57,8 @@ for(const engine of [chromium,webkit]){
     const title=await card.locator('h3').innerText(),names=await card.locator('.home-event-skaters').innerText();
     if(title.includes('STAR 1-4'))assert.equal(names,beginner.name);
     if(title.includes('Sectional'))assert.equal(names,breken.name);
-    const portal=card.locator('.home-register-link');assert.equal(await portal.getAttribute('href'),'https://uplifterfigureskating.com/');
+    if(scenario.id.startsWith('ava-'))assert.equal(names,ava.name);
+    const portal=card.locator('.home-register-link');assert.equal(await portal.getAttribute('href'),scenario.id.startsWith('ava-')?lake.registrations[0].url:'https://uplifterfigureskating.com/');
    }
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
    const screenshot=[engine.name(),width,language,scenario.id].join('-')+'.png';
@@ -60,4 +69,4 @@ for(const engine of [chromium,webkit]){
  }}finally{await browser.close();}
 }
 await fs.writeFile(path.join(output,'report.json'),JSON.stringify({views:report.length,checks:report,fixtureOnly:true,productionWrites:0},null,2));
-console.log(JSON.stringify({views:report.length,engines:['chromium','webkit'],widths:[320,1280],languages:['en','zh'],senior:true,beginner:true,progression:true,separateDisciplines:true,siblingScope:true,noOverflow:true,output}));
+console.log(JSON.stringify({views:report.length,engines:['chromium','webkit'],widths:[320,1280],languages:['en','zh'],scenarios:activeScenarios.map(scenario=>scenario.id),noOverflow:true,output}));
