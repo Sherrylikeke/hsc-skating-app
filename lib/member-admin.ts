@@ -1,3 +1,4 @@
+import {splitCoaches} from './club-types';
 import {AccessError, accessibleSkaters, schedulePreferences, scheduleSkaterIds, actor, admittedIDs, audit, bodyJSON, digest, failure, idsField, json, nowISO, parseIDs, randomToken, rateLimit, relationStatement, requireRole, roleField, sessionCookie, sessionHash, startSession, stringField} from './member-access.ts';
 import type {Candidate, Identity, Member, Role} from './member-access.ts';
 import {drainOutbox, listNotifications, markNotification, listRequirements, writeRequirement, receiptRequirement} from './member-messages.ts';
@@ -96,7 +97,7 @@ async function adminData(database: D1Database, member: Member, candidates: Candi
     database.prepare("SELECT skater_id,coach FROM coach_assignments WHERE coach<>''").all<{coach: string; skater_id: string}>(),
     database.prepare('SELECT state,count(*) AS count FROM hsc_outbox GROUP BY state').all(),
   ]);
-  const coaches = [...new Set(assignments.results.flatMap(row => row.coach.split(/\s*(?:\/|／|;|；|&)\s*/)).filter(Boolean))].sort();
+  const coaches = [...new Set(assignments.results.flatMap(row => splitCoaches(row.coach)).filter(Boolean))].sort();
   const parentHomes=await Promise.all(members.results.filter(parent=>parent.role==='parent'||!parent.role&&parent.requested_role==='parent').map(async parent=>({memberId:parent.id,skaterIds:await scheduleSkaterIds(database,parent),revision:(await database.prepare('SELECT MAX(updated_at) AS revision FROM hsc_home_skaters WHERE member_id=?').bind(parent.id).first<{revision:string|null}>())?.revision??null})));
   return json({members: members.results, parentHomes, candidates, admissions: admissions.results, relations: relations.results, invites: invites.results, claims: claims.results, logs: logs.results, coachCandidates: coaches, outbox: outbox.results});
 }

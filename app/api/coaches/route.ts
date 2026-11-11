@@ -1,3 +1,4 @@
+import {canonicalCoachList} from '../../../lib/coach-names';
 import { env } from 'cloudflare:workers';
 import {profiles} from '../../../lib/club-store';
 import {requestMember} from '../../../lib/member-runtime';
@@ -32,7 +33,7 @@ export async function GET(request: Request) {
     const {db,roster} = await database();
     const {results} = await db.prepare('SELECT skater_id, coach, revision, updated_at FROM coach_assignments').all<{skater_id:string;coach:string;revision:number;updated_at:string}>();
     const saved = new Map(results.map(row => [row.skater_id, row]));
-    return response({coachNames:await coachNames(db),rows:roster.map(row => ({...row, coach:saved.get(row.id)?.coach ?? row.coach, revision:saved.get(row.id)?.revision ?? 0}))});
+    return response({coachNames:await coachNames(db),rows:roster.map(row => ({...row, coach:canonicalCoachList(saved.get(row.id)?.coach ?? row.coach), revision:saved.get(row.id)?.revision ?? 0}))});
   } catch(error) { return failure(error); }
 }
 
@@ -54,6 +55,7 @@ export async function POST(request: Request) {
   }
   try {
     const {db,roster} = await database();
+    for(const change of changes)change.coach=canonicalCoachList(change.coach);
     const ids=new Set(roster.map(row=>row.id));
     if(changes.some(change=>!ids.has(change.id)))return response({error:'选手资料不存在，请刷新名单'},400);
     const now = new Date().toISOString();

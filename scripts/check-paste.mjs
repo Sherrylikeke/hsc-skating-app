@@ -3,7 +3,7 @@ import { planPaste, parseClipboard } from '../app/paste.ts';
 import { readFileSync } from 'node:fs';
 const roster=JSON.parse(readFileSync(new URL('../data/roster.json',import.meta.url),'utf8').replace(/^\uFEFF/,''));
 assert.equal(roster.length,108);
-assert.equal(roster.find(row=>row.name==='Sydney Mitchell').coach,'Jen Jackson/Bryce Davidson');
+assert.equal(roster.find(row=>row.name==='Sydney Mitchell').coach,'Jennifer Jackson/Bryce Davison');
 assert.ok(roster.find(row=>row.name==='Breken Brezden'));
 const rows=[{id:'a',name:'A One'},{id:'b',name:'B Two'},{id:'c',name:'C Three'}];
 assert.deepEqual(planPaste('Coach 1\r\nCoach 2\r\n',rows,rows,'a'),[{id:'a',coach:'Coach 1'},{id:'b',coach:'Coach 2'}]);

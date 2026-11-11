@@ -537,7 +537,7 @@
   "也支持两列「选手姓名 + 教练」，自动匹配选手。": "Two columns are also supported: skater name + coach, matched automatically.",
   "起始选手": "Starting skater",
   "批量教练信息": "Bulk coach information",
-  "粘贴 Excel 内容到这里…\n\n例：\nJen Jackson/Bryce Davidson\n另一位教练": "Paste Excel content here…\n\nExample:\nJen Jackson/Bryce Davidson\nAnother coach",
+  "粘贴 Excel 内容到这里…\n\n例：\nJennifer Jackson/Bryce Davison\n另一位教练": "Paste Excel content here…\n\nExample:\nJennifer Jackson/Bryce Davison\nAnother coach",
   "空白行会清空对应教练格": "Blank rows clear the corresponding coach cells",
   "填入并自动保存": "Fill and save automatically",
   "已公布成绩": "Published result",

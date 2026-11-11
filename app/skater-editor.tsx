@@ -35,7 +35,7 @@ export default function SkaterEditor({skater,onClose,onSaved}:{skater:ClubSkater
     <form onSubmit={event=>void save(event)}>
       <fieldset disabled={loading||saving||!!skater&&!version}>
         <label className="club-field">{text('Skater full name','选手全名')}<input ref={first} name="skaterName" required maxLength={120} value={name} onChange={event=>setName(event.target.value)} autoComplete="off"/></label>
-        <label className="club-field">{text('Coaches','负责教练')}<CoachNameInput name="coach" maxLength={500} value={coach} onChange={setCoach} names={coachNames} placeholder="Jen Jackson/Bryce Davidson"/><small>{text('Type a first name for suggestions. Separate coaches with /. Leave empty to clear.','输入 first name 联想，多位教练用 / 分隔；留空可清除。')}</small></label>
+        <label className="club-field">{text('Coaches','负责教练')}<CoachNameInput name="coach" maxLength={500} value={coach} onChange={setCoach} names={coachNames} placeholder="Jennifer Jackson/Bryce Davison"/><small>{text('Type a first name for suggestions. Separate coaches with /. Leave empty to clear.','输入 first name 联想，多位教练用 / 分隔；留空可清除。')}</small></label>
         <label className="club-checkbox"><input name="training" type="checkbox" checked={training} onChange={event=>setTraining(event.target.checked)}/>{text('Trains at Hamilton Skating Club','在 Hamilton Skating Club 训练')}</label>
         <label className="club-checkbox"><input name="identityPending" type="checkbox" checked={pending} onChange={event=>setPending(event.target.checked)}/>{text('Full name still needs confirmation','全名仍待确认')}</label>
       </fieldset>

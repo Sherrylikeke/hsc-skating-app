@@ -1,3 +1,4 @@
+import {canonicalCoachList} from './coach-names';
 import {env} from 'cloudflare:workers';
 import metadata from '../data/history-meta.json';
 import sourceRecords from '../data/history-records.json';
@@ -20,7 +21,7 @@ export async function profiles():Promise<ClubSkater[]>{
   const {results:admissions}=await db().prepare('SELECT skater_id,payload FROM hsc_admissions').all<{skater_id:string;payload:string}>();
   const overrides=new Map(admissions.map(row=>[row.skater_id,JSON.parse(row.payload) as {name:string;training:boolean;identityPending:boolean;representedClubs:string}]));
   const candidates=[...roster,...admissions.filter(row=>!roster.some(candidate=>candidate.id===row.skater_id)).map(row=>({id:row.skater_id,name:overrides.get(row.skater_id)!.name,coach:'',training:false}))];
-  return candidates.map(row=>{const info=old.get(row.id);const update=overrides.get(row.id);return {id:row.id,name:update?.name||row.name,coach:coaches.get(row.id)??row.coach,training:update?.training??row.training,identityPending:update?.identityPending??('identityPending' in row&&row.identityPending===true),categories:info?.categories||[],clubs:update?.representedClubs?update.representedClubs.split(/\s*;\s*/):info?.represented_clubs||[],firstSeen:info?.first_seen,lastSeen:info?.last_seen,recordCount:info?.record_count||0,eventCount:info?.event_count||0,identityStatus:(update?.identityPending??('identityPending' in row&&row.identityPending))?'全名待确认':info?.identity_status||'用户添加，尚无已关联记录'};});
+  return candidates.map(row=>{const info=old.get(row.id);const update=overrides.get(row.id);return {id:row.id,name:update?.name||row.name,coach:canonicalCoachList(coaches.get(row.id)??row.coach),training:update?.training??row.training,identityPending:update?.identityPending??('identityPending' in row&&row.identityPending===true),categories:info?.categories||[],clubs:update?.representedClubs?update.representedClubs.split(/\s*;\s*/):info?.represented_clubs||[],firstSeen:info?.first_seen,lastSeen:info?.last_seen,recordCount:info?.record_count||0,eventCount:info?.event_count||0,identityStatus:(update?.identityPending??('identityPending' in row&&row.identityPending))?'全名待确认':info?.identity_status||'用户添加，尚无已关联记录'};});
 }
 export async function readLiveEvents():Promise<LiveEvent[]>{const {results}=await db().prepare('SELECT payload FROM live_events').all<{payload:string}>();return results.map(row=>JSON.parse(row.payload) as LiveEvent).sort((a,b)=>a.start.localeCompare(b.start));}
 export async function readLiveEvent(id:string):Promise<LiveEvent|null>{const row=await db().prepare('SELECT payload FROM live_events WHERE id = ?').bind(id).first<{payload:string}>();return row?JSON.parse(row.payload):null;}

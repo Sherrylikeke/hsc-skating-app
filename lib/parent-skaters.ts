@@ -1,3 +1,4 @@
+import {canonicalCoachName,canonicalCoachList} from './coach-names';
 import {AccessError,accessibleSkaters,json,nowISO,requireRole,scheduleSkaterIds,stringField} from './member-access';
 import type {Candidate,Member} from './member-access';
 import {isParentAccount,PARENT_SKATER_LIMIT} from './parent-skater-policy';
@@ -10,7 +11,7 @@ export async function coachNames(database:D1Database){
     database.prepare("SELECT json_extract(payload,'$.coachName') AS name FROM hsc_claims WHERE kind='membership' AND json_valid(payload) AND json_extract(payload,'$.role')='coach' AND typeof(json_extract(payload,'$.coachName'))='text'").all<{name:string}>(),
     database.prepare("SELECT value AS name FROM app_meta WHERE key LIKE 'schedule-coach:%'").all<{name:string}>(),
   ]);
-  return [...new Set([...results.flatMap(row=>splitCoaches(row.coach)),...registered.map(row=>row.name),...chosen.map(row=>row.name)].filter(name=>name.length>0&&name.length<=120))].sort();
+  return [...new Set([...results.flatMap(row=>splitCoaches(row.coach)),...registered.map(row=>row.name),...chosen.map(row=>row.name)].map(canonicalCoachName).filter(name=>name.length>0&&name.length<=120))].sort();
 }
 export async function homeRevision(database:D1Database,memberId:string){return (await database.prepare('SELECT MAX(updated_at) AS revision FROM hsc_home_skaters WHERE member_id=?').bind(memberId).first<{revision:string|null}>())?.revision??null;}
 export async function saveHomeSkater(database:D1Database,member:Member,body:Record<string,unknown>,candidates:Candidate[]){
@@ -37,20 +38,20 @@ async function parentChild(database:D1Database,member:Member,id:string,candidate
 export async function parentCoach(database:D1Database,member:Member,id:string,candidates:Candidate[]){
   const child=await parentChild(database,member,id,candidates);
   const row=await database.prepare('SELECT coach,revision FROM coach_assignments WHERE skater_id=?').bind(id).first<{coach:string;revision:number}>();
-  return json({skater:{id,name:child.name,coach:row?.coach??child.coach??'',revision:row?.revision??0},names:await coachNames(database)});
+  return json({skater:{id,name:child.name,coach:canonicalCoachList(row?.coach??child.coach??''),revision:row?.revision??0},names:await coachNames(database)});
 }
 export async function saveParentCoach(database:D1Database,member:Member,body:Record<string,unknown>,candidates:Candidate[]){
   const id=stringField(body.skaterId,100),home=await homeRevision(database,member.id);
   await parentChild(database,member,id,candidates);
   if(typeof body.coach!=='string'||body.coach.length>500||/[\x00-\x1f]/.test(body.coach)||!Number.isSafeInteger(body.revision)||Number(body.revision)<0)throw new AccessError(400,'Enter valid coach names.');
-  const choices=await coachNames(database);
+  const coach=canonicalCoachList(body.coach.trim()),choices=await coachNames(database);
   if(splitCoaches(body.coach).some(name=>!choices.some(choice=>coachKey(choice)===coachKey(name))))throw new AccessError(400,'Choose coach names from the dropdown. / 请从下拉列表选择教练。');
   const operation=crypto.randomUUID(),time=nowISO(),gate='EXISTS(SELECT 1 FROM hsc_audit WHERE id=?)';
   const results=await database.batch([
     database.prepare("INSERT INTO hsc_audit(id,actor_id,action,subject_id,payload,created_at) SELECT ?,?,'parent-coach-update',?,?,? WHERE COALESCE((SELECT revision FROM coach_assignments WHERE skater_id=?),0)=? AND COALESCE((SELECT MAX(updated_at) FROM hsc_home_skaters WHERE member_id=?),'')=? AND EXISTS(SELECT 1 FROM hsc_members WHERE id=? AND role='parent' AND status='active' AND auth_version=?) AND EXISTS(SELECT 1 FROM hsc_relations r JOIN hsc_admissions a ON a.skater_id=r.skater_id AND a.admitted=1 WHERE r.member_id=? AND r.skater_id=? AND r.kind='parent' AND r.active=1)")
-      .bind(operation,member.id,id,JSON.stringify({coach:body.coach}),time,id,body.revision,member.id,home??'',member.id,member.auth_version,member.id,id),
-    database.prepare(`INSERT INTO coach_assignments(skater_id,coach,revision,updated_at) SELECT ?,?,1,? WHERE ${gate} ON CONFLICT(skater_id) DO UPDATE SET coach=excluded.coach,revision=coach_assignments.revision+1,updated_at=excluded.updated_at`).bind(id,body.coach.trim(),time,operation),
+      .bind(operation,member.id,id,JSON.stringify({coach}),time,id,body.revision,member.id,home??'',member.id,member.auth_version,member.id,id),
+    database.prepare(`INSERT INTO coach_assignments(skater_id,coach,revision,updated_at) SELECT ?,?,1,? WHERE ${gate} ON CONFLICT(skater_id) DO UPDATE SET coach=excluded.coach,revision=coach_assignments.revision+1,updated_at=excluded.updated_at`).bind(id,coach,time,operation),
   ]);
   if(!results[0].meta.changes)throw new AccessError(409,'The coach details or your access changed. Reload before saving. / 教练资料或权限已变更，请重新读取。');
-  return json({ok:true,coach:body.coach.trim(),revision:Number(body.revision)+1});
+  return json({ok:true,coach,revision:Number(body.revision)+1});
 }

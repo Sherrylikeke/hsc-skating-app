@@ -1,3 +1,4 @@
+import {canonicalCoachList} from './coach-names';
 import {AccessError,json,nowISO,stringField} from './member-access';
 import type {Candidate,Member} from './member-access';
 import {coachNames} from './parent-skaters';
@@ -21,10 +22,10 @@ export async function saveCoachProfile(database:D1Database,member:Member,body:Re
 export async function selfCoachAssignment(database:D1Database,member:Member,body:Record<string,unknown>,candidates:Candidate[]){
   if(!isScheduleCoach(member))throw new AccessError(403,'Sign in as a coach.');
   const profile=await scheduleCoachProfile(database,member),id=stringField(body.skaterId,100);
-  if(!profile.name||body.coachName!==profile.name||!candidates.some(candidate=>candidate.id===id))throw new AccessError(400,'Choose your own coach name and a listed skater.');
+  if(!profile.name||typeof body.coachName!=='string'||coachKey(body.coachName)!==coachKey(profile.name)||!candidates.some(candidate=>candidate.id===id))throw new AccessError(400,'Choose your own coach name and a listed skater.');
   const row=await database.prepare('SELECT coach,revision FROM coach_assignments WHERE skater_id=?').bind(id).first<{coach:string;revision:number}>();
   if(body.revision!==undefined&&body.revision!==(row?.revision??0))throw new AccessError(409,'Coach assignments changed. Reload before saving.');
-  const before=row?.coach??candidates.find(candidate=>candidate.id===id)?.coach??'';
+  const before=canonicalCoachList(row?.coach??candidates.find(candidate=>candidate.id===id)?.coach??'');
   if(assignedToCoach(before,profile.name))return json({coach:before,revision:row?.revision??0});
   const after=[before.trim(),profile.name].filter(Boolean).join('/'),operation=crypto.randomUUID(),time=nowISO(),gate='EXISTS(SELECT 1 FROM hsc_audit WHERE id=?)';
   if(after.length>500)throw new AccessError(400,'The coach list is full. Ask the administrator to review it.');

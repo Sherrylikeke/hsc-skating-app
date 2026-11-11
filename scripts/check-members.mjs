@@ -895,21 +895,21 @@ const scheduleCoach={identity:{userId:'password:coach-no-links',email:'coach-no-
 parentDatabase.database.prepare("INSERT INTO hsc_members(id,email,name,requested_role,status,created_at) VALUES (?,?,?,'coach','club-viewer',?)").run(scheduleCoach.identity.userId,scheduleCoach.identity.email,'Coach Fixture',nowISO());
 parentDatabase.database.prepare("INSERT INTO hsc_claims(id,member_id,kind,payload,status,created_at) VALUES (?,?,'membership',?,'pending',?)").run('coach-no-child-claim',scheduleCoach.identity.userId,JSON.stringify({role:'coach',coachName:'Jen Jackson',skaterIds:[]}),nowISO());
 const coachNoLinksSession=await parentCall(scheduleCoach,'session',{role:'coach'});scheduleCoach.cookie=coachNoLinksSession.response.headers.get('Set-Cookie').split(';')[0];
-assert.equal((await parentCall(scheduleCoach,'coach-profile')).value.name,'Jen Jackson');
+assert.equal((await parentCall(scheduleCoach,'coach-profile')).value.name,'Jennifer Jackson');
 await parentCall(scheduleCoach,'coach-profile',{coachName:'Bryce Davidson'},403);
 await parentCall(scheduleCoach,'self-coach',{skaterId:'SK-B',coachName:'Bryce Davidson'},400);
 await parentCall(scheduleCoach,'self-coach',{skaterId:'SK-B',coachName:'Jen Jackson',revision:1});
-assert.equal(parentDatabase.database.prepare('SELECT coach FROM coach_assignments WHERE skater_id=?').get('SK-B').coach,'Bryce Davidson/Jen Jackson');
+assert.equal(parentDatabase.database.prepare('SELECT coach FROM coach_assignments WHERE skater_id=?').get('SK-B').coach,'Bryce Davison/Jennifer Jackson');
 await parentCall(scheduleCoach,'self-coach',{skaterId:'SK-B',coachName:'Jen Jackson',revision:1},409);
 await parentCall(scheduleCoach,'admin',undefined,403);
 assert.equal(parentDatabase.database.prepare('SELECT count(*) AS count FROM hsc_relations WHERE member_id=?').get(scheduleCoach.identity.userId).count,0);
 assert.equal(parentDatabase.database.prepare('SELECT role FROM hsc_members WHERE id=?').get(scheduleCoach.identity.userId).role,null);
 await parentCall(parentFixture,'self-coach',{skaterId:'SK-B',coachName:'Jen Jackson'},403);
-const coachRegistration=await registrationEligibility(parentDatabase,{role:'coach',coachName:'Jen Jackson'},'fixture-coach-registration');assert.equal(coachRegistration.coachName,'Jen Jackson');assert.deepEqual(coachRegistration.skaterIds,[]);
+const coachRegistration=await registrationEligibility(parentDatabase,{role:'coach',coachName:'Jen Jackson'},'fixture-coach-registration');assert.equal(coachRegistration.coachName,'Jennifer Jackson');assert.deepEqual(coachRegistration.skaterIds,[]);
 parentDatabase.database.prepare("UPDATE coach_assignments SET coach=''").run();
-assert.equal((await parentCall(scheduleCoach,'coach-profile')).value.name,'Jen Jackson');
+assert.equal((await parentCall(scheduleCoach,'coach-profile')).value.name,'Jennifer Jackson');
 await parentCall(scheduleCoach,'self-coach',{skaterId:'SK-B',coachName:'Jen Jackson'});
-assert.equal(parentDatabase.database.prepare('SELECT coach FROM coach_assignments WHERE skater_id=?').get('SK-B').coach,'Jen Jackson');
+assert.equal(parentDatabase.database.prepare('SELECT coach FROM coach_assignments WHERE skater_id=?').get('SK-B').coach,'Jennifer Jackson');
 await assert.rejects(registrationEligibility(parentDatabase,{role:'coach',coachName:'Unlisted Coach'},'fixture-coach-registration'),error=>error.status===400);
 check('active parents finish pending same-role claims after admission, role conflicts cannot approve; coaches register without child links and self-assign only their canonical name while preserving other coaches and private access boundaries');
 // Parent registrations accept an unlisted full name without creating a skater or granting a relationship.

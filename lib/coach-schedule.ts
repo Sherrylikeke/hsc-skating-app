@@ -1,9 +1,11 @@
+import {canonicalCoachName} from './coach-names.ts';
 import {splitCoaches} from './club-types.ts';
 import type {ScheduleRow} from './club-types.ts';
 import {scheduleInstant} from './schedule-time.ts';
 
 export type CoachOverlap = {peer:ScheduleRow; start:number; end:number; coaches:string[]};
 export function coachOverlaps(rows:ScheduleRow[], onlyCoach='') {
+  onlyCoach=canonicalCoachName(onlyCoach);
   const clocks = new Map<string,number|null>();
   function instant(row:ScheduleRow,clock:string) {
     const key = [row.date,clock,row.timezone].join('|');
@@ -36,7 +38,7 @@ export function coachOverlaps(rows:ScheduleRow[], onlyCoach='') {
 
 export type CoachScheduleFilters={event:string;coach:string;date:string;assignedOnly:boolean};
 export function filterCoachSchedule<Row extends {eventId:string;coach:string;date:string}>(rows:Row[],filters:CoachScheduleFilters):Row[]{
-  return rows.filter(row=>(!filters.event||row.eventId===filters.event)&&(!filters.assignedOnly||row.coach.trim())&&(!filters.coach||splitCoaches(row.coach).includes(filters.coach))&&(!filters.date||row.date===filters.date));
+  return rows.filter(row=>(!filters.event||row.eventId===filters.event)&&(!filters.assignedOnly||row.coach.trim())&&(!filters.coach||splitCoaches(row.coach).includes(canonicalCoachName(filters.coach)))&&(!filters.date||row.date===filters.date));
 }
 
 export const hasCoachGroupTime=(row:ScheduleRow)=>!row.uncertain&&/^([01]\d|2[0-3]):[0-5]\d$/.test(row.start);

@@ -143,7 +143,16 @@ try {
   }
   const crossWrite=await post('/api/skaters',newSkater,{...platformHeaders,origin:'https://attacker.example.test'});assert.equal(crossWrite.status,403);
   const createdResponse=await post('/api/skaters',newSkater,platformHeaders);assert.equal(createdResponse.status,201,await createdResponse.clone().text());const created=(await createdResponse.json()).skater;
-  assert.match(created.id,/^HSC-NEW-/);assert.equal(created.coach,newSkater.coach);assert.equal(created.coachRevision,1);
+  assert.match(created.id,/^HSC-NEW-/);assert.equal(created.coach,'Jennifer Jackson/Bryce Davison');assert.equal(created.coachRevision,1);
+  // Legacy stored names are corrected on every roster surface without changing links or revision.
+  await database.prepare('UPDATE coach_assignments SET coach=? WHERE skater_id=?').bind(newSkater.coach,created.id).run();
+  for(const endpoint of ['/api/coaches','/api/skaters?id='+created.id,'/api/club']){
+    const response=await mf.dispatchFetch(origin+endpoint,{headers:platformHeaders});assert.equal(response.status,200);const data=await response.json();
+    const row=data.skater??(data.rows??data.skaters).find(row=>row.id===created.id);assert.equal(row.coach,'Jennifer Jackson/Bryce Davison');
+  }
+  const correctedNames=(await (await mf.dispatchFetch(origin+'/api/member?action=coach-names',{headers:platformHeaders})).json()).names;
+  assert.ok(correctedNames.includes('Jennifer Jackson'));assert.ok(correctedNames.includes('Bryce Davison'));assert.ok(!correctedNames.includes('Jen Jackson'));assert.ok(!correctedNames.includes('Bryce Davidson'));
+  assert.equal((await database.prepare('SELECT revision FROM coach_assignments WHERE skater_id=?').bind(created.id).first()).revision,1);
   assert.equal((await database.prepare('SELECT admitted FROM hsc_admissions WHERE skater_id=?').bind(created.id).first()).admitted,0);
   assert.equal((await database.prepare('SELECT count(*) AS count FROM hsc_relations WHERE skater_id=?').bind(created.id).first()).count,0);
   assert.equal((await post('/api/skaters',{...newSkater,name:' fixture   added skater '},platformHeaders)).status,409);
@@ -271,11 +280,11 @@ try {
   const scheduleCoachLogin=await post('/api/member?action=session',{role:'coach'},scheduleCoachPlatform);assert.equal(scheduleCoachLogin.status,200);
   const scheduleCoachHeaders={...scheduleCoachPlatform,cookie:cookies(scheduleCoachLogin)};
   const noChildClubResponse=await mf.dispatchFetch(origin+'/api/club',{headers:scheduleCoachHeaders});assert.equal(noChildClubResponse.status,200);const noChildClub=await noChildClubResponse.json();
-  assert.equal(noChildClub.scheduleCoachName,'Jen Jackson');assert.ok(noChildClub.skaters.length>=108);assert.ok(noChildClub.events.length>0);assert.equal(noChildClub.plans.length,0);assert.equal(noChildClub.writableSkaterIds.length,0);
+  assert.equal(noChildClub.scheduleCoachName,'Jennifer Jackson');assert.ok(noChildClub.skaters.length>=108);assert.ok(noChildClub.events.length>0);assert.equal(noChildClub.plans.length,0);assert.equal(noChildClub.writableSkaterIds.length,0);
   assert.equal((await post('/api/member?action=self-coach',{skaterId:created.id,coachName:'Bryce Davidson'},scheduleCoachHeaders)).status,400);
   const beforeSelf=(await database.prepare('SELECT coach FROM coach_assignments WHERE skater_id=?').bind(created.id).first()).coach;
   assert.equal((await post('/api/member?action=self-coach',{skaterId:created.id,coachName:'Jen Jackson'},scheduleCoachHeaders)).status,200);
-  assert.equal((await database.prepare('SELECT coach FROM coach_assignments WHERE skater_id=?').bind(created.id).first()).coach,beforeSelf+'/Jen Jackson');
+  assert.equal((await database.prepare('SELECT coach FROM coach_assignments WHERE skater_id=?').bind(created.id).first()).coach,beforeSelf+'/Jennifer Jackson');
   assert.equal((await database.prepare('SELECT count(*) AS count FROM hsc_relations WHERE member_id=?').bind(scheduleCoachId).first()).count,0);
   assert.equal((await post('/api/plans',{skaterId:created.id,eventId:syncEvent.id,slotKey:'fixture',meetingTime:'',note:'No private access',revision:0},scheduleCoachHeaders)).status,403);
   assert.equal((await post('/api/skaters',newSkater,scheduleCoachHeaders)).status,403);

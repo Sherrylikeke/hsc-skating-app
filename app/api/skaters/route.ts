@@ -1,3 +1,4 @@
+import {canonicalCoachList} from '../../../lib/coach-names';
 import {db,profiles} from '../../../lib/club-store';
 import {requestMember} from '../../../lib/member-runtime';
 import {AccessError,bodyJSON,failure,json,rateLimit,stringField} from '../../../lib/member-access';
@@ -21,7 +22,7 @@ export async function GET(request:Request){
     if(!skater)throw new AccessError(404,'Skater not found.');
     const {profile,coach}=await versions(skater.id);
     const latest=profile?JSON.parse(profile.payload):{};
-    return json({skater:{...skater,...(profile?{name:latest.name,training:latest.training,identityPending:latest.identityPending}:{}),coach:coach?.coach??skater.coach,profileRevision:profile?.updated_at??null,coachRevision:coach?.revision??0}});
+    return json({skater:{...skater,...(profile?{name:latest.name,training:latest.training,identityPending:latest.identityPending}:{}),coach:canonicalCoachList(coach?.coach??skater.coach),profileRevision:profile?.updated_at??null,coachRevision:coach?.revision??0}});
   }catch(error){return failure(error);}
 }
 export async function POST(request:Request){
@@ -33,7 +34,7 @@ export async function POST(request:Request){
     const id=creating?'HSC-NEW-'+crypto.randomUUID():stringField(body.id,100);
     const all=await profiles(),previous=all.find(row=>row.id===id);
     if(!creating&&!previous)throw new AccessError(404,'Skater not found. Reload the list before editing.');
-    const name=stringField(body.name,120),coach=stringField(body.coach,500,true);
+    const name=stringField(body.name,120),coach=canonicalCoachList(stringField(body.coach,500,true));
     if(/[\r\n\t\x00-\x1f]/.test(name)||/[\r\n\t\x00-\x1f]/.test(coach)||typeof body.training!=='boolean'||typeof body.identityPending!=='boolean')throw new AccessError(400,'Check the skater name, coach and profile fields.');
     if(all.some(row=>row.id!==id&&normalized(row.name)===normalized(name)))throw new AccessError(409,'A skater with this name already exists. Edit the existing profile.');
     const current=await versions(id);
