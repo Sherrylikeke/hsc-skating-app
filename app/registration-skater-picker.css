@@ -1,0 +1,7 @@
+.registration-skater-picker{position:relative;margin-block:14px}
+.member-app .registration-skater-picker label{margin-bottom:6px}
+.registration-skater-picker ul{list-style:none;margin:4px 0;padding:4px;border:1px solid #b9cadf;border-radius:8px;background:#fff;max-height:240px;overflow-y:auto;overscroll-behavior:contain}
+.member-app .registration-skater-picker [role=option]{display:block;width:100%;min-height:44px;padding:10px 12px;border:0;text-align:left;border-radius:5px;white-space:normal;overflow-wrap:anywhere;font:inherit}
+.member-app .registration-skater-picker [role=option][aria-selected=true]{background:#e6effb;color:#174574}
+.registration-skater-picker p{font-size:13px;line-height:1.5;margin:6px 0}
+.registration-skater-picker .registration-name-selected{color:#17614c;font-weight:600}

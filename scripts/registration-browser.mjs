@@ -15,6 +15,7 @@ export async function checkRegistrationFeedback(browser,profile,origin){
         return route.fulfill({json:{deliveryConfigured:mail==='enabled',registrationConfigured:mail==='enabled'}});
       }
       if(url.pathname==='/api/auth/sign-up/email')return route.fulfill({json:{user:{email},token:null,registrationMode:'verification',verificationDelivery:outcome}});
+      if(url.pathname==='/api/auth/registration-skaters')return route.fulfill({json:{names:['Fixture Skater'],hasMore:false}});
       if(url.pathname==='/api/auth/send-verification-email'&&request.method()==='POST'){
         assert.equal(request.postDataJSON().email,email);
         resends++;
@@ -32,7 +33,8 @@ export async function checkRegistrationFeedback(browser,profile,origin){
       await page.getByLabel('Confirm password',{exact:true}).fill('Registration-Fixture-Only');
       await page.getByLabel('Your email',{exact:true}).fill(email);
       await page.getByLabel("Skater's name on the club list",{exact:true}).fill('Fixture Skater');
-      await page.getByRole('button',{name:'Check name and create account'}).tap();
+      await page.getByRole('option',{name:'Fixture Skater',exact:true}).tap();
+      await page.getByRole('button',{name:'Create account',exact:true}).tap();
       const heading=page.getByRole('heading',{name:'Verify your email',exact:true});
       await heading.waitFor();
       await page.waitForFunction(el=>{

@@ -1,9 +1,14 @@
 import {text,translate} from '../lib/i18n';
 
-export type AuthProblem={code?:string;message?:string;error?:{message?:string}};
+export type AuthProblem={code?:string;message?:string;error?:{message?:string};retryAfter?:number};
+export function authRetrySeconds(response:Pick<Response,'headers'>,result:AuthProblem={}){
+  const seconds=Number(response.headers.get('Retry-After')||response.headers.get('X-Retry-After')||result.retryAfter);
+  return Number.isFinite(seconds)&&seconds>0?Math.min(3600,Math.ceil(seconds)):60;
+}
 
 export function authProblem(status:number,result:AuthProblem){
   if(status===429)return 'RATE_LIMITED';
+  if(result.code==='SKATER_NOT_FOUND')return 'SKATER_NOT_FOUND';
   if(result.code==='MAIL_DISABLED'||result.message?.includes('mail service setup')||result.message?.startsWith('Email service setup'))return 'MAIL_DISABLED';
   if(result.code==='MAIL_UNAVAILABLE')return 'MAIL_UNAVAILABLE';
   if(result.code==='ACCOUNT_ALREADY_EXISTS'||result.message?.startsWith('An account already uses this email.'))return 'ACCOUNT_ALREADY_EXISTS';
@@ -20,6 +25,8 @@ export function authFeedback(problem:string){
     case 'MAIL_UNAVAILABLE':return text('The verification email could not be sent. Please retry in a minute.','验证邮件暂未发出，请在一分钟后重试。');
     case 'UNAVAILABLE':return text('The service could not be reached. Please try again.','暂时无法连接服务，请重试。');
     case 'PASSWORD_MISMATCH':return text('The passwords do not match.','两次输入的密码不一致。');
+    case 'SELECT_SKATER':
+    case 'SKATER_NOT_FOUND':return text('Type a first name and choose the skater from the suggestions.','请输入 first name，再从联想结果中选择选手。');
     case 'ACCOUNT_ALREADY_EXISTS':return text('This email already has an account. Sign in, or request a verification link if you still need one.','此邮箱已有账号。请登录；如果尚未完成验证，可以申请新的验证链接。');
     case 'BAD_CREDENTIALS':
     case 'Invalid username or password':

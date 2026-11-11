@@ -1,0 +1,10 @@
+.parent-account-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));gap:10px;margin:14px 0}
+.member-app .parent-account-list>button{text-align:left;white-space:normal;overflow-wrap:anywhere;min-height:100px}
+.parent-account-list strong,.parent-account-list span{display:block}
+.parent-skater-settings{margin-top:20px;padding-top:16px;border-top:1px solid #dbe4ef}
+.parent-skater-settings fieldset{min-width:0;border:1px solid #dbe4ef;border-radius:8px;padding:10px}
+.parent-skater-choices{max-height:280px;overflow-y:auto}
+.member-app .parent-skater-choices label{display:flex;flex-direction:row;align-items:center;min-height:44px;gap:10px;margin:0;padding:6px}
+.parent-skater-profile{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:10px 0;border-top:1px solid #e1e7ef}
+.member-app .club-skater-editor{width:min(540px,calc(100vw - 28px));max-width:calc(100vw - 28px);min-width:0;box-sizing:border-box}
+.member-app .club-skater-editor .club-checkbox{flex-direction:row;align-items:center;gap:10px}

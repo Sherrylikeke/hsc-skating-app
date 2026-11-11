@@ -1,17 +1,28 @@
 import {AccessError, audit, nowISO, rateLimit} from './member-access';
 import roster from '../data/roster.json';
+import {skaterNameSuggestions} from './skater-name-search';
 
 export type Registration = {role:'skater'|'parent'|'coach';skaterIds:string[];skaterName:string};
 const normalizedName=(value:string)=>value.normalize('NFKC').toLocaleLowerCase().replace(/\s+/g,' ').trim();
-export async function registrationEligibility(database:D1Database,body:Record<string,unknown>,address:string):Promise<Registration> {
-  await rateLimit(database,'registration:'+address,8,3600000);
-  if(!['skater','parent','coach'].includes(String(body.role)))throw new AccessError(400,'Choose Skater, Parent or Coach.');
-  if(typeof body.skaterName!=='string'||!body.skaterName.trim()||body.skaterName.length>120)throw new AccessError(400,"Enter the club skater's full name.");
+async function registrationNames(database:D1Database){
   const {results}=await database.prepare('SELECT skater_id,payload FROM hsc_admissions').all<{skater_id:string;payload:string}>();
   const names=new Map(roster.map(skater=>[skater.id,skater.name]));
   for(const row of results){const profile=JSON.parse(row.payload) as {name:string};names.set(row.skater_id,profile.name);}
+  return names;
+}
+export async function registrationSuggestions(database:D1Database,query:string){
+  if(query.trim().length<2)return {names:[] as string[],hasMore:false};
+  return skaterNameSuggestions((await registrationNames(database)).values(),query);
+}
+export async function registrationEligibility(database:D1Database,body:Record<string,unknown>,address:string):Promise<Registration> {
+  await rateLimit(database,'registration-check:'+address,40,600000);
+  if(!['skater','parent','coach'].includes(String(body.role)))throw new AccessError(400,'Choose Skater, Parent or Coach.');
+  if(typeof body.skaterName!=='string'||!body.skaterName.trim()||body.skaterName.length>120)throw new AccessError(400,"Enter the club skater's full name.");
+  const names=await registrationNames(database);
   const matches=[...names].filter(([,name])=>normalizedName(name)===normalizedName(body.skaterName as string));
-  if(!matches.length)throw new AccessError(403,'This skater name is not on the club list. Check the spelling or contact the club.');
+  if(!matches.length)throw new AccessError(403,'Choose the skater from the name suggestions. If the name is missing, contact the club.',undefined,'SKATER_NOT_FOUND');
+  // Misspellings must not consume the hourly account-creation allowance.
+  await rateLimit(database,'registration-create:'+address,8,3600000);
   return {role:body.role as Registration['role'],skaterIds:matches.map(([id])=>id),skaterName:matches[0][1]};
 }
 export async function recordRegistration(database:D1Database,user:{id:string;email:string;name:string},registration:Registration) {

@@ -177,6 +177,11 @@ try {
   const usernameSignin=await post('/api/auth/sign-in/username',{username:'owner.fixture',password});assert.equal(usernameSignin.status,200);
   assert.equal((await post('/api/link-password',{}, {cookie:passwordCookie})).status,401);
   const pilotBody={name:'pilot.fixture',username:'pilot.fixture',email:'pilot-fixture@example.test',password,role:'parent',skaterName:'Carson Wang',pilotInvitation:pilotToken};
+  assert.equal((await post('/api/auth/registration-skaters',{query:'Mike'})).status,503);
+  const nameLookup=await post('/api/auth/registration-skaters',{query:'mike procheav',pilotInvitation:pilotToken});
+  assert.equal(nameLookup.status,200,await nameLookup.clone().text());
+  const suggested=await nameLookup.json();assert.deepEqual(Object.keys(suggested).sort(),['hasMore','names']);assert.ok(suggested.names.includes('Mike Pochaev'));
+  assert.equal((await post('/api/auth/registration-skaters',{query:'Mike',pilotInvitation:pilotToken},{origin:'https://attacker.example.test'})).status,403);
   const pilot=await post('/api/auth/sign-up/email',pilotBody);assert.equal(pilot.status,200,await pilot.clone().text());
   assert.equal(pilot.headers.get('X-HSC-Registration-Mode'),'pilot');
   const pilotUser=(await pilot.json()).user;assert.equal(pilotUser.emailVerified,false);
@@ -185,6 +190,17 @@ try {
   assert.equal((await post('/api/auth/sign-up/email',pilotBody)).status,409);
   const viewerLogin=await post('/api/auth/sign-in/email',{email:pilotBody.email,password});assert.equal(viewerLogin.status,200);const viewerPassword=cookies(viewerLogin);
   const viewerSession=await post('/api/member?action=session',{role:'parent'},{cookie:viewerPassword});assert.equal(viewerSession.status,200);const viewerHeaders={cookie:viewerPassword+'; '+cookies(viewerSession)};
+  assert.equal((await post('/api/auth/registration-skaters',{query:'Mike',pilotInvitation:pilotToken})).status,403);
+  const parentAdmin=await (await mf.dispatchFetch(origin+'/api/member?action=admin',{headers:platformHeaders})).json();
+  const parentHome=parentAdmin.parentHomes.find(row=>row.memberId==='password:'+pilotUser.id);assert.ok(parentHome);assert.ok(parentHome.skaterIds.includes(fixtureCarson.id));
+  assert.equal(parentAdmin.members.find(row=>row.id===parentHome.memberId).email_verified,0);
+  const parentChange={memberId:parentHome.memberId,skaterIds:[created.id],revision:parentHome.revision};
+  assert.equal((await post('/api/member?action=parent-home-skaters',parentChange,viewerHeaders)).status,403);
+  const changedParent=await post('/api/member?action=parent-home-skaters',parentChange,platformHeaders);assert.equal(changedParent.status,200,await changedParent.clone().text());
+  assert.deepEqual((await changedParent.json()).preferredSkaterIds,[created.id]);
+  assert.equal((await post('/api/member?action=parent-home-skaters',parentChange,platformHeaders)).status,409);
+  assert.equal((await database.prepare('SELECT count(*) AS count FROM hsc_relations WHERE member_id=?').bind(parentHome.memberId).first()).count,0);
+  console.log('Worker registration suggestions return names only, reject wrong origin and consumed pilot; admin parent homepage updates preserve role and private relations, reject non-admin and stale writes.');
   // Signup pinned Carson; explicitly replace that preference to exercise viewing another skater.
   assert.equal((await post('/api/member?action=home-skater',{skaterId:fixtureCarson.id,pinned:false},viewerHeaders)).status,200);
   assert.equal((await post('/api/member?action=home-skater',{skaterId:created.id,pinned:true},viewerHeaders)).status,200);

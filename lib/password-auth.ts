@@ -6,7 +6,7 @@ import {drizzle} from 'drizzle-orm/d1';
 import {authUser, authSession, authAccount, authVerification} from '../db/schema';
 import {AccessError,nowISO,rateLimit} from './member-access';
 import type {Role} from './member-access';
-import {recordRegistration,registrationEligibility} from './registration';
+import {recordRegistration,registrationEligibility,registrationSuggestions} from './registration';
 import type {VerificationDelivery} from './verification-mail';
 import type {PilotRegistration} from './pilot-registration';
 import {isRegisteredPilot,pilotUsedKey} from './pilot-registration';
@@ -60,6 +60,18 @@ export function createPasswordAuth(database: D1Database, secret: string, origin 
     }
     if(request.method==='POST'&&(request.headers.get('origin')!==origin||request.headers.get('sec-fetch-site')==='cross-site'))return Response.json({message:'Invalid request origin.'},{status:403});
     if(request.method==='POST'&&!request.headers.get('content-type')?.startsWith('application/json'))return Response.json({message:'Use application/json.'},{status:415});
+    if(request.method==='POST'&&pathname==='/api/auth/registration-skaters'){
+      try{
+        const raw=await request.text();if(new TextEncoder().encode(raw).length>1024)return Response.json({message:'Request is too large.'},{status:413});
+        const body=JSON.parse(raw) as {query?:unknown;pilotInvitation?:unknown};
+        if(!body||typeof body.query!=='string'||body.query.length>120)return Response.json({message:'Enter a skater name to search.'},{status:400});
+        const pilot=!delivery.enabled&&pilotRegistration&&typeof body.pilotInvitation==='string'?await pilotRegistration(request,'',body.pilotInvitation):null;
+        if(!(delivery.enabled&&delivery.registrationEnabled===true)&&!pilot)return Response.json({message:'Registration is not open.'},{status:503});
+        if(pilot&&await database.prepare('SELECT value FROM app_meta WHERE key=?').bind(pilotUsedKey(pilot)).first())return Response.json({message:'This invitation has already been used.'},{status:403});
+        await rateLimit(database,'registration-suggestions:'+(request.headers.get('cf-connecting-ip')||'unknown'),60,60000);
+        return Response.json(await registrationSuggestions(database,body.query),{headers:{'Cache-Control':'private, no-store'}});
+      }catch(error){return Response.json({message:error instanceof AccessError?error.message:error instanceof SyntaxError?'Invalid request.':'Names could not be loaded. Please retry.'},{status:error instanceof AccessError?error.status:error instanceof SyntaxError?400:503,headers:{'Cache-Control':'private, no-store',...(error instanceof AccessError&&error.retryAfter?{'Retry-After':String(error.retryAfter)}:{})}});}
+    }
     if(request.method==='POST'&&['/api/auth/request-password-reset','/api/auth/reset-password','/api/auth/send-verification-email'].includes(pathname)){
       if(!delivery.enabled&&pathname!=='/api/auth/reset-password')return Response.json({code:'MAIL_DISABLED',message:'Email service setup is pending. Existing accounts can still sign in.'},{status:503});
       try{
@@ -138,7 +150,7 @@ export function createPasswordAuth(database: D1Database, secret: string, origin 
           }
         }
         return Response.json({...result,registrationMode,verificationDelivery},{status:response.status,headers});
-      }catch(error){return Response.json({message:error instanceof AccessError?error.message:error instanceof SyntaxError?'Invalid registration request.':'Registration could not be completed. Please contact the club.'},{status:error instanceof AccessError?error.status:error instanceof SyntaxError?400:503});}
+      }catch(error){return Response.json({message:error instanceof AccessError?error.message:error instanceof SyntaxError?'Invalid registration request.':'Registration could not be completed. Please contact the club.',...(error instanceof AccessError&&error.code?{code:error.code}:{}),...(error instanceof AccessError&&error.retryAfter?{retryAfter:error.retryAfter}:{})},{status:error instanceof AccessError?error.status:error instanceof SyntaxError?400:503,headers:{'Cache-Control':'private, no-store',...(error instanceof AccessError&&error.retryAfter?{'Retry-After':String(error.retryAfter)}:{})}});}
     }
     return auth.handler(request);
   }};

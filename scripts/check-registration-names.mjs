@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {skaterNameSuggestions} from '../lib/skater-name-search.ts';
+const names=JSON.parse(fs.readFileSync('data/roster.json','utf8')).map(skater=>skater.name);
+for(const query of ['Mike','mike','Ｍｉｋｅ','miek','Mike procheav','procheav Mike','Mike Pochaev'])assert.ok(skaterNameSuggestions(names,query).names.includes('Mike Pochaev'),query);
+assert.deepEqual(skaterNameSuggestions(names,'Mike Pochaev').names,['Mike Pochaev']);
+assert.deepEqual(skaterNameSuggestions(names,'m').names,[]);
+assert.deepEqual(skaterNameSuggestions(names,'Not A Real Registered Skater').names,[]);
+const many=skaterNameSuggestions(Array.from({length:12},(_,i)=>'Alex Example '+i),'Alex');assert.equal(many.names.length,8);assert.equal(many.hasMore,true);
+assert.deepEqual(skaterNameSuggestions(['Mike Pochaev','MIKE POCHAEV'],'Mike').names,['Mike Pochaev']);
+assert.deepEqual(skaterNameSuggestions(['Élodie O’Neil'],'Elodie').names,['Élodie O’Neil']);
+assert.deepEqual(skaterNameSuggestions(names,'x'.repeat(121)).names,[]);
+console.log('First-name, full-name, transposition and surname-typo suggestions, Unicode normalization, bounded results and duplicate-name handling passed.');

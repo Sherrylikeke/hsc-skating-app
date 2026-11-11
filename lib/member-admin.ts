@@ -86,7 +86,7 @@ export async function memberRequest(context: Context, request: Request): Promise
 async function adminData(database: D1Database, member: Member, candidates: Candidate[]) {
   requireRole(member, 'admin');
   const [members, admissions, relations, invites, claims, logs, assignments, outbox] = await Promise.all([
-    database.prepare('SELECT id,email,name,role,requested_role,status,created_at FROM hsc_members ORDER BY created_at DESC').all(),
+    database.prepare("SELECT m.id,m.email,m.name,m.role,m.requested_role,m.status,m.created_at,(SELECT u.email_verified FROM hsc_auth_user u WHERE 'password:'||u.id=m.id OR u.id IN (SELECT auth_user_id FROM hsc_auth_links WHERE member_id=m.id) LIMIT 1) AS email_verified FROM hsc_members m ORDER BY m.created_at DESC").all<Member&{email_verified:number|null}>(),
     database.prepare('SELECT * FROM hsc_admissions').all(),
     database.prepare('SELECT * FROM hsc_relations').all(),
     database.prepare('SELECT id,email,role,skater_ids,expires_at,status,used_by,created_at FROM hsc_invites ORDER BY created_at DESC LIMIT 100').all(),
@@ -96,7 +96,8 @@ async function adminData(database: D1Database, member: Member, candidates: Candi
     database.prepare('SELECT state,count(*) AS count FROM hsc_outbox GROUP BY state').all(),
   ]);
   const coaches = [...new Set(assignments.results.flatMap(row => row.coach.split(/\s*(?:\/|／|;|；|&)\s*/)).filter(Boolean))].sort();
-  return json({members: members.results, candidates, admissions: admissions.results, relations: relations.results, invites: invites.results, claims: claims.results, logs: logs.results, coachCandidates: coaches, outbox: outbox.results});
+  const parentHomes=await Promise.all(members.results.filter(parent=>parent.role==='parent'||!parent.role&&parent.requested_role==='parent').map(async parent=>({memberId:parent.id,skaterIds:await scheduleSkaterIds(database,parent),revision:(await database.prepare('SELECT MAX(updated_at) AS revision FROM hsc_home_skaters WHERE member_id=?').bind(parent.id).first<{revision:string|null}>())?.revision??null})));
+  return json({members: members.results, parentHomes, candidates, admissions: admissions.results, relations: relations.results, invites: invites.results, claims: claims.results, logs: logs.results, coachCandidates: coaches, outbox: outbox.results});
 }
 
 async function submitClaim(database: D1Database, member: Member, body: Record<string, unknown>, candidates: Candidate[]) {
@@ -145,6 +146,25 @@ async function acceptInvite(database: D1Database, member: Member, token: string)
 }
 
 async function adminWrite(database: D1Database, member: Member, operation: string, body: Record<string, unknown>, candidates: Candidate[]) {
+  if(operation==='parent-home-skaters'){
+    const memberId=stringField(body.memberId,100),ids=idsField(body.skaterIds);
+    const target=await database.prepare('SELECT * FROM hsc_members WHERE id=?').bind(memberId).first<Member>();
+    if(!target||!(target.role==='parent'||!target.role&&target.requested_role==='parent')||!['active','club-viewer','pending'].includes(target.status))throw new AccessError(400,'Choose a registered parent account that is not disabled.');
+    if(ids.some(id=>!candidates.some(candidate=>candidate.id===id)))throw new AccessError(400,'Choose skaters on the club list.');
+    if(body.revision!==null&&typeof body.revision!=='string')throw new AccessError(400,'Reload the parent account before saving.');
+    const previous=await scheduleSkaterIds(database,target);
+    const operationId=crypto.randomUUID(),time=new Date(Math.max(Date.now(),(Date.parse(String(body.revision))||0)+1)).toISOString();
+    const gate='EXISTS(SELECT 1 FROM hsc_audit WHERE id=?)';
+    const allIds=[...new Set([...candidates.map(candidate=>candidate.id),...previous])];
+    const result=await database.batch([
+      database.prepare("INSERT INTO hsc_audit(id,actor_id,action,subject_id,payload,created_at) SELECT ?,?,'parent-home-skaters',?,?,? WHERE COALESCE((SELECT MAX(updated_at) FROM hsc_home_skaters WHERE member_id=?),'')=?")
+        .bind(operationId,member.id,memberId,JSON.stringify({before:previous,after:ids,access:'homepage-only'}),time,memberId,body.revision??''),
+      database.prepare(`INSERT INTO hsc_home_skaters(id,member_id,skater_id,pinned,updated_at) SELECT json_array(?,value),?,value,CASE WHEN value IN (SELECT value FROM json_each(?)) THEN 1 ELSE 0 END,? FROM json_each(?) WHERE ${gate} ON CONFLICT(id) DO UPDATE SET pinned=excluded.pinned,updated_at=excluded.updated_at`)
+        .bind(memberId,memberId,JSON.stringify(ids),time,JSON.stringify(allIds),operationId),
+    ]);
+    if(!result[0].meta.changes)throw new AccessError(409,'This parent’s skaters changed in another window. Reload before saving.');
+    return json({preferredSkaterIds:await scheduleSkaterIds(database,target)});
+  }
   if (operation === 'admission') {
     const id = stringField(body.skaterId, 100);
     const candidate = candidates.find(row => row.id === id);

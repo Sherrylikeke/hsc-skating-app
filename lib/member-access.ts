@@ -3,13 +3,13 @@ export type Identity = {userId: string; email: string; displayName: string; prov
 export type Member = {id: string; email: string; name: string; role: Role | null; requested_role: Role; status: string; auth_version: number};
 export type Candidate = {id: string; name: string; identityPending?: boolean; training?: boolean; coach?: string};
 export class AccessError extends Error {
-  constructor(public status: number, message: string) {super(message);}
+  constructor(public status: number, message: string, public retryAfter?:number, public code?:string) {super(message);}
 }
 export const nowISO = () => new Date().toISOString();
 export const randomToken = () => Array.from(crypto.getRandomValues(new Uint8Array(32)), value => value.toString(16).padStart(2, '0')).join('');
 export const digest = async (value: string) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))), byte => byte.toString(16).padStart(2, '0')).join('');
 export const json = (value: unknown, status = 200, headers: Record<string, string> = {}) => Response.json(value, {status, headers: {'Cache-Control': 'private, no-store', ...headers}});
-export const failure = (error: unknown) => json({error: error instanceof AccessError ? error.message : '操作暂未完成，请重试'}, error instanceof AccessError ? error.status : 503);
+export const failure = (error: unknown) => json({error: error instanceof AccessError ? error.message : '操作暂未完成，请重试',...(error instanceof AccessError&&error.retryAfter?{retryAfter:error.retryAfter}:{})}, error instanceof AccessError ? error.status : 503,error instanceof AccessError&&error.retryAfter?{'Retry-After':String(error.retryAfter)}:{});
 export function requireRole(member: Member, ...roles: Role[]) {
   if (member.status !== 'active' || !member.role || !roles.includes(member.role)) throw new AccessError(403, '此账号没有该操作权限');
 }
@@ -48,7 +48,7 @@ export async function rateLimit(database: D1Database, key: string, limit = 20, i
   const time = Date.now();
   const id = `${key}:${Math.floor(time / interval)}`;
   const row = await database.prepare('INSERT INTO hsc_rate_limits (id,count,expires_at) VALUES (?,1,?) ON CONFLICT(id) DO UPDATE SET count=count+1 RETURNING count').bind(id, time + interval).first<{count: number}>();
-  if (!row || row.count > limit) throw new AccessError(429, '操作过于频繁，请稍后重试');
+  if (!row || row.count > limit) throw new AccessError(429, '操作过于频繁，请稍后重试',Math.max(1,Math.ceil((interval-time%interval)/1000)));
 }
 export function cookieName(request: Request) {
   return new URL(request.url).protocol === 'https:' ? '__Host-hsc_session' : 'hsc_session';
