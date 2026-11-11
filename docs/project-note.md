@@ -6,8 +6,13 @@
 
 - 基于用户指定4b770f5/V42实现四项需求：概览移除总数统计；会员首页、概览、个人赛程展示My Skaters相关的未来正式/Interim名单赛事；重复Starting Order顶部链接移除、保留类别顺序表；报名阶段开放日前14天至截止日展示类别匹配及SkateReg/Uplifter入口，各赛事有明确Skate Ontario详情外链。逻辑与解析范围见docs/home-events.md。
 - 实际Niagara/Bowmanville两种Interim PDF解析547/372条，保留跨页类别与完整姓名安全匹配。网页/Announcement读取assigned/public日期，音乐截止日和不明确年份不作为报名日期。未来183天轮换第三场详情，保留每轮三场和原小时任务；不变更schema、账号/关系、邮件配置、访问范围。
-- 已通过20个回归文件（含31组核心权限）、Web类型、10项native检查、Capacitor构建与Android/iOS sync；后来补充公告类别跨行与第二种Interim真实样本回归，最终构建/Worker结果待补。Chrome/WebKit、320/390/1280px、中英文、三个首页入口36个隔离样本视图通过，手机静态入口漏载已有样式导致的WebKit320px溢出已修正。浏览器报告在本次会话outputs/home-events-review；不是生产用户登录/真机安装。
-- 本轮重新读Sites为V42/public、原小时任务启用。GitHub工具核对同名原仓库当前visibility=public、push/admin=true；不更改可见性，后续正常同步同一仓库。本次上线、实际官网再同步、APK/iOS资源和Git结果待后续补记，不沿用V42作为本轮成功结论。
+- 已通过20个回归文件（含31组核心权限）、Web类型、10项native检查、Capacitor构建与Android/iOS sync；后来补充公告类别跨行与第二种Interim真实样本回归，最终构建/Worker结果见本节下方。Chrome/WebKit、320/390/1280px、中英文、三个首页入口36个隔离样本视图通过，手机静态入口漏载已有样式导致的WebKit320px溢出已修正。浏览器报告在本次会话outputs/home-events-review；不是生产用户登录/真机安装。
+- 本轮重新读Sites为V42/public、原小时任务启用。GitHub工具核对同名原仓库当前visibility=public、push/admin=true；不更改可见性，后续正常同步同一仓库。本次上线、实际官网再同步、APK/iOS资源和Git结果见下方最终记录，不沿用V42作为本轮成功结论。
+
+- 最终官方Sites生产构建及真实Worker/临时D1回归通过，运行源码8522f2c5aa24810654b0b7122204fb2f8038edf2；V43保存版本appgprj_6ad76ca2dba481919ba883865cbd5a0d~appgver_592dfb93f5c8819198a99ebb03471a3e，部署appgdep_6af47a3816ac81919dfed5398073cbba于2026-11-11T14:22:58.894660Z（Toronto09:22）succeeded，env9/MCP ready。最终npm test为20/20，新增首页回归10组（含两份真实PDF）。
+- 正式域名14:25:59Z只读HTTP验收：首页、概览、个人页200，匿名club API401；包含新首页文案的BzCzaVt2.js SHA256=aaeb62b140961f8baa7b3de4c1442b7dd545923163f4a5e963e1208c85fac9e6，与本地发布资源相同。实际官网日历重新同步38场；Niagara14:24:06Z导入547条/23位关联选手、无赛程，Bowmanville14:25:44Z导入372条/0位关联选手，Paris14:24:43Z网页及公告读取成功，三场errors均空。其他未支持来源不据此声称全部成功；本次未新增生产账号或修改私人关系。
+- Android编译、Lint及签名通过，APK SHA256=E63A17AF6D68030CC68190B3BB242A44066019877B8732A5CB5D68898030D4C2；iOS仅sync和58文件ZIP，SHA256=73E33DE2817ADE4324AD3171E84052A130FD76EEE8ECF5208AFCC82F8A19BF41。13份客户端资源在dist/APK/iOS逐字节相同。交付在本次会话outputs/home-events-release，浏览器截图在outputs/home-events-review；未真机安装、未生成IPA或上架。
+- Sites源已同步8522f2c。GitHub main只读核对仍4b770f5；向同名公开仓库main的正常推送被自动审批拒绝，理由为用户本轮未明确授权向公开仓库披露源码。没有改用其他方式推送；需用户明确同意后再正常快进。最终仅补本地说明与验收记录，不为文档重部署。
 
 ## 2026-11-11 十位密码及重置入口
 
