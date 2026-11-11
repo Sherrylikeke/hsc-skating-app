@@ -8,7 +8,7 @@
 
 - 用户指定4b770f5基线的四项功能已实现：移除概览统计，正式/Interim名单匹配即可展示未来比赛，类别匹配的报名开放日前14天至截止日附SkateReg/Uplifter入口，Skate Ontario详情外链；顶部重复Starting Order链接移除。说明见docs/home-events.md。
 - 运行源码8522f2c，V43于Toronto09:22 succeeded，env9/MCP ready。20/20回归、真实Worker/D1、36个Chrome/WebKit中英文视图、正式域名资源SHA检查通过。生产重新导入Niagara547条/23位关联选手，Bowmanville372条/0位关联选手，Paris公告读取无错误。
-- 新APK及iOS构建资源、SHA与逐文件证明在本次会话outputs/home-events-release；iOS无IPA，未真机安装。GitHub main仍4b770f5，本轮公开仓库推送被自动审批拒绝，等待用户明确授权；没有强推、改可见性或绕过拒绝。最终事实见docs/project-note.md。下列V42及此前记录为历史。
+- 新APK及iOS构建资源、SHA与逐文件证明在本次会话outputs/home-events-release；iOS无IPA，未真机安装。此前公开GitHub推送被自动审批拒绝后，用户明确要求全部推送远端，已从4b770f5正常快进到5253e14；随后补同步文档并正常推送，最终HEAD以远端校验为准。没有强推、改可见性或绕过拒绝。用户目前没有Mac/Apple Developer账号。最终事实见docs/project-note.md。下列V42及此前记录为历史。
 
 
 ### 十位密码与密码重置（2026-11-11，V42已上线）
