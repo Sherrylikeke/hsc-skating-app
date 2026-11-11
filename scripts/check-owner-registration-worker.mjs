@@ -256,4 +256,27 @@ try {
   console.log('Account actions survive unreadable roster data. Device sign-out can be retried, cross-origin writes are rejected, and revoke-all only ends this account’s logins.');
 
   console.log('Worker registration: anonymous blocked; administrator signup, same-identity linking, email/username login and role preserved; pilot signup and single use passed; authenticated results, all opponents, detailed marks and arbitrary-source rejection and custom-domain login/same-origin protection passed; real Worker sync resolves Carson #19 / warm-up 4 to 11:15–12:15 and excludes awards.');
+  const scheduleCoachId='fixture-shared-coach',scheduleCoachEmail='shared-coach@example.test';
+  await database.prepare("INSERT INTO hsc_members(id,email,name,requested_role,status,auth_version,created_at) VALUES (?,?,?,'coach','club-viewer',1,?)").bind(scheduleCoachId,scheduleCoachEmail,'Jen fixture',new Date().toISOString()).run();
+  await database.prepare("INSERT INTO hsc_claims(id,member_id,kind,payload,status,created_at) VALUES (?,?,'membership',?,'pending',?)").bind('fixture-coach-no-child',scheduleCoachId,JSON.stringify({role:'coach',coachName:'Jen Jackson',skaterIds:[]}),new Date().toISOString()).run();
+  const scheduleCoachPlatform={'oai-authenticated-user-id':scheduleCoachId,'oai-authenticated-user-email':scheduleCoachEmail};
+  const scheduleCoachLogin=await post('/api/member?action=session',{role:'coach'},scheduleCoachPlatform);assert.equal(scheduleCoachLogin.status,200);
+  const scheduleCoachHeaders={...scheduleCoachPlatform,cookie:cookies(scheduleCoachLogin)};
+  const noChildClubResponse=await mf.dispatchFetch(origin+'/api/club',{headers:scheduleCoachHeaders});assert.equal(noChildClubResponse.status,200);const noChildClub=await noChildClubResponse.json();
+  assert.equal(noChildClub.scheduleCoachName,'Jen Jackson');assert.ok(noChildClub.skaters.length>=108);assert.ok(noChildClub.events.length>0);assert.equal(noChildClub.plans.length,0);assert.equal(noChildClub.writableSkaterIds.length,0);
+  assert.equal((await post('/api/member?action=self-coach',{skaterId:created.id,coachName:'Bryce Davidson'},scheduleCoachHeaders)).status,400);
+  const beforeSelf=(await database.prepare('SELECT coach FROM coach_assignments WHERE skater_id=?').bind(created.id).first()).coach;
+  assert.equal((await post('/api/member?action=self-coach',{skaterId:created.id,coachName:'Jen Jackson'},scheduleCoachHeaders)).status,200);
+  assert.equal((await database.prepare('SELECT coach FROM coach_assignments WHERE skater_id=?').bind(created.id).first()).coach,beforeSelf+'/Jen Jackson');
+  assert.equal((await database.prepare('SELECT count(*) AS count FROM hsc_relations WHERE member_id=?').bind(scheduleCoachId).first()).count,0);
+  assert.equal((await post('/api/plans',{skaterId:created.id,eventId:syncEvent.id,slotKey:'fixture',meetingTime:'',note:'No private access',revision:0},scheduleCoachHeaders)).status,403);
+  assert.equal((await post('/api/skaters',newSkater,scheduleCoachHeaders)).status,403);
+  const activeParentId='fixture-preactivated-parent';
+  await database.prepare("INSERT INTO hsc_members(id,email,name,role,requested_role,status,auth_version,created_at) VALUES (?,?,?,'parent','parent','active',1,?)").bind(activeParentId,'activated-parent@example.test','Activated parent fixture',new Date().toISOString()).run();
+  await database.prepare("INSERT INTO hsc_claims(id,member_id,kind,payload,status,created_at) VALUES (?,?,'membership',?,'pending',?)").bind('fixture-preactivated-claim',activeParentId,JSON.stringify({role:'parent',skaterIds:[fixtureCarson.id]}),new Date().toISOString()).run();
+  assert.equal((await post('/api/member?action=admission',{skaterId:fixtureCarson.id,name:fixtureCarson.name,admitted:true},platformHeaders)).status,200);
+  const approveActive=await post('/api/member?action=review-claim',{id:'fixture-preactivated-claim',approve:true},platformHeaders);assert.equal(approveActive.status,200,await approveActive.clone().text());
+  assert.equal((await database.prepare("SELECT count(*) AS count FROM hsc_relations WHERE member_id=? AND kind='parent' AND active=1").bind(activeParentId).first()).count,1);
+  assert.equal((await post('/api/member?action=review-claim',{id:'fixture-preactivated-claim',approve:true},platformHeaders)).status,409);
+  console.log('Worker coach schedule: no-child coach sees all official skaters/events, self-assigns only own name preserving other labels, cannot read/write private plans or edit full profiles. Active same-role parent completes a pending claim once after admission.');
 }finally{await mf.dispose();}

@@ -1,10 +1,15 @@
 import assert from 'node:assert/strict';
-import {MemberAPIError,activeMemberRole,readMemberResponse,recoverMemberSession} from '../lib/member-client.ts';
+import {MemberAPIError,activeMemberRole,readMemberResponse,recoverMemberSession,destinationAfterSignIn} from '../lib/member-client.ts';
 import {homeSkaterChoices} from '../lib/home-skater-choices.ts';
 import {groupHomeSchedule} from '../lib/home-schedule.ts';
 import {arrivalReference} from '../lib/schedule-time.ts';
 
 const checks=[];
+assert.equal(destinationAfterSignIn('',{role:null,requested_role:'coach',status:'club-viewer'}),'/workspace?view=coach');
+assert.equal(destinationAfterSignIn('',{role:'coach',status:'active'}),'/workspace?view=coach');
+assert.equal(destinationAfterSignIn('',{role:'parent',status:'active'}),'/workspace?view=personal');
+assert.equal(destinationAfterSignIn('?tab=account',{role:'coach',status:'active'}),'/?tab=account');
+assert.equal(destinationAfterSignIn('?schedule=view%3Devents',{role:'coach',status:'active'}),'/workspace?view=events');
 assert.equal(activeMemberRole({role:'admin',status:'active'},'admin'),true);
 for(const member of [null,{role:'parent',status:'active'},{role:'admin',status:'disabled'},{role:'admin',status:'pending'},{role:'admin',status:'club-viewer'}])assert.equal(activeMemberRole(member,'admin'),false);
 assert.equal(activeMemberRole({role:'coach',status:'active'},'coach'),true);

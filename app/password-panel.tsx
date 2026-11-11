@@ -2,9 +2,10 @@
 import {useEffect,useId,useRef,useState} from 'react';
 import {apiFetch} from '../lib/client-platform';
 import {text,useLanguage} from '../lib/i18n';
-import type {Role} from '../lib/member-access';
+import type {Member,Role} from '../lib/member-access';
 import {authFeedback,authProblem,authRetrySeconds,type AuthProblem} from './auth-feedback';
 import RegistrationSkaterPicker from './registration-skater-picker';
+import RegistrationCoachPicker from './registration-coach-picker';
 import EmailVerificationPanel,{type VerificationReason} from './email-verification-panel';
 import PasswordResetPanel from './password-reset-panel';
 import {useAuthAvailability} from './auth-availability';
@@ -12,11 +13,12 @@ import {useAuthAvailability} from './auth-availability';
 type PilotRole='parent'|'coach'|'skater';
 type RegistrationResult=AuthProblem&{token?:string|null;user?:{email:string};registrationMode?:'verification'|'pilot'|'linked';verificationDelivery?:'requested'|'retry-needed'};
 
-export default function PasswordPanel({role,onComplete,allowAdminLink=false}:{role:Role;onComplete:()=>Promise<void>;allowAdminLink?:boolean}) {
+export default function PasswordPanel({role,onComplete,allowAdminLink=false}:{role:Role;onComplete:(member?:Member)=>Promise<void>;allowAdminLink?:boolean}) {
   useLanguage();
   const id=useId();
   const [register,setRegister]=useState(false),[username,setUsername]=useState(''),[password,setPassword]=useState(''),[confirm,setConfirm]=useState(''),[email,setEmail]=useState(''),[skaterName,setSkaterName]=useState('');
   const [selectedSkater,setSelectedSkater]=useState(''),[retryAt,setRetryAt]=useState(0),[now,setNow]=useState(Date.now);
+  const [coachName,setCoachName]=useState('');
   const retrySeconds=Math.max(0,Math.ceil((retryAt-now)/1000));
   useEffect(()=>{if(!retryAt)return;const timer=window.setInterval(()=>{const current=Date.now();setNow(current);if(current>=retryAt)setRetryAt(0);},1000);return()=>window.clearInterval(timer);},[retryAt]);
   const [requestedRole,setRequestedRole]=useState<Role>(role==='admin'?'parent':role),[link,setLink]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
@@ -83,13 +85,13 @@ export default function PasswordPanel({role,onComplete,allowAdminLink=false}:{ro
   async function submit(event:React.FormEvent) {
     event.preventDefault();
     if(busy||retrySeconds>0)return;
-    if(register&&!adminLink&&(!selectedSkater||selectedSkater!==skaterName)){setError('SELECT_SKATER');return;}
+    if(register&&!adminLink&&(requestedRole==='coach'?!coachName:!selectedSkater||selectedSkater!==skaterName)){setError('SELECT_SKATER');return;}
     if(register&&password!==confirm){setError('PASSWORD_MISMATCH');return;}
     setBusy(true);setError('');
     try {
       const identifier=username.trim(),emailLogin=!register&&identifier.includes('@');
       const endpoint=register?'sign-up/email':emailLogin?'sign-in/email':'sign-in/username';
-      const body=register?{name:identifier,email:email.trim(),username:identifier,password,role:requestedRole,skaterName,linkExisting:adminLink,...(pilot?{pilotInvitation:pilot.token}:{})}:emailLogin?{email:identifier,password}:{username:identifier,password};
+      const body=register?{name:identifier,email:email.trim(),username:identifier,password,role:requestedRole,skaterName:requestedRole==='coach'?'':skaterName,...(requestedRole==='coach'?{coachName}:{}),linkExisting:adminLink,...(pilot?{pilotInvitation:pilot.token}:{})}:emailLogin?{email:identifier,password}:{username:identifier,password};
       const response=await apiFetch('/api/auth/'+endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
       const result:RegistrationResult=await response.json();
       if(!response.ok){
@@ -115,8 +117,8 @@ export default function PasswordPanel({role,onComplete,allowAdminLink=false}:{ro
         const value=await linked.json() as {error?:string};if(!linked.ok){setError(value.error||'UNAVAILABLE');return;}
       }
       const session=await apiFetch('/api/member?action=session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role:register?requestedRole:role})});
-      const value=await session.json() as {error?:string};if(!session.ok){setError(value.error||'UNAVAILABLE');return;}
-      await onComplete();
+      const value=await session.json() as {error?:string;member?:Member};if(!session.ok){setError(value.error||'UNAVAILABLE');return;}
+      await onComplete(value.member);
     }catch{setError('UNAVAILABLE');}finally{setBusy(false);}
   }
 
@@ -146,13 +148,13 @@ export default function PasswordPanel({role,onComplete,allowAdminLink=false}:{ro
         <label>{text('Your email','你的邮箱')}<input required type="email" value={email} onChange={event=>setEmail(event.target.value)} readOnly={!!pilot} autoComplete="email" maxLength={254}/></label>
         {!adminLink&&<><label htmlFor={id+'-role'}>{text('Role','身份')}</label><select id={id+'-role'} required value={requestedRole} onChange={event=>setRequestedRole(event.target.value as Role)}>
           {(!pilot||pilot.role==='skater')&&<option value="skater">{text('Skater','选手')}</option>}{(!pilot||pilot.role==='parent')&&<option value="parent">{text('Parent','家长')}</option>}{(!pilot||pilot.role==='coach')&&<option value="coach">{text('Coach','教练')}</option>}
-        </select><RegistrationSkaterPicker value={skaterName} selected={!!selectedSkater&&selectedSkater===skaterName} disabled={busy} pilotInvitation={pilot?.token}
+        </select>{requestedRole==='coach'?<RegistrationCoachPicker value={coachName} onChange={setCoachName} disabled={busy} pilotInvitation={pilot?.token}/>:<><RegistrationSkaterPicker value={skaterName} selected={!!selectedSkater&&selectedSkater===skaterName} disabled={busy} pilotInvitation={pilot?.token}
           onChange={value=>{setSkaterName(value);setSelectedSkater('');if(error==='SELECT_SKATER'||error==='SKATER_NOT_FOUND')setError('');}}
           onChoose={name=>{setSkaterName(name);setSelectedSkater(name);if(error==='SELECT_SKATER'||error==='SKATER_NOT_FOUND')setError('');}}/>
-        <p id={id+'-skater'} className="member-muted">{text('Skaters enter their own name, parents their child’s, and coaches a club skater’s.','选手填写本人姓名，家长填写孩子姓名，教练填写一位俱乐部选手的姓名。')}</p></>}
+        <p id={id+'-skater'} className="member-muted">{text('Skaters choose their own name; parents choose their child.','选手选择本人姓名，家长选择孩子姓名。')}</p></>}</>}
       </>}
       {allowAdminLink&&<div className="member-check-row"><label><input type="checkbox" checked={link} onChange={event=>setLink(event.target.checked)}/>{text('Link these credentials to my current administrator account','将这些登录凭据关联到我当前的管理员账号')}</label><small>{text('Only for the signed-in administrator using the same email.','仅限已登录管理员使用同一邮箱。')}</small></div>}
-      <button className="primary" disabled={busy||retrySeconds>0||(register&&!adminLink&&(!selectedSkater||selectedSkater!==skaterName))}>{busy?text('Please wait…','请稍候…'):register?text('Create account','创建账号'):text('Sign in','登录')}</button>
+      <button className="primary" disabled={busy||retrySeconds>0||(register&&!adminLink&&(requestedRole==='coach'?!coachName:!selectedSkater||selectedSkater!==skaterName))}>{busy?text('Please wait…','请稍候…'):register?text('Create account','创建账号'):text('Sign in','登录')}</button>
     </form>}
     {error&&<p role="alert" className="password-error">{authFeedback(error)}{error==='RATE_LIMITED'&&retrySeconds>0&&' '+(retrySeconds>=60?text('Try again in '+Math.ceil(retrySeconds/60)+' minute(s).','请在 '+Math.ceil(retrySeconds/60)+' 分钟后重试。'):text('Try again in '+retrySeconds+' seconds.','请在 '+retrySeconds+' 秒后重试。'))}</p>}
     {register&&error==='ACCOUNT_ALREADY_EXISTS'&&<div className="member-actions">

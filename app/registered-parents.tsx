@@ -7,6 +7,7 @@ import {text} from '../lib/i18n';
 import SkaterEditor from './skater-editor';
 import './registered-parents.css';
 import './skater-editor.css';
+import {PARENT_SKATER_LIMIT} from '../lib/parent-skater-policy';
 
 export type RegisteredParent=Member&{email_verified?:number|null;created_at?:string};
 export type ParentHome={memberId:string;skaterIds:string[];revision:string|null};
@@ -36,17 +37,17 @@ export default function RegisteredParents({members,homes,skaters,onRefresh}:Prop
     </button>)}</div>
     {!visible.length&&<p>{text('No matching parent accounts.','没有匹配的家长账号。')}</p>}
     {target&&home&&<div className="parent-skater-settings">
-      <h3>{target.name} · {text('Homepage skaters','主页选手')}</h3>
+      <h3>{target.name} · {text('Homepage skaters','主页选手')} ({ids.length}/{PARENT_SKATER_LIMIT})</h3>
       <p>{text('These choices organize shared schedules. Approved private relationships remain separate.','这些选择用于整理共享赛程，已批准的私人关系单独管理。')}</p>
       <label>{text('Find a skater to add','查找要添加的选手')}<input type="search" value={skaterQuery} onChange={event=>setSkaterQuery(event.target.value)}/></label>
-      <fieldset disabled={busy||target.status==='disabled'}><legend>{text('Choose or remove skaters','添加或移除选手')}</legend><div className="parent-skater-choices">{choices.map(skater=><label key={skater.id}><input type="checkbox" checked={ids.includes(skater.id)} onChange={event=>{setSaved(false);setIds(previous=>event.target.checked?[...previous,skater.id]:previous.filter(id=>id!==skater.id));}}/>{skater.name}</label>)}</div></fieldset>
+      <fieldset disabled={busy||target.status==='disabled'}><legend>{text('Choose or remove skaters · up to 4','添加或移除选手 · 最多4位')}</legend><div className="parent-skater-choices">{choices.map(skater=><label key={skater.id}><input type="checkbox" disabled={!ids.includes(skater.id)&&ids.length>=PARENT_SKATER_LIMIT} checked={ids.includes(skater.id)} onChange={event=>{setSaved(false);setIds(previous=>event.target.checked?[...previous,skater.id]:previous.filter(id=>id!==skater.id));}}/>{skater.name}</label>)}</div></fieldset>
       <div className="member-actions"><button type="button" className="primary" disabled={busy||target.status==='disabled'} onClick={()=>void save()}>{busy?text('Saving…','保存中…'):text('Save parent’s skaters','保存家长的主页选手')}</button><button type="button" disabled={busy} onClick={()=>{setIds(home.skaterIds);setError('');setSaved(false);void onRefresh().catch(failure=>setError((failure as Error).message));}}>{text('Reload saved skaters','重新读取已保存选手')}</button></div>
       {saved&&<p role="status">{text('Saved. The parent can still add or remove skaters themselves.','已保存，家长仍可自行添加或移除选手。')}</p>}
       {error&&<p role="alert">{error}</p>}
       <h3>{text('Skater profiles & coaches','选手资料与教练')}</h3>
       <p>{text('Coach details belong to the club skater profile and appear for all families. Editing them does not grant coach account permissions.','教练信息属于俱乐部选手资料，其他家庭也会看到更新；填写教练姓名不会授予教练账号权限。')}</p>
       {skaters.filter(skater=>ids.includes(skater.id)).map(skater=><div className="parent-skater-profile" key={skater.id}><span><strong>{skater.name}</strong><small>{skater.coach||text('Coach unassigned','尚未填写教练')}</small></span><button type="button" disabled={busy} onClick={()=>setEditing(skater)}>{text('Edit skater & coaches','编辑选手及教练')}</button></div>)}
-      <button type="button" disabled={busy} onClick={()=>setEditing(null)}>{text('Add a new club skater','新增俱乐部选手')}</button>
+      <button type="button" disabled={busy||ids.length>=PARENT_SKATER_LIMIT} onClick={()=>setEditing(null)}>{text('Add a new club skater','新增俱乐部选手')}</button>
     </div>}
     {editing!==undefined&&<SkaterEditor skater={editing} onClose={()=>setEditing(undefined)} onSaved={async skater=>{if(editing===null)setIds(previous=>[...new Set([...previous,skater.id])]);setEditing(undefined);await onRefresh();}}/>}
   </section>;

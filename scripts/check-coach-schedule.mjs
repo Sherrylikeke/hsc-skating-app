@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {filterCoachSchedule} from '../lib/coach-schedule.ts';
+import {assignedToCoach,coachScheduleRows} from '../lib/coach-identity.ts';
+import {coachSuggestions} from '../lib/coach-name-search.ts';
 
 const rows=[
   {id:'first',eventId:'event-a',coach:'Jen Jackson/Bryce Davidson',date:'2026-11-05'},
@@ -20,4 +22,9 @@ const app=fs.readFileSync('app/club-app.tsx','utf8');
 assert.ok(app.includes('教练总表比赛筛选'));assert.ok(app.includes('event:coachEventFilter'));
 assert.ok(app.includes('<CoachDailySchedule rows={filteredSchedule}'));assert.ok(app.includes('filteredSchedule.map(row=>'));
 assert.ok(app.includes('!coachEventFilter||plan.eventId===coachEventFilter'));
-console.log(JSON.stringify({passed:8,allEvents:true,eventCoachDateIntersection:true,multiCoach:true,emptySelection:true,inputUnchanged:true,tableAndExportShareFilter:true,orphanPlansEventScoped:true}));
+assert.ok(assignedToCoach('Jen Jackson/Bryce Davidson','Jen Jackson'));assert.ok(assignedToCoach('Jen Jackson/Bryce Davidson','Bryce Davidson'));assert.ok(assignedToCoach('Jennifer Jackson/Bryce Davidson','Jen Jackson'));
+assert.deepEqual(coachScheduleRows(rows,'Bryce Davidson',true,[]).map(row=>row.id),['first','third']);
+assert.deepEqual(coachScheduleRows(rows,'Bryce Davidson',true,['Jen Jackson']).map(row=>row.id),['first','third','second']);
+assert.deepEqual(coachScheduleRows(rows,'Jen Jackson',false,[]).slice(0,2).map(row=>row.id),['first','second']);
+assert.deepEqual(coachSuggestions('bryce',['Jen Jackson/Bryce Davidson']),['Bryce Davidson']);assert.deepEqual(coachSuggestions('jen',['Jen Jackson/Bryce Davidson']),['Jen Jackson']);
+console.log(JSON.stringify({passed:14,allEvents:true,eventCoachDateIntersection:true,multiCoach:true,emptySelection:true,inputUnchanged:true,tableAndExportShareFilter:true,orphanPlansEventScoped:true,ownCoachFirst:true,hideOthersAndExtraCoaches:true,firstNameDropdownSearch:true}));

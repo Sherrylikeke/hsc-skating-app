@@ -4,6 +4,7 @@ import {translate,text,useLanguage,LanguageSwitch} from '../lib/i18n';
 
 import { useEffect, useRef, useState } from 'react';
 import { planPaste } from './paste';
+import CoachNameInput from './coach-name-input';
 import {useRevalidateRestoredPage} from './workspace-navigation';
 
 type Row={id:string;name:string;coach:string;training:boolean;identityPending?:boolean;revision:number};
@@ -14,6 +15,7 @@ export default function CoachEditor(){
   useLanguage();
   useRevalidateRestoredPage();
   const [rows,setRows]=useState<Row[]>([]);
+  const [coachNames,setCoachNames]=useState<string[]>([]);
   const [query,setQuery]=useState('');
   const [onlyEmpty,setOnlyEmpty]=useState(false);
   const [phase,setPhase]=useState<'loading'|'ready'|'saving'|'error'|'login'>('loading');
@@ -42,7 +44,7 @@ export default function CoachEditor(){
       const response=await fetch('/api/coaches',{cache:'no-store'});
       if(response.status===401||response.status===403){current.current=[];setRows([]);setPhase('login');return;}
       if(!response.ok)throw new Error(translate("读取失败，请重试"));
-      const data=await response.json() as {rows:Row[]};
+      const data=await response.json() as {rows:Row[];coachNames?:string[]};setCoachNames(data.coachNames??[]);
       let loaded:Row[]=data.rows;
       versions.current=new Map(loaded.map(row=>[row.id,row.revision]));
       let draft:Record<string,string>={};
@@ -150,7 +152,7 @@ export default function CoachEditor(){
     <LanguageSwitch/><header className="topbar"><a href="/" className="brand"><span className="monogram">HSC</span><span>HAMILTON<br/><b>SKATING CLUB</b></span></a><span className="private-label"><span/>{translate("私人工作表")}</span></header>
     <main>
       <nav className="coach-return-links" aria-label={text('Return navigation','返回导航')}><a href="/workspace?view=coach">← {text('Back to coach schedule','返回教练总表')}</a><a href="/">{text('Back to my homepage','返回我的主页')}</a><a href="/?tab=account">{text('Account','账户')}</a><span>{text('Administrators only','仅管理员可维护')}</span></nav>
-      <div className="page-heading"><div><p className="eyebrow">{translate("CLUB ROSTER / 教练资料")}</p><h1>{translate("选手与教练")}<span className="title-dot">.</span></h1><p className="subtitle">{translate("点一下教练格，直接输入或粘贴。")}</p></div><div className="save-state" role="status" aria-live="polite"><i className={phase}/>{phase==='ready'?translate("全部已保存"):phase==='saving'?translate("正在保存…"):phase==='error'?translate("尚未保存"):phase==='login'?translate("请先登录"):translate("正在读取…")}</div></div>
+      <div className="page-heading"><div><p className="eyebrow">{translate("CLUB ROSTER / 教练资料")}</p><h1>{translate("选手与教练")}<span className="title-dot">.</span></h1><p className="subtitle">{text('Search a first name, then select a coach from the dropdown. Bulk paste is also available.','输入 first name 联想，再从下拉列表选择教练；也可批量粘贴。')}</p></div><div className="save-state" role="status" aria-live="polite"><i className={phase}/>{phase==='ready'?translate("全部已保存"):phase==='saving'?translate("正在保存…"):phase==='error'?translate("尚未保存"):phase==='login'?translate("请先登录"):translate("正在读取…")}</div></div>
       {phase==='login'?<section className="empty-state"><h2>{translate("登录后即可编辑")}</h2><p>{text('This maintenance page requires an active administrator account. Return to the member homepage to sign in.','此维护页仅限有效管理员账号。请返回会员主页登录。')}</p><a className="primary button" href="/">{text('Return to member homepage','返回会员主页')}</a></section>:<>
         <section className="workspace" aria-label={translate("教练信息编辑表")}>
           <div className="workspace-head"><div><strong>{translate("选手名单")}</strong><span className="count">{rows.length || '—'} {translate(" 位")}</span></div><span className="completion"><b>{filled}</b> / {rows.length || '—'} {translate(" 已填教练")}</span></div>
@@ -159,7 +161,7 @@ export default function CoachEditor(){
           {error && <div className="error" role="alert">{error}<button onClick={()=>void retry()}>{translate("重试保存")}</button></div>}
           {pasteError && !modal && <div className="error" role="alert">{pasteError}<button onClick={()=>setPasteError('')}>{translate("关闭")}</button></div>}
           <div className="table-wrap"><table><colgroup><col className="number-col"/><col className="name-col"/><col/></colgroup><thead><tr><th>#</th><th>{translate("选手姓名 ")}<span>SKATER</span></th><th>{translate("负责教练 ")}<span>{translate("COACH · 可直接编辑")}</span></th></tr></thead><tbody>
-            {visible.map((row,index)=><tr key={row.id} className={active===row.id?'active-row':''}><td className="row-number">{String(index+1).padStart(2,'0')}</td><td><div className="skater-name">{row.name}</div>{row.training && <span className="training">{translate("在 Hamilton 训练")}</span>}{row.identityPending && <span className="training">{translate("全名待确认")}</span>}</td><td className="coach-cell"><input ref={el=>{if(el)inputs.current.set(row.id,el);else inputs.current.delete(row.id);}} aria-label={translate("{0} 的负责教练",[row.name])} value={row.coach} maxLength={500} placeholder={translate("输入或粘贴教练姓名")} onFocus={()=>setActive(row.id)} onChange={e=>apply([{id:row.id,coach:e.target.value}])} onPaste={e=>{const text=e.clipboardData.getData('text/plain');if(/[\n\r\t]/.test(text)){e.preventDefault();paste(text,row.id);}}} onKeyDown={e=>{if(e.key==='Enter' || e.key==='ArrowDown' || e.key==='ArrowUp'){e.preventDefault();const next=visible[index+(e.key==='ArrowUp'?-1:1)];if(next)inputs.current.get(next.id)?.focus();}}}/><span className={row.coach?'cell-mark filled':'cell-mark'}>{row.coach?'✓':'＋'}</span></td></tr>)}
+            {visible.map((row,index)=><tr key={row.id} className={active===row.id?'active-row':''}><td className="row-number">{String(index+1).padStart(2,'0')}</td><td><div className="skater-name">{row.name}</div>{row.training && <span className="training">{translate("在 Hamilton 训练")}</span>}{row.identityPending && <span className="training">{translate("全名待确认")}</span>}</td><td className="coach-cell"><CoachNameInput inputRef={el=>{if(el)inputs.current.set(row.id,el);else inputs.current.delete(row.id);}} aria-label={translate("{0} 的负责教练",[row.name])} value={row.coach} maxLength={500} placeholder={translate("输入或粘贴教练姓名")} onFocus={()=>setActive(row.id)} onChange={coach=>apply([{id:row.id,coach}])} names={[...coachNames,...rows.map(item=>item.coach)]} onPaste={e=>{const text=e.clipboardData.getData('text/plain');if(/[\n\r\t]/.test(text)){e.preventDefault();paste(text,row.id);}}} onKeyDown={e=>{if(e.key==='Enter' || e.key==='ArrowDown' || e.key==='ArrowUp'){e.preventDefault();const next=visible[index+(e.key==='ArrowUp'?-1:1)];if(next)inputs.current.get(next.id)?.focus();}}}/><span className={row.coach?'cell-mark filled':'cell-mark'}>{row.coach?'✓':'＋'}</span></td></tr>)}
           </tbody></table>{!visible.length && <div className="table-empty">{phase==='loading'?translate("正在加载选手名单…"):rows.length?translate("没有符合条件的选手"):translate("暂时无法加载名单，请点击重试。")}</div>}</div>
           <div className="table-foot"><span>{translate("显示 ")}{visible.length} {translate(" 位选手")}</span><span><span className="legend-dot"/> {translate(" 修改后自动保存")}</span></div>
         </section>

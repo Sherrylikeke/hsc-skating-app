@@ -2,6 +2,9 @@ import {AccessError, accessibleSkaters, schedulePreferences, scheduleSkaterIds, 
 import type {Candidate, Identity, Member, Role} from './member-access.ts';
 import {drainOutbox, listNotifications, markNotification, listRequirements, writeRequirement, receiptRequirement} from './member-messages.ts';
 import {listReminders,saveReminder} from './reminders.ts';
+import {coachNames,parentCoach,saveHomeSkater,saveParentCoach} from './parent-skaters';
+import {PARENT_SKATER_LIMIT} from './parent-skater-policy';
+import {scheduleCoachProfile,saveCoachProfile,selfCoachAssignment} from './coach-profile';
 
 type Context = {database: D1Database; identity: Identity | null; candidates: Candidate[]; ownerEmail: string};
 type Invite = {id: string; email: string; role: Role; hash: string; skater_ids: string; expires_at: string; status: string; created_by: string};
@@ -42,6 +45,9 @@ export async function memberRequest(context: Context, request: Request): Promise
         return json({matches: candidates.filter(row => (names.get(row.id) || row.name).normalize('NFKC').toLocaleLowerCase() === name).slice(0, 10).map(row => ({id: row.id, name: names.get(row.id) || row.name, identityPending: row.identityPending || false})), explanation: '姓名仅用于找到候选资料；管理员审核后才能访问赛程。'});
       }
       if (operation === 'admin') return await adminData(database, member, candidates);
+      if(operation==='coach-names')return json({names:await coachNames(database)});
+      if(operation==='coach-profile')return json(await scheduleCoachProfile(database,member));
+      if(operation==='parent-coach')return await parentCoach(database,member,stringField(new URL(request.url).searchParams.get('skaterId'),100),candidates);
       requireRole(member, 'admin', 'coach', 'parent', 'skater');
       if (operation === 'notifications') return json({notifications: await listNotifications(database, member)});
       if (operation === 'requirements') return json({requirements: await listRequirements(database, member)});
@@ -56,16 +62,10 @@ export async function memberRequest(context: Context, request: Request): Promise
       return json({ok: true}, 200, {'Set-Cookie': sessionCookie(request, '', 0)});
     }
     if (operation === 'accept-invite') return await acceptInvite(database, member, stringField(body.token, 100));
-    if (operation === 'home-skater') {
-      if (!['active','club-viewer'].includes(member.status)) throw new AccessError(403,'Sign in to manage your skater homepage.');
-      const skaterId=stringField(body.skaterId,100);
-      if(typeof body.pinned!=='boolean'||!candidates.some(candidate=>candidate.id===skaterId))throw new AccessError(400,'Choose a skater on the club list.');
-      await database.batch([
-        database.prepare('INSERT INTO hsc_home_skaters (id,member_id,skater_id,pinned,updated_at) VALUES (?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET pinned=excluded.pinned,updated_at=excluded.updated_at').bind(JSON.stringify([member.id,skaterId]),member.id,skaterId,Number(body.pinned),nowISO()),
-        audit(database,member.id,'home-skater',skaterId,{pinned:body.pinned}),
-      ]);
-      return json({preferredSkaterIds:await scheduleSkaterIds(database,member)});
-    }
+    if(operation==='home-skater')return await saveHomeSkater(database,member,body,candidates);
+    if(operation==='parent-coach')return await saveParentCoach(database,member,body,candidates);
+    if(operation==='coach-profile')return await saveCoachProfile(database,member,body);
+    if(operation==='self-coach')return await selfCoachAssignment(database,member,body,candidates);
     if (operation === 'claim') return await submitClaim(database, member, body, candidates);
     requireRole(member, 'admin', 'coach', 'parent', 'skater');
     if (operation === 'notification-read') {await markNotification(database, member, stringField(body.id, 500)); return json({ok: true});}
@@ -125,6 +125,7 @@ async function acceptInvite(database: D1Database, member: Member, token: string)
   const invite = await database.prepare("SELECT * FROM hsc_invites WHERE hash=? AND email=? AND status='pending' AND expires_at>?").bind(await digest(token), member.email.toLowerCase(), nowISO()).first<Invite>();
   if (!invite) throw new AccessError(400, '邀请无效、已使用、已过期，或邀请邮箱与登录邮箱不符');
   const skaterIds = parseIDs(invite.skater_ids);
+  if(invite.role==='parent'&&new Set([...(member.role==='parent'?await accessibleSkaters(database,member):[]),...skaterIds]).size>PARENT_SKATER_LIMIT)throw new AccessError(400,'家长最多关联4位选手，请先核对现有关系。');
   await admittedIDs(database, skaterIds);
   if (member.role === 'admin' && invite.role !== 'admin') {
     const administrators = await database.prepare("SELECT count(*) AS count FROM hsc_members WHERE role='admin' AND status='active'").first<{count: number}>();
@@ -151,6 +152,7 @@ async function adminWrite(database: D1Database, member: Member, operation: strin
     const target=await database.prepare('SELECT * FROM hsc_members WHERE id=?').bind(memberId).first<Member>();
     if(!target||!(target.role==='parent'||!target.role&&target.requested_role==='parent')||!['active','club-viewer','pending'].includes(target.status))throw new AccessError(400,'Choose a registered parent account that is not disabled.');
     if(ids.some(id=>!candidates.some(candidate=>candidate.id===id)))throw new AccessError(400,'Choose skaters on the club list.');
+    if(ids.length>PARENT_SKATER_LIMIT)throw new AccessError(400,'A parent can add up to 4 skaters. / 家长最多添加4位选手。');
     if(body.revision!==null&&typeof body.revision!=='string')throw new AccessError(400,'Reload the parent account before saving.');
     const previous=await scheduleSkaterIds(database,target);
     const operationId=crypto.randomUUID(),time=new Date(Math.max(Date.now(),(Date.parse(String(body.revision))||0)+1)).toISOString();
@@ -212,17 +214,19 @@ async function adminWrite(database: D1Database, member: Member, operation: strin
     const accepted = body.approve === true;
     const ids = idsField(body.skaterIds ?? requested.skaterIds);
     const target = await database.prepare('SELECT * FROM hsc_members WHERE id=?').bind(claim.member_id).first<Member>();
-    if (!target || target.status === 'disabled' || (claim.kind === 'membership' && !['pending','club-viewer'].includes(target.status))) throw new AccessError(400, '申请账号状态已变更，请重新核对');
+    if(!target||!['pending','club-viewer','active'].includes(target.status))throw new AccessError(400,'申请账号已停用或不存在，请重新核对');
     if (accepted) {
-      if (requested.role === 'admin' || (claim.kind === 'coach-link' && target.role !== 'coach')) throw new AccessError(400, '申请身份已变更，请重新核对');
+      roleField(requested.role);
+      if(!['membership','coach-link'].includes(claim.kind)||requested.role==='admin'||(claim.kind==='membership'&&target.status==='active'&&target.role!==requested.role)||(claim.kind==='coach-link'&&(target.status!=='active'||target.role!=='coach'||requested.role!=='coach')))throw new AccessError(400,'申请身份与当前身份不同，请重新核对');
       if (requested.role === 'skater' && ids.length !== 1) throw new AccessError(400, '请明确选手账号的唯一资料');
-      await admittedIDs(database, ids);
+      if(requested.role==='parent'&&new Set([...(await accessibleSkaters(database,target)),...ids]).size>PARENT_SKATER_LIMIT)throw new AccessError(400,'家长最多关联4位选手，请先核对现有关系。');
+      try{await admittedIDs(database,ids);}catch(error){if(error instanceof AccessError&&error.status===400)throw new AccessError(400,'请先在“会员准入与选手资料”确认选手准入，再批准此申请：'+ids.map(id=>candidates.find(candidate=>candidate.id===id)?.name??id).join('、'));throw error;}
     }
     const operationId = crypto.randomUUID();
     const gate = 'EXISTS (SELECT 1 FROM hsc_audit WHERE id=?)';
-    const statements = [database.prepare("INSERT INTO hsc_audit (id,actor_id,action,subject_id,payload,created_at) SELECT ?,?,'claim-review',?,?,? WHERE EXISTS (SELECT 1 FROM hsc_claims WHERE id=? AND status='pending')").bind(operationId, member.id, id, JSON.stringify({accepted, ids}), nowISO(), id),database.prepare(`UPDATE hsc_claims SET status=?,reviewed_by=? WHERE id=? AND ${gate}`).bind(accepted ? 'approved' : 'rejected', member.id, id, operationId)];
+    const statements = [database.prepare("INSERT INTO hsc_audit (id,actor_id,action,subject_id,payload,created_at) SELECT ?,?,'claim-review',?,?,? WHERE EXISTS (SELECT 1 FROM hsc_claims WHERE id=? AND status='pending') AND EXISTS(SELECT 1 FROM hsc_members WHERE id=? AND status=? AND role IS ? AND auth_version=?)").bind(operationId, member.id, id, JSON.stringify({accepted, ids}), nowISO(), id,target.id,target.status,target.role,target.auth_version),database.prepare(`UPDATE hsc_claims SET status=?,reviewed_by=? WHERE id=? AND ${gate}`).bind(accepted ? 'approved' : 'rejected', member.id, id, operationId)];
     if (accepted) {
-      if (claim.kind === 'membership') statements.push(database.prepare(`UPDATE hsc_members SET role=?,status='active',auth_version=auth_version+1 WHERE id=? AND status IN ('pending','club-viewer') AND ${gate}`).bind(requested.role, claim.member_id, operationId));
+      if (claim.kind === 'membership') statements.push(database.prepare(`UPDATE hsc_members SET role=?,status='active',auth_version=auth_version+1 WHERE id=? AND ${gate}`).bind(requested.role, claim.member_id, operationId));
       statements.push(...ids.map(skaterId => database.prepare(`INSERT INTO hsc_relations (id,member_id,skater_id,kind,active,approved_by,updated_at) SELECT ?,?,?,?,1,?,? WHERE ${gate} ON CONFLICT(id) DO UPDATE SET active=1,approved_by=excluded.approved_by,updated_at=excluded.updated_at`).bind(`${claim.member_id}|${requested.role}|${skaterId}`, claim.member_id, skaterId, requested.role, member.id, nowISO(), operationId)));
     }
     const result=await database.batch(statements);
@@ -256,6 +260,7 @@ async function adminWrite(database: D1Database, member: Member, operation: strin
     if (!target?.role || target.role === 'admin') throw new AccessError(400, '请先启用并核对账号身份');
     if (body.active === true) {
       await admittedIDs(database, [skaterId]);
+      if(target.role==='parent'&&new Set([...(await accessibleSkaters(database,target)),skaterId]).size>PARENT_SKATER_LIMIT)throw new AccessError(400,'家长最多关联4位选手，请先移除现有关系。');
       if (target.role === 'skater' && (await accessibleSkaters(database, target)).some(id => id !== skaterId)) throw new AccessError(409, '选手账号只能绑定自己的一个资料');
     }
     await database.batch([

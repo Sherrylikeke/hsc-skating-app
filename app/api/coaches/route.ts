@@ -2,6 +2,7 @@ import { env } from 'cloudflare:workers';
 import {profiles} from '../../../lib/club-store';
 import {requestMember} from '../../../lib/member-runtime';
 import {audit,checkWrite,failure} from '../../../lib/member-access';
+import {coachNames} from '../../../lib/parent-skaters';
 
 export const dynamic = 'force-dynamic';
 const response = (body: unknown, status = 200) => Response.json(body, {
@@ -31,7 +32,7 @@ export async function GET(request: Request) {
     const {db,roster} = await database();
     const {results} = await db.prepare('SELECT skater_id, coach, revision, updated_at FROM coach_assignments').all<{skater_id:string;coach:string;revision:number;updated_at:string}>();
     const saved = new Map(results.map(row => [row.skater_id, row]));
-    return response({rows:roster.map(row => ({...row, coach:saved.get(row.id)?.coach ?? row.coach, revision:saved.get(row.id)?.revision ?? 0}))});
+    return response({coachNames:await coachNames(db),rows:roster.map(row => ({...row, coach:saved.get(row.id)?.coach ?? row.coach, revision:saved.get(row.id)?.revision ?? 0}))});
   } catch(error) { return failure(error); }
 }
 

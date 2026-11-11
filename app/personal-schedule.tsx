@@ -9,6 +9,7 @@ import HomeSkaters from './home-skaters';
 import './personal-schedule.css';
 
 type Props = {
+  limit?:number;editableIds?:string[];onCoachChange?:()=>void;
   onSkater:(id:string)=>void;
   onWatch:()=>void;
   onCalendar:()=>void;
@@ -21,7 +22,7 @@ type Props = {
   renderRows:(rows:ScheduleRow[], showArrival?:boolean)=>ReactNode;
 };
 
-export default function PersonalSchedule({rows,skaters,ownIds,scope,onScope,onChange,renderRows,onWatch,onCalendar,onSkater}:Props) {
+export default function PersonalSchedule({rows,skaters,ownIds,scope,onScope,onChange,renderRows,onWatch,onCalendar,onSkater,limit,editableIds,onCoachChange}:Props) {
   const [now,setNow] = useState(Date.now);
   useEffect(() => {
     const update = () => setNow(Date.now());
@@ -51,7 +52,7 @@ export default function PersonalSchedule({rows,skaters,ownIds,scope,onScope,onCh
           {skaters.filter(skater=>!own.has(skater.id)).map(option)}
         </CompactSelect>
       </div>
-      <HomeSkaters onSkater={onSkater} skaters={skaters} ownIds={ownIds} onChange={onChange}/>
+      <HomeSkaters limit={limit} editableIds={editableIds} onCoachChange={onCoachChange} onSkater={onSkater} skaters={skaters} ownIds={ownIds} onChange={onChange}/>
       <button type="button" className="cal-entry" onClick={onCalendar}>{text('Schedule calendar','赛程日历')}</button>
       <button type="button" className="watch-entry" onClick={onWatch}>{text('Cheer from now','从现在看 · 给朋友加油')}</button>
     </section>

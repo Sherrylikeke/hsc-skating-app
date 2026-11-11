@@ -1,0 +1,9 @@
+'use client';
+import {useEffect,useState} from 'react';
+import {apiFetch} from '../lib/client-platform';
+import {text} from '../lib/i18n';
+export default function RegistrationCoachPicker({value,onChange,pilotInvitation,disabled}:{value:string;onChange:(name:string)=>void;pilotInvitation?:string;disabled?:boolean}){
+  const [names,setNames]=useState<string[]>([]),[query,setQuery]=useState(''),[error,setError]=useState(''),[attempt,setAttempt]=useState(0);
+  useEffect(()=>{let current=true;setError('');void apiFetch('/api/auth/registration-coaches',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:'',...(pilotInvitation?{pilotInvitation}:{})})}).then(async response=>{const data=await response.json() as {names:string[]};if(!response.ok)throw new Error();if(current)setNames(data.names);}).catch(()=>{if(current)setError(text('Could not load coach names.','无法读取教练名单。'));});return()=>{current=false;};},[pilotInvitation,attempt]);
+  return <><label>{text('Find your coach name','查找你的教练姓名')}<input value={query} onChange={event=>setQuery(event.target.value)} disabled={disabled} placeholder={text('First name, e.g. Jen or Bryce','输入 first name，例如 Jen 或 Bryce')}/></label><label>{text('Your coach name','你的教练姓名')}<select required value={value} onChange={event=>onChange(event.target.value)} disabled={disabled}><option value="">{text('Choose your name','选择你的姓名')}</option>{names.filter(name=>name===value||name.toLowerCase().includes(query.trim().toLowerCase())).map(name=><option key={name}>{name}</option>)}</select></label><p>{text('Coach registration does not require a skater. After email verification, all official schedules are available and your assigned skaters appear first.','教练注册无需选择选手。验证邮箱后即可查看全队官方赛程，自己的选手优先显示。')}</p>{error&&<p role="alert">{error}<button type="button" onClick={()=>setAttempt(value=>value+1)}>{text('Retry','重试')}</button></p>}</>;
+}

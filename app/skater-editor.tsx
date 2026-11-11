@@ -3,10 +3,13 @@ import {useEffect,useRef,useState} from 'react';
 import {apiFetch as fetch} from '../lib/client-platform';
 import {text,useLanguage} from '../lib/i18n';
 import type {ClubSkater} from '../lib/club-types';
+import CoachNameInput from './coach-name-input';
 type Editable=ClubSkater&{profileRevision:string|null;coachRevision:number};
 export default function SkaterEditor({skater,onClose,onSaved}:{skater:ClubSkater|null;onClose:()=>void;onSaved:(skater:ClubSkater)=>Promise<void>}){
   useLanguage();
   const [name,setName]=useState(skater?.name??''),[coach,setCoach]=useState(skater?.coach??'');
+  const [coachNames,setCoachNames]=useState<string[]>([]);
+  useEffect(()=>{let current=true;void fetch('/api/member?action=coach-names',{cache:'no-store'}).then(async response=>{if(response.ok){const data=await response.json() as {names:string[]};if(current)setCoachNames(data.names);}}).catch(()=>{});return()=>{current=false;};},[]);
   const [training,setTraining]=useState(skater?.training??true),[pending,setPending]=useState(skater?.identityPending??false);
   const [version,setVersion]=useState<Editable|null>(null),[loading,setLoading]=useState(!!skater),[saving,setSaving]=useState(false),[error,setError]=useState('');
   const dialog=useRef<HTMLElement>(null),first=useRef<HTMLInputElement>(null),busy=useRef(false);
@@ -32,7 +35,7 @@ export default function SkaterEditor({skater,onClose,onSaved}:{skater:ClubSkater
     <form onSubmit={event=>void save(event)}>
       <fieldset disabled={loading||saving||!!skater&&!version}>
         <label className="club-field">{text('Skater full name','选手全名')}<input ref={first} name="skaterName" required maxLength={120} value={name} onChange={event=>setName(event.target.value)} autoComplete="off"/></label>
-        <label className="club-field">{text('Coaches','负责教练')}<input name="coach" maxLength={500} value={coach} onChange={event=>setCoach(event.target.value)} placeholder="Jen Jackson/Bryce Davidson" autoComplete="off"/><small>{text('Separate multiple coaches with /. Leave empty to clear.','多位教练用 / 分隔；留空可清除。')}</small></label>
+        <label className="club-field">{text('Coaches','负责教练')}<CoachNameInput name="coach" maxLength={500} value={coach} onChange={setCoach} names={coachNames} placeholder="Jen Jackson/Bryce Davidson"/><small>{text('Type a first name for suggestions. Separate coaches with /. Leave empty to clear.','输入 first name 联想，多位教练用 / 分隔；留空可清除。')}</small></label>
         <label className="club-checkbox"><input name="training" type="checkbox" checked={training} onChange={event=>setTraining(event.target.checked)}/>{text('Trains at Hamilton Skating Club','在 Hamilton Skating Club 训练')}</label>
         <label className="club-checkbox"><input name="identityPending" type="checkbox" checked={pending} onChange={event=>setPending(event.target.checked)}/>{text('Full name still needs confirmation','全名仍待确认')}</label>
       </fieldset>

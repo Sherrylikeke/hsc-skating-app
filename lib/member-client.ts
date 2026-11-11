@@ -5,12 +5,12 @@ export class MemberAPIError extends Error {
 
 export function activeMemberRole(member:{role?:string|null;status:string}|null,role:string){return member?.status==='active'&&member.role===role;}
 
-export function destinationAfterSignIn(search:string){
+export function destinationAfterSignIn(search:string,member?:{role?:string|null;requested_role?:string;status:string}){
   const params=new URLSearchParams(search);
   if(params.get('tab')==='account')return '/?tab=account';
   // Only the query is carried across sign-in. The path is always our workspace.
   const schedule=params.get('schedule');
-  return schedule ? '/workspace?'+new URLSearchParams(schedule).toString() : '/workspace?view=personal';
+  return schedule ? '/workspace?'+new URLSearchParams(schedule).toString() : member&&['active','club-viewer'].includes(member.status)&&(member.role==='coach'||!member.role&&member.requested_role==='coach')?'/workspace?view=coach':'/workspace?view=personal';
 }
 
 export async function readMemberResponse<Result>(response:Response,fallback:string):Promise<Result>{
