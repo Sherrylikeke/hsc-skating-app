@@ -7,6 +7,11 @@
 - 用户要求普通用户不显示Record Review，并仅在Recently imported competition records看到My Skaters的记录。现在仅active管理员渲染资料核对卡；其他账号的最近记录由服务端按本人主页选手ID筛选后再取最新6条，客户端同时按当前主页选手过滤，无主页选手/无记录时显示空状态。个人页更换选手后重新读取，管理员保留全队记录。其他共享赛程与档案浏览权限不变。
 - 已核查注册流程：新账号为club-viewer，创建pending membership claim，可立即访问共享官方赛程；批准申请才授予请求角色和已准入选手的私人关系，重新登录生效。已active且同角色的申请仍可补关系。拒绝申请不等于停用共享访问，停用账号需使用账号管理；管理员面板补齐中英文说明。本轮没有批准/拒绝任何真实申请或变更实际账号权限。
 - 基线Git为25d4137，工作区初始干净；实时Sites查询为V44/public，原小时同步仍启用。20/20既有回归、Web类型、diff检查和官方生产构建通过；新增真实Worker/临时D1回归通过，验证先筛选后LIMIT、四种普通账号、空列表、切换选手与管理员全队记录。手机静态构建、10项检查及Android/iOS sync通过。浏览器覆盖五种角色和审批说明，最终部署和手机资源在完成后补记；首次开发预览reload超时，已改用生产预览；测试补齐临时数据主键、修正内嵌文本定位后复测。不更改schema、邮箱配置、站点范围或小时任务。
+- 最终40个浏览器视图通过：Chrome/WebKit、320/1280px、中英文、viewer/parent/skater/coach/admin；检查管理员专属审核卡、本人记录、空状态、审批说明和无整页溢出。使用隔离API样本，不代表真实会员登录或真机验收；本机预览已停止。
+- 运行源码b212e937d3bb891a5fac06718e5223c80c07a6c8，V45保存版本appgprj_6ad76ca2dba481919ba883865cbd5a0d~appgver_385995dc1960819183eb5ab4b2a17ad7；部署appgdep_6af4a279e31081918462a341d2e420af于2026-11-11T17:14:45.536553Z（Toronto12:14）succeeded，env9/MCP ready。凭据到期后仅续期同一源仓库并正常完成同步/归档，复用已通过且运行源码未变的构建，不更改访问范围。
+- 正式域名17:15:06Z只读验证：首页、概览、管理员入口页面HTTP200，匿名club API401；DCbhBNH4.js SHA256=27f3921050eb78031ddf18bace0a1c9b09f6c7ae09e940e6330972f5137040d1，EXmNB5YS.js SHA256=75e7da21229805b13dae62efe0250a62b34d3f57fe769c46152c3d7c8d583c3a，均与本地最终资源一致。没有操作真实申请或生产会员数据。
+- Android编译、Lint及签名通过，APK SHA256=48174148B4C3E003DEC98E12A4928BB3885DFF091253B790F272377F5A5A4A7C；iOS仅sync和58文件ZIP，SHA256=9FA72000B1BCA8EA5D5F82D4052884C384754350901C354D01929E9FBA0A96D9。dist/APK/iOS静态资源逐字节核对通过，交付在本次会话outputs/home-records-release，浏览器报告在outputs/home-records-review；未真机安装、未生成IPA或上架。
+- GitHub main本轮核对为25d4137；按既有明确授权正常快进推送本轮运行源码和最终说明，结果以Git远端校验为准。最后仅补文档不重复部署。
 
 ## 2026-11-11 首页公开报名过滤、已报名赛程与日期排序
 
