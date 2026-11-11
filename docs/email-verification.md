@@ -1,5 +1,11 @@
 # Email verification setup
 
+## Password policy and recovery entry (2026-11-11)
+
+Registration and password reset share a 10–128 character policy enforced by Better Auth and both web/mobile forms. Existing password sign-in is unchanged. The sign-in page has a direct Forgot your password link to `/reset-password`, which accepts the registered email without requiring an existing session. A plain visit requests a link; a valid emailed token opens the new-password form. Explicit invalid or expired links offer a new request. The Capacitor router also includes this page; recovery email links use the trusted HTTPS site.
+
+Recovery uses the configured Resend adapter, one-hour single-use tokens and request throttling. Unknown emails receive the same neutral request response. Successful resets revoke existing authentication sessions and require signing in again; they do not verify email or grant membership/private relationships. Isolated regression covers rejection at nine characters, successful registration/reset at ten, old password rejection and old session revocation. This change does not send a production test email or change any real user's password.
+
 Ordinary self-service accounts require a listed skater name and a verified email address. They receive no session until verification succeeds and they sign in. The verification flow uses Better Auth signed links with a one-hour expiry and a rate-limited resend endpoint. Matching a name, choosing homepage skaters and verifying an email do not grant membership roles, private notes, messages or administrator access.
 
 The mail adapter uses Resend's HTTPS API. The account and secret were configured on 2026-10-27, and one authorized self-addressed test was reported Delivered; a production sender domain is still pending. Until sender setup is complete, ordinary new self-service registration returns a clear setup-pending response before creating an account. Existing accounts retain sign-in, and the existing owner can continue using their current administrator session and verified identity. Existing administrator credential linking remains available. No existing user is marked verified by deployment.

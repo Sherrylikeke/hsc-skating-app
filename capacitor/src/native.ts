@@ -130,7 +130,7 @@ export async function bootstrap(){
     const anchor=(event.target as Element).closest?.('a');
     if(!anchor||!anchor.href)return;
     const url=new URL(anchor.href,location.href);
-    if(url.origin===location.origin&&['/','/workspace','/coaches','/verify-email'].includes(url.pathname)){
+    if(url.origin===location.origin&&['/','/workspace','/coaches','/verify-email','/reset-password'].includes(url.pathname)){
       event.preventDefault();history.pushState({},'',url.pathname+url.search);window.dispatchEvent(new PopStateEvent('popstate'));return;
     }
     event.preventDefault();

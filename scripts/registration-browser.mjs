@@ -57,14 +57,14 @@ export async function checkRegistrationFeedback(browser,profile,origin){
     }
     mail='unavailable';
     await page.goto(origin);
-    const recovery=page.locator('details').filter({has:page.getByText('Forgot your password?',{exact:true})});
-    await recovery.locator('summary').tap();
+    await page.getByRole('link',{name:'Forgot your password?',exact:true}).tap();
+    const recovery=page.locator('section').filter({has:page.getByRole('heading',{name:'Reset your password',exact:true})});
     await recovery.getByRole('alert').waitFor();
-    assert.equal(await page.getByLabel('Email or username',{exact:true}).isEnabled(),true);
     mail='disabled';
     await recovery.getByRole('button',{name:'Try again'}).tap();
     await recovery.getByText(/Please contact the club/).waitFor();
     assert.equal(await recovery.locator('input[type="email"]').count(),0);
+    await page.goto(origin);
     const verification=page.locator('details').filter({has:page.getByText('Need to verify your email?',{exact:true})});
     await verification.locator('summary').tap();
     await verification.getByText(/Please contact the club/).waitFor();

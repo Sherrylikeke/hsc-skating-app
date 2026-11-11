@@ -11,6 +11,7 @@ import {coachNames} from './parent-skaters';
 import type {VerificationDelivery} from './verification-mail';
 import type {PilotRegistration} from './pilot-registration';
 import {isRegisteredPilot,pilotUsedKey} from './pilot-registration';
+import {MIN_PASSWORD_LENGTH,MAX_PASSWORD_LENGTH} from './password-policy';
 
 export const productionOrigin = 'https://hsc-coach-roster.sherrylikeke.chatgpt.site';
 export function createPasswordAuth(database: D1Database, secret: string, origin = productionOrigin, existingMembership?: (request:Request,email:string)=>Promise<Role|null>, delivery:VerificationDelivery={enabled:false}, pilotRegistration?: (request:Request,email:string,token:string)=>Promise<PilotRegistration|null>, verificationGrace?: (userId:string)=>boolean) {
@@ -20,7 +21,7 @@ export function createPasswordAuth(database: D1Database, secret: string, origin 
   const auth = betterAuth({
     appName:'HSC Skating', baseURL:origin, basePath:'/api/auth', secret,
     database:drizzleAdapter(drizzle(database,{schema}),{provider:'sqlite',schema,transaction:false}),
-    emailAndPassword:{enabled:true,minPasswordLength:12,maxPasswordLength:128,autoSignIn:false,resetPasswordTokenExpiresIn:3600,revokeSessionsOnPasswordReset:true,
+    emailAndPassword:{enabled:true,minPasswordLength:MIN_PASSWORD_LENGTH,maxPasswordLength:MAX_PASSWORD_LENGTH,autoSignIn:false,resetPasswordTokenExpiresIn:3600,revokeSessionsOnPasswordReset:true,
       ...(delivery.enabled&&delivery.sendReset?{async sendResetPassword({user,url}:{user:{email:string};url:string}){await delivery.sendReset!(user.email,url);}}:{}),
     },
     // Request the initial email explicitly once membership is saved. Better Auth's

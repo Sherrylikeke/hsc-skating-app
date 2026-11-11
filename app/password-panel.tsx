@@ -7,8 +7,8 @@ import {authFeedback,authProblem,authRetrySeconds,type AuthProblem} from './auth
 import RegistrationSkaterPicker from './registration-skater-picker';
 import RegistrationCoachPicker from './registration-coach-picker';
 import EmailVerificationPanel,{type VerificationReason} from './email-verification-panel';
-import PasswordResetPanel from './password-reset-panel';
 import {useAuthAvailability} from './auth-availability';
+import {MIN_PASSWORD_LENGTH,MAX_PASSWORD_LENGTH} from '../lib/password-policy';
 
 type PilotRole='parent'|'coach'|'skater';
 type RegistrationResult=AuthProblem&{token?:string|null;user?:{email:string};registrationMode?:'verification'|'pilot'|'linked';verificationDelivery?:'requested'|'retry-needed'};
@@ -141,10 +141,10 @@ export default function PasswordPanel({role,onComplete,allowAdminLink=false}:{ro
       {register&&pilot&&<p>{text('Your invitation is ready. Choose a username and password.','专属邀请已确认，请设置用户名和密码。')}</p>}
       <label>{register?text('Username','用户名'):text('Email or username','邮箱或用户名')}<input ref={signInInput} required value={username} onChange={event=>setUsername(event.target.value)} autoComplete="username" minLength={register?3:1} maxLength={register?30:254} pattern={register?'[a-zA-Z0-9_.]+':undefined} aria-describedby={register?id+'-username':undefined} spellCheck={false} autoCapitalize="none"/></label>
       {register&&<small id={id+'-username'}>{text('3–30 letters, numbers, underscores or periods.','3–30 位英文字母、数字、下划线或句点。')}</small>}
-      <label>{text('Password','密码')}<input required type="password" value={password} onChange={event=>setPassword(event.target.value)} autoComplete={register?'new-password':'current-password'} minLength={register?12:1} maxLength={128} aria-describedby={register?id+'-password':undefined}/></label>
+      <label>{text('Password','密码')}<input required type="password" value={password} onChange={event=>setPassword(event.target.value)} autoComplete={register?'new-password':'current-password'} minLength={register?MIN_PASSWORD_LENGTH:1} maxLength={MAX_PASSWORD_LENGTH} aria-describedby={register?id+'-password':undefined}/></label>
       {register&&<>
-        <small id={id+'-password'}>{text('Use 12–128 characters.','请输入 12–128 个字符。')}</small>
-        <label>{text('Confirm password','确认密码')}<input required type="password" value={confirm} onChange={event=>setConfirm(event.target.value)} autoComplete="new-password" minLength={12} maxLength={128}/></label>
+        <small id={id+'-password'}>{text('Use 10–128 characters.','请输入 10–128 个字符。')}</small>
+        <label>{text('Confirm password','确认密码')}<input required type="password" value={confirm} onChange={event=>setConfirm(event.target.value)} autoComplete="new-password" minLength={MIN_PASSWORD_LENGTH} maxLength={MAX_PASSWORD_LENGTH}/></label>
         <label>{text('Your email','你的邮箱')}<input required type="email" value={email} onChange={event=>setEmail(event.target.value)} readOnly={!!pilot} autoComplete="email" maxLength={254}/></label>
         {!adminLink&&<><label htmlFor={id+'-role'}>{text('Role','身份')}</label><select id={id+'-role'} required value={requestedRole} onChange={event=>setRequestedRole(event.target.value as Role)}>
           {(!pilot||pilot.role==='skater')&&<option value="skater">{text('Skater','选手')}</option>}{(!pilot||pilot.role==='parent')&&<option value="parent">{text('Parent','家长')}</option>}{(!pilot||pilot.role==='coach')&&<option value="coach">{text('Coach','教练')}</option>}
@@ -162,7 +162,7 @@ export default function PasswordPanel({role,onComplete,allowAdminLink=false}:{ro
       <button onClick={()=>{setPassword('');setConfirm('');setVerification({email:email.trim(),reason:'resend'});}}>{text('Request a verification link','申请验证链接')}</button>
     </div>}
     {!register&&<><details><summary>{text('Need to verify your email?','需要验证邮箱？')}</summary><EmailVerificationPanel availability={availability}/></details>
-      <details><summary>{text('Forgot your password?','忘记密码？')}</summary><PasswordResetPanel availability={availability}/></details></>}
+      <a href="/reset-password">{text('Forgot your password?','忘记密码？')}</a></>}
     {register&&showForm&&<p className="member-muted">{pilot?text('Your invitation gives access to shared schedules.','专属邀请可用于查看共享赛程。'):text('Verify your email after registering to view shared club schedules.','注册后请验证邮箱，即可查看俱乐部共享赛程。')} {text('Private access requires club approval.','私人资料访问权限由俱乐部另行审批。')}</p>}
   </section>;
 }

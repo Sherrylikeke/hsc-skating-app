@@ -395,7 +395,7 @@ const verificationLinks=[];
 const testDelivery={enabled:true,registrationEnabled:true,async send(email,url){verificationLinks.push({email,url});}};
 const auth=createPasswordAuth(database,'isolated-tests-only-secret-0123456789-abcdef','http://127.0.0.1:5173',undefined,testDelivery);
 const authRequest=(path,body,headers={})=>new Request('http://127.0.0.1:5173/api/auth/'+path,{method:'POST',headers:{origin:'http://127.0.0.1:5173','Content-Type':'application/json','cf-connecting-ip':'192.0.2.71',...headers},body:JSON.stringify(body)});
-const testPassword='Isolated-Fixture-Password-2026!';
+const testPassword='Test-2026!';
 const registrationBody={email:'password-fixture@example.test',name:'Password Fixture',username:'fixture.account',password:testPassword,role:'parent',skaterName:'Test Alpha',emailVerified:true};
 const registrationDatabase=new LocalD1();
 for(const file of migrations)registrationDatabase.database.exec(fs.readFileSync(path.join('drizzle',file),'utf8'));
@@ -444,6 +444,8 @@ for(const [index,invalid] of [{role:'admin'},{role:'outsider'},{skaterName:''},{
   assert.ok([400,403].includes(rejected.status),await rejected.text());
 }
 assert.equal(database.database.prepare('SELECT count(*) AS count FROM hsc_auth_user').get().count,beforeRegistrationCount);
+assert.equal((await auth.handler(authRequest('sign-up/email',{...registrationBody,password:'123456789'},{'cf-connecting-ip':'192.0.2.249'}))).status,400);
+assert.equal(database.database.prepare('SELECT id FROM hsc_auth_user WHERE email=?').get(registrationBody.email),undefined);
 const signup=await auth.handler(authRequest('sign-up/email',{...registrationBody,skaterName:'  TEST   ALPHA  '}));
 assert.equal(signup.status,200,await signup.clone().text());
 const signupValue=await signup.json();
@@ -789,9 +791,9 @@ assert.equal(resetLink.searchParams.get('callbackURL'),'http://127.0.0.1:5173/re
 const resetCallback=await recoveryAuth.handler(new Request(resetLink));
 assert.equal(resetCallback.status,302);
 const resetToken=new URL(resetCallback.headers.get('location')).searchParams.get('token');assert.ok(resetToken);
-const resetPassword='New-Isolated-Password-2026!';
+const resetPassword='Reset-2026';
 assert.equal((await recoveryAuth.handler(authRequest('reset-password',{token:resetToken,newPassword:resetPassword},{origin:'https://untrusted.example.test'}))).status,403);
-assert.equal((await recoveryAuth.handler(authRequest('reset-password',{token:resetToken,newPassword:'short'}))).status,400);
+assert.equal((await recoveryAuth.handler(authRequest('reset-password',{token:resetToken,newPassword:'123456789'}))).status,400);
 database.database.prepare('UPDATE hsc_auth_verification SET expires_at=? WHERE identifier=?').run(Date.now()-1000,'reset-password:'+resetToken);
 assert.equal((await recoveryAuth.handler(authRequest('reset-password',{token:resetToken,newPassword:resetPassword}))).status,400);
 assert.equal((await recoveryAuth.handler(resetRequest(pilotEmail,'192.0.2.235'))).status,200);

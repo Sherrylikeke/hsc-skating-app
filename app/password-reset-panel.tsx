@@ -4,6 +4,7 @@ import {apiFetch,verificationReturnURL} from '../lib/client-platform';
 import {text,useLanguage} from '../lib/i18n';
 import {authFeedback,authProblem,type AuthProblem} from './auth-feedback';
 import {MailAvailability,type AuthAvailability} from './auth-availability';
+import {MIN_PASSWORD_LENGTH,MAX_PASSWORD_LENGTH} from '../lib/password-policy';
 
 export default function PasswordResetPanel({complete=false,availability}:{complete?:boolean;availability:AuthAvailability}){
   useLanguage();
@@ -16,7 +17,7 @@ export default function PasswordResetPanel({complete=false,availability}:{comple
     initialized.current=true;
     const params=new URLSearchParams(location.search);
     const value=params.get('error')?'':params.get('token')||'';
-    setToken(value);setExpired(!value);
+    setToken(value);setExpired(params.has('error')||(params.has('token')&&!value));
     history.replaceState(history.state,'',location.pathname);
   },[complete]);
 
@@ -39,9 +40,9 @@ export default function PasswordResetPanel({complete=false,availability}:{comple
     }catch{setError('UNAVAILABLE');}finally{setBusy(false);}
   }
   const form=<form onSubmit={submit}>
-      {token?<><label>{text('New password','新密码')}<input required type="password" autoComplete="new-password" minLength={12} maxLength={128} value={password} onChange={event=>setPassword(event.target.value)}/></label>
-        <small>{text('Use 12–128 characters.','请输入 12–128 个字符。')}</small>
-        <label>{text('Confirm password','确认密码')}<input required type="password" autoComplete="new-password" minLength={12} maxLength={128} value={confirm} onChange={event=>setConfirm(event.target.value)}/></label></>:
+      {token?<><label>{text('New password','新密码')}<input required type="password" autoComplete="new-password" minLength={MIN_PASSWORD_LENGTH} maxLength={MAX_PASSWORD_LENGTH} value={password} onChange={event=>setPassword(event.target.value)}/></label>
+        <small>{text('Use 10–128 characters.','请输入 10–128 个字符。')}</small>
+        <label>{text('Confirm password','确认密码')}<input required type="password" autoComplete="new-password" minLength={MIN_PASSWORD_LENGTH} maxLength={MAX_PASSWORD_LENGTH} value={confirm} onChange={event=>setConfirm(event.target.value)}/></label></>:
         <label>{text('Registered email','注册邮箱')}<input required type="email" autoComplete="email" maxLength={254} value={email} onChange={event=>setEmail(event.target.value)}/></label>}
       <button disabled={busy}>{busy?text('Please wait…','请稍候…'):token?text('Save new password','保存新密码'):text('Request reset link','申请重设链接')}</button>
     </form>;
