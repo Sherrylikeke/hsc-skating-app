@@ -1,5 +1,6 @@
 import {canonicalCoachName} from './coach-names.ts';
-export type ClubSkater={id:string;name:string;coach:string;training:boolean;identityPending?:boolean;categories:string[];clubs:string[];firstSeen?:string;lastSeen?:string;recordCount:number;eventCount:number;identityStatus:string};
+export type RegistrationCategory={date:string;category:string};
+export type ClubSkater={id:string;name:string;coach:string;training:boolean;identityPending?:boolean;categories:string[];registrationHistory?:RegistrationCategory[];hasRegistrationHistory?:boolean;clubs:string[];firstSeen?:string;lastSeen?:string;recordCount:number;eventCount:number;identityStatus:string};
 export type HistoryRecord={record_id:string;name:string;club:string;section:string;event_name:string;event_url:string;event_key:string;start_date:string;end_date?:string;category:string;result_level:string;rank:number|string|null;total_score:number|null;segment_scores?:Array<number|string>;score_components?:Record<string,unknown>|null;status:string;source_url:string;source_page?:number;source_row?:string;skater_ids:string[];entity_type:string};
 export type HistoryEvent={id:string;name:string;url:string;start:string;end:string;recordCount:number;skaterIds:string[];teamCount:number;dateBasis:string};
 export type OfficialDocument={url:string;label:string;kind:'schedule'|'entries'|'results'|'start-order';category?:string;hash?:string;matchingRosterHash?:string;checkedAt?:string;attemptedAt?:string;parserVersion?:string;entryCount?:number;entryFiles?:OfficialDocument[];error?:string};

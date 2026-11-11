@@ -1,5 +1,6 @@
 import type {ClubEvent,ClubSkater,EventRegistration} from './club-types.ts';
-import {categoryCompatible,plain,scheduleRows} from './official-parser.ts';
+import {categoryCompatible,categoryKey,categoryKeys,plain,scheduleRows} from './official-parser.ts';
+import {homeRegistrationCategories,registrationLevel} from './registration-categories.ts';
 
 // Skate Ontario now directs existing SkateReg accounts to Uplifter.
 export const REGISTRATION_PORTAL='https://uplifterfigureskating.com/';
@@ -54,8 +55,12 @@ export function registrationDetails(content:string,name:string,sourceUrl:string)
 }
 
 function categoryMatches(own:string,offered:string){
+  const levels=(category:string)=>[registrationLevel(category),...categoryKeys(category).map(key=>key.split(':')[0])].filter(Boolean);
+  // Incomplete labels such as "Women" have no level and cannot match a blank key.
+  if(!levels(own).some(level=>levels(offered).includes(level)))return false;
   // Level-only series titles cover freeskate; other disciplines require an explicit category.
-  if(/^STAR\s*\d+$/i.test(offered))return own.match(/\bSTAR\s*(10|[1-9])\b/i)?.[0].replace(/\s/g,'').toUpperCase()===offered.replace(/\s/g,'').toUpperCase()&&!/dance|elements|showcase|artistic|synchro/i.test(own);
+  if(/^STAR\s*\d+$/i.test(offered)||/^STAR\s*\d+$/i.test(own))return !/dance|solo|pair|elements|showcase|\bart\b|artistic|synchro/i.test(own+' '+offered);
+  if(!categoryKey(own)||!categoryKey(offered))return false;
   return categoryCompatible(own,offered);
 }
 export const compareEventDates=(a:Pick<ClubEvent,'start'|'name'|'id'>,b:Pick<ClubEvent,'start'|'name'|'id'>)=>a.start.localeCompare(b.start)||a.name.localeCompare(b.name)||a.id.localeCompare(b.id);
@@ -70,18 +75,20 @@ export function mergeRegistrations(primary:EventRegistration[],secondary:EventRe
 }
 export function homeEventCards(events:ClubEvent[],skaters:ClubSkater[],ownIds:string[],today:string){
   const own=new Set(ownIds),mine=skaters.filter(skater=>own.has(skater.id));
+  const categories=new Map(mine.map(skater=>[skater.id,homeRegistrationCategories(skater,events,today)]));
   return events.filter(event=>(event.end||event.start)>=today).flatMap(event=>{
     const entered=mine.filter(skater=>event.participants.some(entry=>entry.skaterIds.includes(skater.id)));
     const matching=mine.filter(skater=>{
       if(entered.some(registered=>registered.id===skater.id))return false;
-      const current=events.filter(item=>(item.end||item.start)>=today).flatMap(item=>item.participants.filter(entry=>entry.skaterIds.includes(skater.id)).map(entry=>entry.category));
-      return !skater.identityPending&&(current.length?current:skater.categories).some(category=>(event.offeredCategories||[]).some(offered=>categoryMatches(category,offered)));
+      const profile=categories.get(skater.id)!;
+      if(profile.assumedBeginner&&/\b(?:provincial|sectional)\b/i.test(event.name))return false;
+      return !skater.identityPending&&profile.categories.some(category=>(event.offeredCategories||[]).some(offered=>categoryMatches(category,offered)));
     });
     const windows=(event.registrations||[]).filter(window=>{
       // Public closing is required. Missing deadlines never extend to competition day.
       if(window.kind!=='public'||!validDate(window.opens)||!validDate(window.closes)||window.closes! < window.opens)return false;
       const date=new Date(window.opens+'T12:00:00Z');if(!Number.isFinite(date.getTime()))return false;
-      date.setUTCDate(date.getUTCDate()-14);
+      date.setUTCDate(date.getUTCDate()-7);
       return today>=date.toISOString().slice(0,10)&&today<=window.closes!&&!!registrationLink(window.url);
     });
     const rows=entered.length?scheduleRows([event],entered):[];

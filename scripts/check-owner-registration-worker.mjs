@@ -349,4 +349,20 @@ try {
   assert.equal((await database.prepare('SELECT skater_id FROM hsc_relations WHERE member_id=?').bind(missingParentId).first()).skater_id,addedChildId);
   assert.equal((await post('/api/member?action=review-claim',{id:'unlisted-child-parent',approve:true,skaterIds:[addedChildId]},platformHeaders)).status,409);
   console.log('Worker parent review: existing HSC child needs one relationship approval preserving profile; unlisted child remains unlinked until an administrator creates/admit-selects the profile; duplicate review is rejected.');
+  const recommendationToday=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Toronto',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  const lastYear=new Date(recommendationToday+'T12:00:00Z');lastYear.setUTCFullYear(lastYear.getUTCFullYear()-1);lastYear.setUTCDate(lastYear.getUTCDate()-1);
+  for(const [suffix,date,category,status,entity] of [['recent',recommendationToday,'Senior Women','entry_list_only','skater'],['old',lastYear.toISOString().slice(0,10),'STAR 3','result','skater'],['withdrawn',recommendationToday,'Junior Women','withdrawn','skater'],['team',recommendationToday,'STAR 2','result','team']]){
+    const record={...recordBase,record_id:'recommendation-'+suffix,start_date:date,category,status,entity_type:entity,skater_ids:[created.id]};
+    await database.prepare('INSERT INTO history_records(id,event_id,payload) VALUES (?,?,?)').bind(record.record_id,record.event_key,JSON.stringify(record)).run();
+  }
+  const recommendationClub=await clubFor(platformHeaders),recommendationSkater=recommendationClub.skaters.find(row=>row.id===created.id);
+  assert.equal(recommendationSkater.hasRegistrationHistory,true);
+  assert.deepEqual(recommendationSkater.registrationHistory,[{date:recommendationToday,category:'Senior Women'}]);
+  assert.ok(recommendationClub.recent.every(row=>row.record_id.startsWith('recent-foreign-')),'Recommendations must not depend on the six recent cards');
+  await database.prepare("DELETE FROM history_records WHERE id='recommendation-recent'").run();
+  const staleSkater=(await clubFor(platformHeaders)).skaters.find(row=>row.id===created.id);
+  assert.equal(staleSkater.hasRegistrationHistory,true);assert.deepEqual(staleSkater.registrationHistory,[],'Stale or withdrawn history cannot revert a known skater to a beginner');
+  const neverRegistered=(await clubFor(platformHeaders)).skaters.find(row=>row.id===addedChildId);
+  assert.equal(neverRegistered.hasRegistrationHistory,false);assert.deepEqual(neverRegistered.registrationHistory,[]);
+  console.log('Worker recommendations: dated individual registration history is read independently of recent cards; future, stale, withdrawn and team rows are excluded, and old registrations retain the ever-registered flag. No production writes.');
 }finally{await mf.dispose();}

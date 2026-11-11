@@ -5,6 +5,7 @@ import sourceRecords from '../data/history-records.json';
 import roster from '../data/roster.json';
 import type {HistoryRecord,HistoryEvent,ClubSkater,LiveEvent,CoachPlan,SyncStatus} from './club-types';
 import {eventWriteStatements} from './change-notifications';
+import {attachRegistrationHistory} from './registration-categories';
 export function db(){if(!env.DB)throw new Error('数据库暂不可用');return env.DB;}
 const SEED_VERSION='history-2026-10-19-v1';
 export async function ensureHistory(){
@@ -35,6 +36,12 @@ export async function recentRecords(skaterIds?:string[]):Promise<HistoryRecord[]
   const query=db().prepare("SELECT payload FROM history_records"+filter+" ORDER BY json_extract(payload,'$.start_date') DESC,id LIMIT 6");
   const {results}=await (skaterIds===undefined?query:query.bind(JSON.stringify(skaterIds))).all<{payload:string}>();
   return results.map(row=>JSON.parse(row.payload));
+}
+export async function profilesWithRegistrationHistory(skaters:ClubSkater[],today:string):Promise<ClubSkater[]>{
+  // Read dated individual registrations independently of the six recent-record
+  // cards. Return only this year's categories/dates and an ever-registered flag.
+  const {results}=await db().prepare(`SELECT json_extract(payload,'$.skater_ids') AS ids,json_extract(payload,'$.start_date') AS date,json_extract(payload,'$.category') AS category,json_extract(payload,'$.status') AS status FROM history_records WHERE json_extract(payload,'$.start_date') <= ? AND json_extract(payload,'$.entity_type') != 'team' AND json_extract(payload,'$.status') IN ('result','entry_list_only','start_order_only','withdrawn')`).bind(today).all<{ids:string;date:string;category:string;status:string}>();
+  return attachRegistrationHistory(skaters,results.map(row=>({skaterIds:JSON.parse(row.ids),date:row.date,category:row.category,status:row.status})),today);
 }
 export async function recordsFor({skater,event}:{skater?:string;event?:string}):Promise<HistoryRecord[]>{
   let query='SELECT payload FROM history_records';const args:string[]=[];
