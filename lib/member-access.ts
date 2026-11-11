@@ -1,3 +1,4 @@
+import {isParentAccount,PARENT_SKATER_LIMIT} from './parent-skater-policy';
 export type Role = 'admin' | 'parent' | 'skater' | 'coach';
 export type Identity = {userId: string; email: string; displayName: string; provider?: 'password'; authToken?: string; authVerified?:boolean; emailVerificationRequired?:boolean; emailVerificationGrace?:boolean};
 export type Member = {id: string; email: string; name: string; role: Role | null; requested_role: Role; status: string; auth_version: number};
@@ -91,7 +92,9 @@ export async function schedulePreferences(database:D1Database,member:Member,appr
   const defaults=[...approvedSkaterIds,...(Array.isArray(ids)?ids.filter((id:unknown):id is string=>typeof id==='string'):[])];
   const {results}=await database.prepare('SELECT skater_id,pinned FROM hsc_home_skaters WHERE member_id=?').bind(member.id).all<{skater_id:string;pinned:number}>();
   const hidden=new Set(results.filter(row=>!row.pinned).map(row=>row.skater_id));
-  const preferredSkaterIds=[...new Set([...defaults,...results.filter(row=>row.pinned).map(row=>row.skater_id)])].filter(id=>!hidden.has(id));
+  const chosen=results.filter(row=>row.pinned).map(row=>row.skater_id),parent=isParentAccount(member);
+  const ordered=[...new Set(parent?[...chosen,...defaults]:[...defaults,...chosen])].filter(id=>!hidden.has(id));
+  const preferredSkaterIds=parent?ordered.slice(0,PARENT_SKATER_LIMIT):ordered;
   return {preferredSkaterIds,membershipClaimStatus:claim?.status??null};
 }
 export async function scheduleSkaterIds(database:D1Database,member:Member):Promise<string[]> {

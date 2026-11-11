@@ -63,7 +63,7 @@ registerHooks({
   },
 });
 const {memberRequest} = await import('../lib/member-admin.ts');
-const {actor, accessibleSkaters, assertSkater,nowISO} = await import('../lib/member-access.ts');
+const {actor, accessibleSkaters, assertSkater,nowISO,schedulePreferences} = await import('../lib/member-access.ts');
 const {drainOutbox} = await import('../lib/member-messages.ts');
 const {eventWriteStatements} = await import('../lib/change-notifications.ts');
 const {syncEvent} = await import('../lib/official-sync.ts');
@@ -866,6 +866,7 @@ await parentCall(parentFixture,'home-skater',{skaterId:'SK-N',pinned:false});
 const concurrentHome=await Promise.all(['SK-D','SK-N'].map(skaterId=>memberRequest({database:parentDatabase,identity:parentFixture.identity,candidates,ownerEmail},request(parentFixture,'home-skater',{skaterId,pinned:true}))));
 assert.equal(concurrentHome.filter(response=>response.status===200).length,1);assert.ok(concurrentHome.every(response=>[200,400,409].includes(response.status)));
 assert.equal((await parentCall(parentFixture,'me')).value.preferredSkaterIds.length,4);
+const parentDefaultLimit=await schedulePreferences(parentDatabase,(await parentCall(parentFixture,'me')).value.member,candidates.map(candidate=>candidate.id));assert.equal(parentDefaultLimit.preferredSkaterIds.length,4);
 await parentCall(parentFixture,'parent-coach&skaterId=SK-A',undefined,403);
 await parentCall(parentOwner,'member',{id:parentFixture.identity.userId,role:'parent',status:'active'});
 const missingAdmission=await parentCall(parentOwner,'review-claim',{id:'parent-name-claim',approve:true},400);assert.match(missingAdmission.value.error,/准入/);
