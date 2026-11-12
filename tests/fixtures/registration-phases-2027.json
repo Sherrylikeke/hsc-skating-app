@@ -1,0 +1,44 @@
+{
+  "checkedOn": "2026-11-12",
+  "note": "Registration facts from current Skate Ontario event pages; category subsets verified in the linked announcements. Page updates take priority over conflicting PDF dates or times.",
+  "milton": {
+    "id": "SO-325496",
+    "name": "Provincial Series #10 – Milton Winter Skate",
+    "url": "https://skateontario.org/event/provincial-series-10-milton-winter-skate-2/",
+    "announcement": "https://skateontario.org/wp-content/uploads/2026/07/Provincial-Series-10-Milton-26-27-Announcement-2.pdf",
+    "start": "2027-01-22",
+    "end": "2027-01-24",
+    "timezone": "America/Toronto",
+    "venue": "Sherwood Community Centre",
+    "city": "Milton",
+    "source": "Skate Ontario",
+    "documents": [],
+    "participants": [],
+    "blocks": [],
+    "offeredCategories": ["STAR 5", "STAR 6", "STAR 7", "STAR 8", "STAR 9", "STAR 10", "GOLD", "Pre-Juvenile", "Juvenile", "Pre-Novice", "Novice"],
+    "registrations": [
+      {"kind":"assigned","opens":"2026-11-12","closes":"2026-11-16","opensTime":"10:00","closesTime":"23:59","timezone":"America/Toronto","url":"https://uplifterfigureskating.com/","sourceUrl":"https://skateontario.org/event/provincial-series-10-milton-winter-skate-2/"},
+      {"kind":"public","opens":"2026-11-17","closes":"2026-11-19","opensTime":"13:00","closesTime":"23:59","timezone":"America/Toronto","url":"https://uplifterfigureskating.com/","sourceUrl":"https://skateontario.org/event/provincial-series-10-milton-winter-skate-2/"}
+    ]
+  },
+  "waterloo": {
+    "id": "SO-325760",
+    "name": "STAR 1-4 Kitchener-Waterloo",
+    "url": "https://skateontario.org/event/star-1-4-kitchener-waterloo/",
+    "announcement": "https://skateontario.org/wp-content/uploads/2026/08/STAR-1-4-Kitchener-Waterloo-26-27-Announcement_Sep-24.pdf",
+    "start": "2027-01-22",
+    "end": "2027-01-24",
+    "timezone": "America/Toronto",
+    "venue": "RIM Park",
+    "city": "Waterloo",
+    "source": "Skate Ontario",
+    "documents": [],
+    "participants": [],
+    "blocks": [],
+    "offeredCategories": ["STAR 1", "STAR 2", "STAR 3", "STAR 4"],
+    "registrations": [
+      {"kind":"assigned","opens":"2026-11-16","closes":"2026-11-18","opensTime":"10:00","closesTime":"23:59","timezone":"America/Toronto","url":"https://uplifterfigureskating.com/","sourceUrl":"https://skateontario.org/event/star-1-4-kitchener-waterloo/"},
+      {"kind":"public","opens":"2026-11-19","closes":"2026-11-23","opensTime":"12:00","closesTime":"23:59","timezone":"America/Toronto","url":"https://uplifterfigureskating.com/","sourceUrl":"https://skateontario.org/event/star-1-4-kitchener-waterloo/"}
+    ]
+  }
+}

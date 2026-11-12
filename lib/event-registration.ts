@@ -1,6 +1,7 @@
 import type {ClubEvent,ClubSkater,EventRegistration} from './club-types.ts';
 import {categoryCompatible,categoryKey,categoryKeys,plain,scheduleRows} from './official-parser.ts';
 import {homeRegistrationCategories,registrationLevel,registrationDiscipline} from './registration-categories.ts';
+import {scheduleInstant} from './schedule-time.ts';
 
 // Skate Ontario now directs existing SkateReg accounts to Uplifter.
 export const REGISTRATION_PORTAL='https://uplifterfigureskating.com/';
@@ -8,6 +9,12 @@ export function registrationLink(value:string){
   try{const url=new URL(value);return url.protocol==='https:'&&['skatereg.ca','www.skatereg.ca','uplifterfigureskating.com','www.uplifterfigureskating.com'].includes(url.hostname)?url.href:null;}catch{return null;}
 }
 const months=['january','february','march','april','may','june','july','august','september','october','november','december'];
+export const validRegistrationTime=(value?:string)=>!!value&&/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value);
+function officialTime(value:string){
+  const match=value.match(/\b(\d{1,2})(?::(\d{2}))?\s*(AM|PM)\b/i);
+  if(!match||Number(match[1])<1||Number(match[1])>12||Number(match[2]||0)>59)return undefined;
+  return String(Number(match[1])%12+(/^pm$/i.test(match[3])?12:0)).padStart(2,'0')+':'+(match[2]||'00');
+}
 function officialDate(value:string){
   const match=value.match(/\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(20\d{2})\b/i);
   if(!match)return '';
@@ -25,7 +32,7 @@ export function registrationDetails(content:string,name:string,sourceUrl:string)
   const registrations:EventRegistration[]=[];
   let section:'public'|'assigned'='public';
   const url=[...content.matchAll(/(?:href=["'])([^"']+)["']/gi)].map(match=>registrationLink(plain(match[1]))).find(url=>url&&!/listings\/events|sign-up-skate-ontario-events/i.test(url))||REGISTRATION_PORTAL;
-  const dates=new Map<string,{opens?:string;closes?:string}>();
+  const dates=new Map<string,Partial<Pick<EventRegistration,'opens'|'closes'|'opensTime'|'closesTime'|'timezone'>>>();
   for(let i=0;i<lines.length;i++){
     const line=lines[i];
     if(/^(?:ASSIGNED ATHLETE|ADVANCED) REGISTRATION\s*:?$/i.test(line))section='assigned';
@@ -39,12 +46,14 @@ export function registrationDetails(content:string,name:string,sourceUrl:string)
     const window=dates.get(kind)||{};
     if(/^open/i.test(match[2])){
       // The first official table/paragraph takes priority over duplicate explanatory prose.
-      window.opens??=date;
-      const close=dateText.match(/\bclose(?:s)?\b(.*)/i);if(close)window.closes??=officialDate(close[1])||undefined;
-    }else window.closes??=date;
+      const parts=dateText.split(/\bclose(?:s)?\b/i),opening=parts[0];
+      if(!window.opens){window.opens=date;window.opensTime=officialTime(opening);}
+      if(parts[1]&&!window.closes){window.closes=officialDate(parts[1])||undefined;window.closesTime=officialTime(parts[1]);}
+    }else if(!window.closes){window.closes=date;window.closesTime=officialTime(dateText);}
+    if(window.opensTime||window.closesTime)window.timezone='America/Toronto';
     dates.set(kind,window);
   }
-  for(const [kind,window] of dates)if(window.opens&&(!window.closes||window.closes>=window.opens))registrations.push({kind:kind as 'public'|'assigned',opens:window.opens,closes:window.closes,url,sourceUrl});
+  for(const [kind,window] of dates)if(window.opens&&(!window.closes||window.closes>=window.opens))registrations.push({kind:kind as 'public'|'assigned',...window,opens:window.opens,url,sourceUrl});
   const text=lines.join('\n');
   const categorySection=text.match(/(?:following categories[^:]*:|^CATEGORIES\s*$)([\s\S]*?)(?:MUSIC REQUIREMENTS|MUSIC SUBMISSION|REGISTRATION OPENING|(?![\s\S]))/im)?.[1]||'';
   const offeredCategories=categorySection.split('\n').map(line=>line.split(/\s+(?:must|each skater|shall)\b/i)[0].trim()).filter(line=>/^(?:STAR\s*(?:10|[1-9])\b|(?:PRE[- ]?)?(?:JUVENILE|NOVICE)\b|JUNIOR\b|SENIOR\b|GOLD\b|ADULT\b)/i.test(line)&&!/assessment|passed/i.test(line));
@@ -81,10 +90,11 @@ export function mergeRegistrations(primary:EventRegistration[],secondary:EventRe
     const previous=secondary.find(other=>other.kind===window.kind&&other.opens===window.opens);
     const confirmed=previous&&validDate(previous.closes)?previous:undefined;
     const merged=!validDate(window.closes)&&confirmed?{...window,closes:confirmed.closes,sourceUrl:confirmed.sourceUrl}:window;
-    return merged.url===REGISTRATION_PORTAL&&previous&&registrationLink(previous.url)?{...merged,url:previous.url}:merged;
+    const timed={...merged,...(!validRegistrationTime(merged.opensTime)&&validRegistrationTime(previous?.opensTime)?{opensTime:previous!.opensTime,timezone:merged.timezone||previous!.timezone}:{}),...(!validRegistrationTime(merged.closesTime)&&merged.closes===previous?.closes&&validRegistrationTime(previous?.closesTime)?{closesTime:previous!.closesTime,timezone:merged.timezone||previous!.timezone}:{})};
+    return timed.url===REGISTRATION_PORTAL&&previous&&registrationLink(previous.url)?{...timed,url:previous.url}:timed;
   }),...secondary.filter(window=>!primary.some(other=>other.kind===window.kind))];
 }
-export function homeEventCards(events:ClubEvent[],skaters:ClubSkater[],ownIds:string[],today:string){
+export function homeEventCards(events:ClubEvent[],skaters:ClubSkater[],ownIds:string[],today:string,now?:number){
   const own=new Set(ownIds),mine=skaters.filter(skater=>own.has(skater.id));
   const categories=new Map(mine.map(skater=>[skater.id,homeRegistrationCategories(skater,events,today)]));
   return events.filter(event=>(event.end||event.start)>=today).flatMap(event=>{
@@ -95,13 +105,16 @@ export function homeEventCards(events:ClubEvent[],skaters:ClubSkater[],ownIds:st
       if(profile.assumedBeginner&&/\b(?:provincial|sectional)\b/i.test(event.name))return false;
       return !skater.identityPending&&profile.categories.some(category=>(event.offeredCategories||[]).some(offered=>categoryMatches(category,offered)));
     });
-    const windows=(event.registrations||[]).filter(window=>{
+    const phases=(event.registrations||[]).filter(window=>validDate(window.opens)&&(!window.closes||validDate(window.closes)&&window.closes>=window.opens)&&!!registrationLink(window.url)).sort((a,b)=>Number(a.kind==='public')-Number(b.kind==='public'));
+    const publicWindow=phases.find(window=>window.kind==='public'&&validDate(window.closes)&&window.closes!>=window.opens);
+    const reminder=!!publicWindow&&today<=publicWindow.closes!&&phases.some(window=>{
       // Public closing is required. Missing deadlines never extend to competition day.
-      if(window.kind!=='public'||!validDate(window.opens)||!validDate(window.closes)||window.closes! < window.opens)return false;
       const date=new Date(window.opens+'T12:00:00Z');if(!Number.isFinite(date.getTime()))return false;
       date.setUTCDate(date.getUTCDate()-7);
-      return today>=date.toISOString().slice(0,10)&&today<=window.closes!&&!!registrationLink(window.url);
+      return window.opens<=publicWindow.closes!&&today>=date.toISOString().slice(0,10);
     });
+    const close=publicWindow&&validRegistrationTime(publicWindow.closesTime)?scheduleInstant(publicWindow.closes!,publicWindow.closesTime!,publicWindow.timezone||event.timezone):null;
+    const windows=reminder&&(now===undefined||close===null||now<close)?phases:[];
     const rows=entered.length?scheduleRows([event],entered):[];
     return entered.length||matching.length&&windows.length?[{event,entered,matching,rows,windows:matching.length?windows:[]}]:[];
   }).sort((a,b)=>compareEventDates(a.event,b.event));

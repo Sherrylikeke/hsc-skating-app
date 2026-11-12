@@ -2,6 +2,15 @@
 
 这是项目负责人的持续维护记录，不属于会员网页内容。后续会话先读取本文件与 AGENTS.md，在完成实质修改或验收后更新；不自动轮询、不新增定时任务。下列运行数据是查询快照，不是实时监控。
 
+## 2026-11-12 Assigned/Public报名提醒与官方时分
+
+- 用户反馈Milton Provincial和Kitchener-Waterloo STAR 1–4即将报名却无提醒，要求分别展示Assigned/Public开放及关闭的日期和具体时间。只读核对V49/public、原小时任务启用；D1中Milton尚无offeredCategories，Waterloo已有STAR 1–4范围但两者均无详细读取时间。原逻辑只按Public开放前7天且丢弃时分，第三个详情轮转名额未优先补近期报名资料。
+- 改为按最早Assigned/Public阶段前7个Toronto日历日提醒，仍需Public截止明确并在截止时隐藏；展示两阶段4个官方日期/时分（ET），Assigned资格提示仅分配/受邀选手可用。原近一年类别匹配、Senior/新手保护、Interim与正式名单赛程保留。官网当前赛事页优先于有冲突的旧PDF；相同日期端点可补缺少时分，不能将旧关闭时间移到新日期。
+- 第三详情名额优先处理7日内开放/仍开放但类别或具体时间不完整的赛事；当天已尝试冷却，保留最近两场、总量最多三场和失败保留旧资料。待上线后仅同步原日历和这两场官方资料，不直接写入/重置生产数据，不修改小时任务。
+- 官网核对：Milton Assigned 11/12 10:00–11/16 23:59，Public 11/17 13:00–11/19 23:59；Waterloo Assigned 11/16 10:00–11/18 23:59，Public 11/19 12:00–11/23 23:59，均2026年ET。Milton旧PDF写Public关闭11/18且正文开放12:00，与更新赛事页不同，按赛事页11/19和13:00显示并保留官方链接。
+- 原工作区存在15个未提交PDF删除，使用本会话work/registration-reminder-fix隔离detached工作树，从c42d073基线实施；不将这些删除混入提交。新增官方事实样本、日期/时分/来源优先和同期报名详情选择回归。
+- 完整回归20/20、首页19组、Web类型与官方助手生产构建通过。真实Worker/临时D1回归通过，新增确认报名阶段具体时分与时区持久化；修正旧测试依赖Public位于数组首项的断言。Chrome/WebKit×320/1280px×中英文×Milton/Waterloo×首页/个人页共32个页面通过，检查全部4个时分、类别范围、Assigned提示与无横向溢出；使用隔离API，未登录或更改真实会员。截图/报告在本会话outputs/registration-phases-browser。最终部署、同步和GitHub验收记录在outputs/registration-phases-release，完成后补记。
+
 ## 2026-11-11 Web regression持续失败修复
 
 - 核对GitHub今天12次failed运行：regression（类型、功能、生产构建、临时D1 Worker）及dependencies均success；11次mobile-browser交互检查失败，另一次43061487443在Ubuntu镜像下载libsoup依赖时404。两次cancelled另列，不作为功能失败。代表失败日志为43010079488（首屏完整观赛行高度断言）及43099839027（注册测试仍寻找旧的俱乐部名单姓名label）。
