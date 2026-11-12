@@ -6,10 +6,13 @@
 
 - 用户反馈Milton Provincial和Kitchener-Waterloo STAR 1–4即将报名却无提醒，要求分别展示Assigned/Public开放及关闭的日期和具体时间。只读核对V49/public、原小时任务启用；D1中Milton尚无offeredCategories，Waterloo已有STAR 1–4范围但两者均无详细读取时间。原逻辑只按Public开放前7天且丢弃时分，第三个详情轮转名额未优先补近期报名资料。
 - 改为按最早Assigned/Public阶段前7个Toronto日历日提醒，仍需Public截止明确并在截止时隐藏；展示两阶段4个官方日期/时分（ET），Assigned资格提示仅分配/受邀选手可用。原近一年类别匹配、Senior/新手保护、Interim与正式名单赛程保留。官网当前赛事页优先于有冲突的旧PDF；相同日期端点可补缺少时分，不能将旧关闭时间移到新日期。
-- 第三详情名额优先处理7日内开放/仍开放但类别或具体时间不完整的赛事；当天已尝试冷却，保留最近两场、总量最多三场和失败保留旧资料。待上线后仅同步原日历和这两场官方资料，不直接写入/重置生产数据，不修改小时任务。
+- 第三详情名额优先处理7日内开放/仍开放但类别或具体时间不完整的赛事；当天已尝试冷却，保留最近两场、总量最多三场和失败保留旧资料。上线后仅定向同步这两场官方资料，不直接写入/重置生产数据，不修改小时任务。全日历同步被自动审批以范围过广拒绝，采用其建议的两场定向同步完成需求，未绕过拒绝执行全量写入。
 - 官网核对：Milton Assigned 11/12 10:00–11/16 23:59，Public 11/17 13:00–11/19 23:59；Waterloo Assigned 11/16 10:00–11/18 23:59，Public 11/19 12:00–11/23 23:59，均2026年ET。Milton旧PDF写Public关闭11/18且正文开放12:00，与更新赛事页不同，按赛事页11/19和13:00显示并保留官方链接。
 - 原工作区存在15个未提交PDF删除，使用本会话work/registration-reminder-fix隔离detached工作树，从c42d073基线实施；不将这些删除混入提交。新增官方事实样本、日期/时分/来源优先和同期报名详情选择回归。
 - 完整回归20/20、首页19组、Web类型与官方助手生产构建通过。真实Worker/临时D1回归通过，新增确认报名阶段具体时分与时区持久化；修正旧测试依赖Public位于数组首项的断言。Chrome/WebKit×320/1280px×中英文×Milton/Waterloo×首页/个人页共32个页面通过，检查全部4个时分、类别范围、Assigned提示与无横向溢出；使用隔离API，未登录或更改真实会员。截图/报告在本会话outputs/registration-phases-browser。最终部署、同步和GitHub验收记录在outputs/registration-phases-release，完成后补记。
+- 运行源码ab6acd25b678c3c51e3f4fbe421ac00cd453e190已推送原GitHub main与Sites源。V50保存版本appgprj_6ad76ca2dba481919ba883865cbd5a0d~appgver_c9346810c98081919aa8a51264153f12，部署appgdep_6af61fe713f481919fe837ce2dd088f9于2026-11-12T20:22:12.742380Z succeeded，env9/MCP ready；保留public范围、数据库、邮件配置及原小时任务。正式域名20:22:56Z首页200、匿名club401，线上C9iv3g0g.js与本地最终构建SHA256逐字节一致（66fe77b104c5bcf85ae6a7ecc7a43b80bd7f6c8d7005f867e9e34e4d18eafdef）；本轮未重建原生安装包。
+- Milton于20:23:09Z、Waterloo于20:23:26Z定向同步成功，两者errors均为空，返回已保存的两阶段4个日期/时分与America/Toronto。Waterloo只读D1投影进一步确认时分、类别和detailCheckedAt已持久化；受工具单行大小限制未继续分页读取无关大赛事。20:27:31Z对两场最新网页及其当前链接PDF执行与Worker相同解析，验证实际Milton Juvenile及Waterloo新手类别均产生提醒、4个日期/时分均一致；Waterloo当前公告已更新为Nov-12版本，同步已自动读取。预览已停止。
+- 运行源码的GitHub Web regression 43299559095三项（regression、dependencies、mobile-browser）全部success：[运行结果](https://github.com/Sherrylikeke/hsc-skating-app/actions/runs/43299559095)。后续仅补本记录和验收文件，不重复部署或重跑输入未变的已通过检查；最终凭据保存在本会话outputs/registration-phases-release。
 
 ## 2026-11-11 Web regression持续失败修复
 
