@@ -46,3 +46,17 @@
 .cal-pending p+p{margin-top:6px}
 @media(max-width:480px){.cal-toolbar{padding:8px 10px;gap:3px}.cal-nav button{min-width:36px}.cal-month{padding-inline:3px}.cal-agenda{padding-inline:3px}.cal-date{min-height:44px}}
 .cal-individual-time small{display:block;margin:5px 0;font-size:14px}
+.cal-options{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 14px}
+.cal-options button,.cal-export button,.cal-week-day h3 button{font:inherit;min-height:44px;border:1px solid var(--cal-line);border-radius:6px;padding:6px 10px;background:#fff;color:var(--cal-ink);cursor:pointer}
+.cal-options button:disabled,.cal-export button:disabled{opacity:.5;cursor:default}
+.cal-views{display:flex;gap:4px;flex-wrap:wrap}
+.cal-views [aria-pressed=true]{background:#e0f0ed;border-color:#78aaa0}
+.cal-scope{display:flex;align-items:center;gap:8px;min-width:0;flex:1 1 220px}
+.cal-scope .club-compact-select{flex:1;min-width:0}
+.cal-week{padding:0 14px}.cal-week>p,.cal-export p{font-size:13px;line-height:1.5;color:#4e6776}
+.cal-week-day{border-top:1px solid var(--cal-line);padding:8px 0}.cal-week-day h3{margin:0 0 8px;font-size:15px}
+.cal-list-session{display:block;width:100%;text-align:start;padding:10px;margin:6px 0;background:#eef5f6;color:var(--cal-ink);border:1px solid var(--cal-line);border-radius:6px;font:inherit;overflow-wrap:anywhere;cursor:pointer}
+.cal-list-session span,.cal-list-session small{display:block;line-height:1.5;font-size:13px}
+.cal-export{padding:12px 14px;border-top:1px solid var(--cal-line)}.cal-export p{margin:6px 0}.cal-export p:empty{display:none}
+.cal-license{padding:12px 0;font-size:12px;color:#355667}.cal-license summary{cursor:pointer;min-height:44px;padding-block:12px;text-decoration:underline}.cal-license pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:320px;overflow:auto;padding:10px;background:#fff}
+.family-calendar :focus-visible{outline:3px solid #246767;outline-offset:2px}

@@ -20,7 +20,7 @@ const blocks=[['Senior Women','13:00','13:35','Red'],['Junior Men','13:20','13:5
 }));
 const event={id:'cup',name:'November Cup',start:day,end:day,timezone:'America/Toronto',venue:'Hamilton Arena',city:'Hamilton',url:source,
   documents:[],needsReview:false,participants,blocks,startingOrders:[{id:'order',name:'Nora Lin',skaterIds:[],category:'Senior Men SHORT',program:'short',
-    startNumber:8,warmupGroup:2,individualTime:'14:05',sourceUrl:source+'/order',page:0}]};
+    startNumber:8,warmupGroup:2,individualTime:'14:05',sourceUrl:source+'/order',page:0},{id:'ana-order',name:'Ana Reed',skaterIds:['ana'],category:'Senior Women SHORT',program:'short',startNumber:1,warmupGroup:1,individualTime:null,sourceUrl:source+'/ana-order',page:1}]};
 const parent={id:'family-a',name:'Taylor Reed',email:'parent@example.test',role:'parent',status:'active'};
 
 async function walk(browser,profile,language,orientation,folder) {
@@ -31,7 +31,7 @@ async function walk(browser,profile,language,orientation,folder) {
   const ui=(en,zh)=>language==='en'?en:zh;
   const shot=name=>page.screenshot({path:path.join(folder,name+'.png'),scale:'css',animations:'disabled'});
   try {
-    await page.clock.setFixedTime(new Date('2026-11-08T17:15:00Z'));
+    await page.clock.setFixedTime(new Date('2026-11-14T18:15:00Z'));
     await page.addInitScript(lang=>localStorage.setItem('hsc-language',lang),language);
     page.on('pageerror',e=>errors.push(e.message));
     await page.route('**/api/**',async route=>{
@@ -54,9 +54,10 @@ async function walk(browser,profile,language,orientation,folder) {
     await page.getByRole('button',{name:ui('Next month','下个月')}).click();
     await page.getByRole('button',{name:ui('Previous month','上个月')}).click();
     await saturday.waitFor();
+    await saturday.evaluate(el=>el.scrollIntoView({block:'center'}));
     if(orientation==='portrait') {
       const box=await saturday.boundingBox(),nav=await page.locator('.club-sidebar').boundingBox();
-      assert.ok(box.height>=44 && box.y+box.height<=nav.y,'next Saturday needs a full touch target on the first screen');
+      assert.ok(box.height>=44 && box.y+box.height<=nav.y,'date has a full visible touch target after scrolling');
     } else await saturday.scrollIntoViewIfNeeded();
     await shot('month');await saturday.click();
     const conflict=page.locator('.cal-overlaps');
@@ -67,9 +68,10 @@ async function walk(browser,profile,language,orientation,folder) {
     assert.equal(await slots.count(),3);
     assert.match(await slots.filter({hasText:'Nora Lin'}).innerText(),/14:05/);
     assert.match(await page.locator('.cal-pending').innerText(),/Novice Women/);
+    await conflict.evaluate(el=>el.scrollIntoView({block:'center'}));
     if(orientation==='portrait') {
       const box=await conflict.boundingBox(),nav=await page.locator('.club-sidebar').boundingBox();
-      assert.ok(box.y>=0 && box.y+box.height<=nav.y,'overlap must be visible on arrival');
+      assert.ok(box.y>=0 && box.y+box.height<=nav.y,'overlap remains fully readable above fixed navigation');
     } else await conflict.scrollIntoViewIfNeeded();
     await shot('overlap');
     await page.getByRole('combobox',{name:ui('Ice surface','比赛冰面')}).click();
@@ -85,10 +87,44 @@ async function walk(browser,profile,language,orientation,folder) {
     await page.getByRole('button',{name:ui('Month','月历'),exact:true}).click();
     await saturday.waitFor();assert.equal(await saturday.locator('.cal-selected').count(),1);
     await page.goBack();await friend.waitFor();assert.equal(await slots.count(),2);
+    await page.getByRole('button',{name:ui('7-day list','7天列表'),exact:true}).click();
+    const list=page.locator('.cal-list-session');
+    await list.first().waitFor();assert.equal(await list.count(),3);
+    assert.match(await list.filter({hasText:'Ana Reed'}).innerText(),/13:06/);
+    assert.match(await list.filter({hasText:'Ana Reed'}).innerText(),/Estimated warm-up|预计上冰热身/);
+    assert.equal(await page.locator('.cal-week-day').count(),7);
+    await page.getByRole('button',{name:ui('Next unfinished group','跳到下一未结束组')}).click();
+    await page.waitForFunction(()=>document.activeElement?.classList.contains('cal-list-session'));
+    assert.match(await page.locator(':focus').innerText(),/Ana Reed/);
+    await page.locator('.cal-week').scrollIntoViewIfNeeded();await shot('seven-days');
+    const choose=async name=>{await page.getByRole('combobox',{name:ui('Skaters in calendar','日历中的选手')}).click();await page.getByRole('option',{name,exact:true}).click();};
+    await choose('Ana Reed');assert.equal(await list.count(),1);
+    const downloadPromise=page.waitForEvent('download');
+    await page.getByRole('button',{name:ui('Export this view (.ics)','导出当前视图 (.ics)')}).click();
+    const download=await downloadPromise;await download.saveAs(path.join(folder,'schedule.ics'));
+    const ics=(await fs.readFile(path.join(folder,'schedule.ics'),'utf8')).replace(/\r\n /g,'');
+    assert.equal((ics.match(/BEGIN:VEVENT/g)||[]).length,1);assert.match(ics,/Ana Reed/);assert.ok(!ics.includes('Ben Reed'));
+    assert.match(ics,/DTSTART:20261114T180000Z/);assert.ok(!ics.includes('DTSTART:20261114T180600Z'));
+    await page.reload();await list.first().waitFor();assert.equal(await list.count(),1);
+    await choose(ui('Friends only','仅朋友'));assert.equal(await list.count(),1);assert.match(await list.innerText(),/Nora Lin/);
+    await choose(ui('My skaters only','仅我的选手'));assert.equal(await list.count(),2);
+    await choose(ui('My skaters & friends','我的选手和朋友'));assert.equal(await list.count(),3);
+    await page.getByRole('button',{name:ui('Next 7 days','后7天')}).click();assert.equal(await list.count(),0);
+    assert.equal(await page.getByRole('button',{name:ui('Export this view (.ics)','导出当前视图 (.ics)')}).isDisabled(),true);
+    await page.goBack();await list.first().waitFor();assert.equal(await list.count(),3);
+    await page.getByRole('button',{name:ui('Day view','日视图'),exact:true}).click();
+    await slots.first().waitFor();await page.locator('.cal-now-line').first().waitFor();
+    await page.locator('.cal-agenda').scrollIntoViewIfNeeded();await shot('current-time');
+    const ana=slots.filter({hasText:'Ana Reed'});
+    assert.ok(await ana.evaluate(el=>el.lastElementChild.getBoundingClientRect().bottom<=el.getBoundingClientRect().bottom+1),'both estimated times fit the grid card');
+    await page.getByRole('combobox',{name:ui('Ice surface','比赛冰面')}).click();
+    await page.getByRole('option',{name:'Blue',exact:true}).click();
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
     member={...parent,id:'family-b'};
     await page.reload();await slots.filter({hasText:'Ben Reed'}).waitFor();
     assert.equal(await friend.count(),0,'friend belongs to the original account');
+    await page.locator('.cal-license summary').click();
+    await page.locator('.cal-license pre').waitFor();assert.match(await page.locator('.cal-license pre').innerText(),/Copyright \(c\) 2026 Adam Shaw/);
     assert.deepEqual(errors,[]);assert.deepEqual(writes,[]);
   } catch(error) {
     await shot('failure').catch(()=>{});

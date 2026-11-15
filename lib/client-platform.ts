@@ -21,9 +21,9 @@ export async function apiFetch(path:string,init?:RequestInit){
 export function verificationReturnURL(){return platform?.verificationURL||location.origin+'/verify-email?verified=1';}
 export async function clearClientSession(){await platform?.logout();}
 export async function scheduleDeviceReminders(plans:ReminderPlan[],askPermission=false){return platform?platform.scheduleReminders(plans,askPermission):'';}
-export async function saveTextFile(filename:string,value:string){
+export async function saveTextFile(filename:string,value:string,mime='text/csv;charset=utf-8'){
   if(platform)return platform.saveText(filename,value);
-  const url=URL.createObjectURL(new Blob([value],{type:'text/csv;charset=utf-8'}));
+  const url=URL.createObjectURL(new Blob([value],{type:mime}));
   const anchor=document.createElement('a');anchor.href=url;anchor.download=filename;anchor.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 }

@@ -26,6 +26,8 @@ jobs:
       - name: Run Web regression suites
         run: npm test
       - run: npm run build
+      - name: Verify distributed calendar licenses
+        run: node scripts/check-calendar-notice.mjs dist/client
       - name: Test the built Worker with temporary D1
         run: node scripts/check-owner-registration-worker.mjs
 

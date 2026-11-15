@@ -2,6 +2,16 @@
 
 这是项目负责人的持续维护记录，不属于会员网页内容。后续会话先读取本文件与 AGENTS.md，在完成实质修改或验收后更新；不自动轮询、不新增定时任务。下列运行数据是查询快照，不是实时监控。
 
+
+## 2026-11-15 免费日历优化与 MIT 声明（已验收，待部署）
+
+- 在 main d28bfe4 基础上保留 FullCalendar Standard 7.1.4，新增7天列表、我的全部/单人/朋友筛选、当前时间线和当前范围内下一未结束组跳转。日期/模式/筛选随URL恢复，不改变主页选手或私人关系。卡片复用原预计热身/开滑算法，时间格采用简短标签，列表和详情保留官方/预计区别及缺资料提示。
+- 新增单次 .ics 导出，仅含当前月/日/7天及当前筛选的已确认官方组别时段。排除未定安排、模糊DST时段及私人备注，不加入估算或闹钟。支持UTC时间、稳定UID、去重、文本转义和UTF-8折行；页面说明后续官网修订不会自动更新，手机沿用系统分享适配器。
+- Web/Capacitor共用构建插件，自动附带FullCalendar React/Core、headless-calendar及temporal-polyfill的完整MIT许可和当前版本。日历底部可展开查看；CI新增构建产物许可检查，四个Web/Capacitor/Android/iOS静态输出的许可原文均核对一致。实现与复验入口见docs/calendar.md。
+- 本轮20项功能回归、Web类型、官方Sites助手生产构建、隔离Worker/临时D1回归通过；后续简短标签改动再通过相关教练时间、日历/ICS及语言检查，最终Web类型/生产构建通过。三机型（iPhone17Pro、GalaxyZFlip6、iPhone17ProMax）×中英×横竖屏12组Chromium/WebKit浏览器流程全部通过，含筛选、刷新/后退、账号朋友隔离、焦点跳转、当前线、预计文字不裁切、实际下载及许可展开。截图与下载样本在本机忽略目录work/family-calendar。全部使用隔离API，未代登生产账号或发送邮件。
+- Capacitor最终静态构建、10项安全适配检查及Android/iOS资源sync完成；未生成新APK/IPA，未验证真机系统分享或Apple/Google日历实际导入。sync仅有三份原生配置的换行变化，已核对内容未变，不纳入提交。
+- 2026-11-15只读Sites get_site返回原项目active、latest_version_number=50；源码凭据接口返回Sites project not found，无法通过官方助手打开源码/同步/部署，本轮新功能尚未上线。04:31 Toronto正式域名首页200，匿名club API401；未查询小时同步执行状态，不沿用历史快照。按用户要求完成本地验收后正常提交推送原GitHub main，不更改站点、仓库可见性或数据库。
+
 ## 2026-11-12 Assigned/Public报名提醒与官方时分
 
 - 用户反馈Milton Provincial和Kitchener-Waterloo STAR 1–4即将报名却无提醒，要求分别展示Assigned/Public开放及关闭的日期和具体时间。只读核对V49/public、原小时任务启用；D1中Milton尚无offeredCategories，Waterloo已有STAR 1–4范围但两者均无详细读取时间。原逻辑只按Public开放前7天且丢弃时分，第三个详情轮转名额未优先补近期报名资料。
