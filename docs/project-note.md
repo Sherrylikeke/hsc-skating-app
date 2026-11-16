@@ -14,7 +14,7 @@
 - 已部署V51，Sites运行源码b77337bd42c848fe73b96f80ebdf6141345c20ae，保存版本appgprj_6ad76ca2dba481919ba883865cbd5a0d~appgver_744d8fc48af48191a4b3257ea829d6ce；部署appgdep_6afb312965988191837df183a8997e95于2026-11-16T16:37:12.409057Z succeeded，env9/MCP ready/public。未包含GitHub主线上未部署的0006/0007迁移及准备/订阅功能。
 - 16:37:52Z定向重读Niagara，16:38只读状态再次确认linksCheckedAt/linksAttemptedAt已持久化、Schedule as of Nov.11与Interim链接均存在，547条/23位关联、blocks=0；两页PDF日期警告保留，detailSuccessAt尚无成功记录。全量日历的人工验证被自动审批拒绝，理由是超出本轮Niagara范围，未重试或间接绕过；独立轮换通过离线及临时D1验证，生产仅验证单场写入/回读。
 - 正式域名16:38:34Z首页200、匿名club401，线上BpqZDo6J.js与本地构建SHA256一致（2133083b90a758e7a6b7d98ca801616847311e5818c087860cb052c012bebd92）。重新查询原小时任务仍启用且无更改，最近日历成功为16:07:27Z。没有重建手机原生包；开发和生产本地预览均已停止。安全验收记录位于本会话outputs/niagara-documents-release。
-- 最新GitHub main已正常推送7b985c2f682ca4df17d5b7014ad04ac6ed28fcf5，保留全部待发布功能；其CI43909315702的类型/25项回归/构建/临时D1及依赖检查成功，手机浏览器两组仍执行中。当前收尾将已部署Sites源码提交作为第二父项合入主线历史，树中保留已验收的新主线实现，便于后续正常快进同步Sites；仅补文档，不重部署。
+- 最新GitHub main已正常推送7b985c2f682ca4df17d5b7014ad04ac6ed28fcf5，保留全部待发布功能；其[CI43909315702](https://github.com/Sherrylikeke/hsc-skating-app/actions/runs/43909315702)四项全部success（regression、dependencies、mobile-browser existing/representative），含类型、25项回归、构建、临时D1和原有/新增机型交互。收尾提交73a2c02将已部署Sites源码作为第二父项合入主线历史，树中保留已验收的新主线实现，便于后续正常快进同步Sites；原工作区已快进，21个原有PDF删除逐项相同。后续仅补本条CI验收记录，不重部署或重复功能测试。
 
 ## 2026-11-16 补充普通／小屏 iPhone 与安卓直板机
 
