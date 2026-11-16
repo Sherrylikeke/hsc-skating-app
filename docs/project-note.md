@@ -9,7 +9,8 @@
 - 机型集中在scripts/browser-devices.mjs；CI按existing／representative两组并行，独立保存截图，避免串行扩大单任务耗时。默认日历26组、准备流程10组，未放宽或关闭原回归断言。实施与模拟范围记录在docs/mobile-web-install.md。
 - 本轮Web类型、24项功能回归、生产构建及变更检查通过；已复看小屏比赛日与S24日历截图，两个预计时间完整。截图／报告在忽略目录work/representative-phones，日志work/representative-*.log；所有测试使用隔离API，没有操作生产账号、私人资料或发送邮件。仍不是上述机型真机验收。
 - 本轮未查询或变更Sites、生产Worker／D1、邮件、原生工程及小时同步状态；沿用用户暂停Sites问题的范围，只提交推送原GitHub main并核对Action，GitHub同步不等于网站上线。
-- 首次源码83efff3的[CI 43844083367](https://github.com/Sherrylikeke/hsc-skating-app/actions/runs/43844083367)中，原有机型、功能／Worker回归与依赖检查通过；新增机型的iPhone 16英文比赛日因Linux WebKit字体换行较多，首项时间触及底部导航。下载截图复核后再次收紧手机容器／卡片内边距，不缩小时间字号或放宽边界断言；本地全部10组比赛准备及生产构建复验通过，最终云端结果待后续核实。
+- 首次源码83efff3的[CI 43844083367](https://github.com/Sherrylikeke/hsc-skating-app/actions/runs/43844083367)中，原有机型、功能／Worker回归与依赖检查通过；新增机型的iPhone 16英文比赛日因Linux WebKit字体换行较多，首项时间触及底部导航。下载截图复核后再次收紧手机容器／卡片内边距，不缩小时间字号或放宽边界断言；本地全部10组比赛准备及生产构建复验通过。
+- 最终修复源码4b838c28dd299c5a3b0cbe41fc80375d11b821ff已推送原GitHub main；2026-11-16 [Web regression 43845461203](https://github.com/Sherrylikeke/hsc-skating-app/actions/runs/43845461203)整体success，regression、dependencies、mobile-browser (existing)、mobile-browser (representative)四项全部通过，包含新增三款36组检查及原有机型。后续仅补记本条验收结果，不修改运行代码或重新部署。
 
 ## 2026-11-16 比赛准备、报名看板、更新状态与日历订阅
 
