@@ -36,6 +36,9 @@ assert.deepEqual(single.calls,[{eventId:'SO-9'}]);checks.push('single-event chec
 const failedCalendar=mock([Response.json({error:'Calendar unavailable'},{status:503})]);
 await assert.rejects(checkOfficialSources(failedCalendar.request,'2026-10-23'),/Calendar unavailable/);
 assert.equal(failedCalendar.calls.length,1);checks.push('failed calendar stops details and cannot report success');
+const failedLinks=mock([Response.json({events:7,nextEvents:[],errors:['SO-9: Official page unavailable']})]);
+assert.deepEqual(await checkOfficialSources(failedLinks.request,'2026-11-16'),{events:7,checkedEvents:0,errors:['SO-9: Official page unavailable']});
+checks.push('calendar link-only page failures remain partial failures even when no PDF imports are selected');
 
 const distant=mock([Response.json({events:2,nextEvents:[{id:'SO-6',start:'2027-04-25'}]})]);
 assert.deepEqual(await checkOfficialSources(distant.request,'2026-10-23'),{events:2,checkedEvents:0,errors:[]});

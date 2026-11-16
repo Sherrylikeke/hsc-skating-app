@@ -5,7 +5,7 @@ function documentNeedsReview(document:OfficialDocument):boolean{
 }
 
 export function clubEventResponse(event:LiveEvent,admin:boolean):ClubEvent{
-  const needsReview=!!event.detailError||event.documents.some(documentNeedsReview);
+  const needsReview=!!event.detailError||!!event.linksError||event.documents.some(documentNeedsReview);
   if(admin)return {...event,needsReview};
   return {
     id:event.id,name:event.name,url:event.url,start:event.start,end:event.end,timezone:event.timezone,

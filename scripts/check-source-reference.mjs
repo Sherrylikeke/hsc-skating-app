@@ -22,7 +22,7 @@ registerHooks({
 });
 const {default:OfficialSourceReference}=await import('../app/official-source-reference.tsx');
 const marker='private-source.pdf: Invalid PDF structure.';
-const props={sync:{error:marker,lastAttempt:'2026-10-24T22:00:00Z'},event:{entryStatus:'30/58 verified',scheduleStatus:'Partial schedule',startingOrderStatus:'Not found',detailCheckedAt:'2026-10-24T22:00:00Z',detailError:marker,documents:[]}};
+const props={sync:{error:marker,lastAttempt:'2026-10-24T22:00:00Z'},event:{entryStatus:'30/58 verified',scheduleStatus:'Partial schedule',startingOrderStatus:'Not found',linksCheckedAt:'2026-10-24T23:00:00Z',detailCheckedAt:'2026-10-24T22:00:00Z',detailError:marker,documents:[]}};
 const checks=[];
 for(const member of [null,...['coach','parent','skater','viewer'].map(role=>({role,status:'active'})),...['disabled','pending','pending-verification'].map(status=>({role:'admin',status}))]){
   assert.equal(renderToStaticMarkup(createElement(OfficialSourceReference,{...props,member})), '');
@@ -31,6 +31,7 @@ checks.push('ordinary roles, inactive administrators and missing identities rend
 const html=renderToStaticMarkup(createElement(OfficialSourceReference,{...props,member:{role:'admin',status:'active'}}));
 assert.match(html,/Administrator reference/);assert.match(html,/30\/58 verified/);assert.ok(html.includes(marker));
 assert.match(html,/<details class="club-reference">/);assert.doesNotMatch(html,/<details[^>]*\bopen\b/);
+for(const label of ['Official links last checked','Document import last attempted','Document import last fully succeeded','A saved schedule link can be opened'])assert.ok(html.includes(label));
 checks.push('active administrators retain event errors and progress only inside closed reference details');
 assert.ok(renderToStaticMarkup(createElement(OfficialSourceReference,{sync:props.sync,member:{role:'admin',status:'active'}})).includes(marker));
 checks.push('non-event pages retain administrator-only global source status');

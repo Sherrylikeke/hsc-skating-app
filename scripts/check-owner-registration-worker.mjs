@@ -19,6 +19,11 @@ const startingHtml='<script>var EVENT_ID="'+startingFixture.eventId+'";var API="
 let awardsFetches=0;
 const fixtureHost='sc-css-public-api-cmh9d3htgxfpdkb7.canadacentral-01.azurewebsites.net';
 let officialRequests=0;
+let linkOnlyPdfFetches=0;
+const linkOnlyPages=[];
+const calendarStart=new Date();calendarStart.setUTCDate(calendarStart.getUTCDate()+20);
+const calendarDate=calendarStart.toISOString().slice(0,10);
+const linkOnlyEvents=Array.from({length:7},(_,index)=>({id:999970+index,title:'Link-only fixture '+index,url:'https://skateontario.org/fixture-links/'+index+'/',start_date:calendarDate+' 08:00:00',end_date:calendarDate+' 17:00:00',modified:'2026-11-16 10:00:00',description:''}));
 const keswickReads=[];
 const workerOptions={cf:false,modules,modulesRoot:root,compatibilityDate:runtime.compatibility_date,compatibilityFlags:runtime.compatibility_flags,d1Databases:['DB'],bindings:{
   BETTER_AUTH_SECRET:'isolated-tests-only-secret-0123456789-abcdef',
@@ -26,6 +31,13 @@ const workerOptions={cf:false,modules,modulesRoot:root,compatibilityDate:runtime
 },outboundService:request=>{const url=new URL(request.url);
 if(url.hostname==='skatingresults.ca'){if(url.pathname.endsWith('/categories'))return Response.json({Categories:[startingFixture.category]});if(url.pathname.endsWith('/segments'))return Response.json({Segments:startingFixture.segments});const id=url.pathname.match(/segment\/([^/]+)\/entries$/)?.[1];if(id)return Response.json(startingFixture.entries[id]);return new Response(startingHtml);}
 if(url.hostname==='www.skateontario.org'){
+if(url.pathname.startsWith('/wp-json/tribe/events/v1/events'))return Response.json({events:linkOnlyEvents});
+if(url.pathname.startsWith('/fixture-links/')){
+  const index=Number(url.pathname.split('/')[2]);linkOnlyPages.push(index);
+  if(index===0)return new Response('Source failed',{status:503});
+  return new Response('<a href="https://skateontario.org/link-only-schedule.pdf">Schedule as of Nov. 11</a>');
+}
+if(url.pathname==='/link-only-schedule.pdf'){linkOnlyPdfFetches++;return new Response('Must not parse PDF during link discovery',{status:500});}
 if(url.pathname==='/fixture-home/')return new Response('<p>Assigned athlete registration opens at 10:00 AM ET November 9, 2026 and closes November 11, 2026 at 11:59 PM ET.</p><p>Public Registration: Registration opens at 12:00 PM ET November 12, 2026 and closes November 16, 2026 at 11:59 PM ET.</p><a href="https://www.skateontario.org/fixture-interim.pdf">Interim List</a>');
 if(url.pathname==='/fixture-interim.pdf')return new Response(fs.readFileSync('tests/fixtures/niagara-2026-interim-entry.pdf'));
 if(url.pathname==='/fixture-max/')return new Response('<a href="https://www.skateontario.org/fixture-keswick-schedule.pdf">Schedule</a><a href="https://www.skateontario.org/fixture-max-entries.html">Entry List</a><a href="https://www.skateontario.org/results/27KES/27KesSTAR5MenU10FP2SO.pdf">Starting Order</a>');
@@ -366,4 +378,17 @@ try {
   const neverRegistered=(await clubFor(platformHeaders)).skaters.find(row=>row.id===addedChildId);
   assert.equal(neverRegistered.hasRegistrationHistory,false);assert.deepEqual(neverRegistered.registrationHistory,[]);
   console.log('Worker recommendations: dated individual registration history is read independently of recent cards; future, stale, withdrawn and team rows are excluded, and old registrations retain the ever-registered flag. No production writes.');
+  const firstCalendar=await post('/api/sync',{},platformHeaders);assert.equal(firstCalendar.status,200);
+  const calendarResult=await firstCalendar.json();assert.equal(calendarResult.linkChecks.length,3);
+  assert.equal(calendarResult.errors.length,1);assert.equal(linkOnlyPdfFetches,0);
+  const readEvent=async eventId=>JSON.parse((await database.prepare('SELECT payload FROM live_events WHERE id=?').bind(eventId).first()).payload);
+  const firstLinkEvent=await readEvent('SO-999971');assert.ok(firstLinkEvent.linksCheckedAt);
+  assert.ok(firstLinkEvent.documents.some(document=>document.kind==='schedule'));
+  assert.equal(firstLinkEvent.detailCheckedAt,undefined);assert.equal(firstLinkEvent.detailSuccessAt,undefined);assert.equal(firstLinkEvent.blocks.length,0);
+  const failedLinks=await readEvent('SO-999970');assert.ok(failedLinks.linksAttemptedAt);assert.equal(failedLinks.linksCheckedAt,undefined);assert.ok(failedLinks.linksError);
+  for(let round=0;round<2;round++)assert.equal((await post('/api/sync',{},platformHeaders)).status,200);
+  assert.deepEqual([...new Set(linkOnlyPages)].sort(),[0,1,2,3,4,5,6]);assert.equal(linkOnlyPdfFetches,0);
+  const linkedClub=await clubFor(platformHeaders);assert.ok(linkedClub.events.find(event=>event.id==='SO-999971').documents.some(document=>document.kind==='schedule'));
+  assert.ok((await readEvent('SO-999970')).linksError,'Other successful imports must not erase an event failure');
+  console.log('Worker calendar: three independent page checks per round persist schedule links without entry/PDF imports; seven events rotate across three rounds despite one source failure, and per-event attempts/success/errors remain distinct.');
 }finally{await mf.dispose();}
