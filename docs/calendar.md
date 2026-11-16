@@ -8,6 +8,7 @@
 - 可看我的全部选手和朋友、仅我的选手、某位主页选手或仅本场关注朋友。筛选及日期写入 URL，刷新／前进／后退可恢复；不改变主页偏好或私人关系。
 - 日视图继续按比赛当地时区显示官方组别时段，支持冰面筛选、当前时间线。下一未结束组在当前视图和筛选范围内查找，优先包含正在进行的组；待定安排不参与。
 - 卡片复用 SessionTiming，官方个人时间优先。小时间格使用简短的“预计”标签，列表与展开详情保留完整说明。热身／开滑仍为估算，缺少可靠来源时不生成。
+- 日视图每15分钟网格至少60px，为窄屏并排卡片的英文换行及两个预计时间留出高度；统一缩放时间轴，卡片起止位置与官方组别时长仍成比例。
 
 ## 单次 .ics 导出
 
@@ -29,6 +30,6 @@ node scripts/check-family-calendar-browser.mjs
 node scripts/check-calendar-notice.mjs dist/client capacitor/dist capacitor/android/app/src/main/assets/public capacitor/ios/App/App/public
 ```
 
-浏览器脚本复用 `work/browser-qa` 的 Chromium/WebKit，使用隔离 API 和固定时钟，覆盖三款手机、中英文及横竖屏。CI 在生产构建后核对许可原文，并通过既有日历浏览器任务验证新交互。
+浏览器脚本复用 `work/browser-qa` 的 Chromium/WebKit，使用隔离 API 和固定时钟，覆盖三款手机、中英文及横竖屏，另加320px中英文竖屏，共14组。逐项验证预计热身／开滑标签与时间值，并检查卡片内每段文字的实际渲染边界，防止文字存在于DOM却被裁切。CI 在生产构建后核对许可原文，并通过既有日历浏览器任务验证新交互。
 
 参考：[FullCalendar 授权](https://fullcalendar.io/license)、[RFC 5545](https://www.rfc-editor.org/rfc/rfc5545.html)。

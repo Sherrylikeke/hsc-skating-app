@@ -218,7 +218,9 @@ export default function FamilyCalendar({events,skaters,ownIds,memberId,onNavigat
             <h3><Clock3 size={15}/>{text('Official group times','官方组别时段')} · {zone}</h3>
             <FullCalendar key={date} plugins={plugins} locales={locales} locale={locale} initialView="timeGridDay" initialDate={date}
               nowIndicator nowIndicatorLineClass="cal-now-line" timeZone={zone} headerToolbar={false} dayHeaders={false} allDaySlot={false} height="auto" slotEventOverlap={false} eventInteractive
-              slotMinTime={hour(min)} slotMaxTime={hour(max)} slotDuration="00:15:00" slotHeaderInterval="00:30:00" slotMinHeight={36}
+              // Leave room for wrapped timing labels in narrow, side-by-side cards.
+              // Scale the time grid uniformly so event heights still reflect duration.
+              slotMinTime={hour(min)} slotMaxTime={hour(max)} slotDuration="00:15:00" slotHeaderInterval="00:30:00" slotMinHeight={60}
               slotHeaderFormat={{hour:'2-digit',minute:'2-digit',hour12:false}} displayEventTime={false}
               events={timed.map(({row,interval})=>({id:row.id,title:row.skaterName,start:interval!.start,end:interval!.end,
                 color:colorFor(row.skaterId,ownIds),extendedProps:{row}}))}

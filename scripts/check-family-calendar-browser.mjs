@@ -116,7 +116,25 @@ async function walk(browser,profile,language,orientation,folder) {
     await slots.first().waitFor();await page.locator('.cal-now-line').first().waitFor();
     await page.locator('.cal-agenda').scrollIntoViewIfNeeded();await shot('current-time');
     const ana=slots.filter({hasText:'Ana Reed'});
-    assert.ok(await ana.evaluate(el=>el.lastElementChild.getBoundingClientRect().bottom<=el.getBoundingClientRect().bottom+1),'both estimated times fit the grid card');
+    const estimates=ana.locator('small');
+    assert.deepEqual(await estimates.allTextContents(),[ui('Est. warm-up','预计热身')+' · 13:00',ui('Est. skate','预计开滑')+' · 13:06']);
+    const clipped=await ana.evaluate(el=>{
+      const box=el.getBoundingClientRect(),outside=[];
+      // Check each rendered text fragment: a wrapped label or value can be clipped
+      // even when its containing element has the expected text and width.
+      const walker=document.createTreeWalker(el,NodeFilter.SHOW_TEXT);
+      while(walker.nextNode()) {
+        const node=walker.currentNode;
+        if(!node.textContent.trim())continue;
+        const range=document.createRange();range.selectNodeContents(node);
+        for(const rect of range.getClientRects()) {
+          if(rect.top<box.top-1||rect.bottom>box.bottom+1||rect.left<box.left-1||rect.right>box.right+1)
+            outside.push({text:node.textContent,rect:rect.toJSON(),card:box.toJSON()});
+        }
+      }
+      return outside;
+    });
+    assert.deepEqual(clipped,[],'all card text, including both estimated times, fits without clipping');
     await page.getByRole('combobox',{name:ui('Ice surface','比赛冰面')}).click();
     await page.getByRole('option',{name:'Blue',exact:true}).click();
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
@@ -138,9 +156,13 @@ for(const model of process.argv.length>2?process.argv.slice(2):['iPhone 17 Pro',
   try {
     for(const orientation of ['portrait','landscape']) for(const language of ['zh','en']) {
       const profile=pw.devices[model+(orientation==='landscape'?' landscape':'')];
-      const folder=path.join(output,model.replaceAll(' ','-')+'-'+orientation+'-'+language);
-      await fs.mkdir(folder,{recursive:true});await walk(browser,profile,language,orientation,folder);
-      console.log(JSON.stringify({model,orientation,language,viewport:profile.viewport,overlapMinutes:15,friend:'Nora Lin'}));
+      const widths=model==='Galaxy Z Flip 6'&&orientation==='portrait'?[profile.viewport.width,320]:[profile.viewport.width];
+      for(const width of widths) {
+        const device={...profile,viewport:{...profile.viewport,width}};
+        const folder=path.join(output,model.replaceAll(' ','-')+'-'+orientation+'-'+language+(width===profile.viewport.width?'':'-'+width));
+        await fs.mkdir(folder,{recursive:true});await walk(browser,device,language,orientation,folder);
+        console.log(JSON.stringify({model,orientation,language,viewport:device.viewport,overlapMinutes:15,friend:'Nora Lin'}));
+      }
     }
   } finally {await browser.close();}
 }
