@@ -1,5 +1,5 @@
 import type {ClubEvent,LiveEvent,OfficialDocument,SyncStatus} from './club-types';
-import {ENTRY_PDF_VERSION,STARTING_DRAW_VERSION} from './club-types';
+import {ENTRY_PDF_VERSION,STARTING_DRAW_VERSION} from './club-types.ts';
 
 function documentNeedsReview(document:OfficialDocument):boolean{
   return !!document.error||(document.kind==='start-order'&&(!document.checkedAt||![STARTING_DRAW_VERSION,'starting-api-1'].includes(document.parserVersion||'')))||!!document.entryFiles?.some(file=>!file.checkedAt||file.parserVersion!==ENTRY_PDF_VERSION||file.matchingRosterHash!==document.matchingRosterHash||documentNeedsReview(file));
