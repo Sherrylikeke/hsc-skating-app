@@ -1,3 +1,4 @@
+import {phoneModels} from './browser-devices.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import {existsSync} from 'node:fs';
@@ -11,7 +12,7 @@ if (!process.env.PLAYWRIGHT_BROWSERS_PATH && existsSync(cache)) process.env.PLAY
 const playwright = await import(pathToFileURL(process.env.HSC_PLAYWRIGHT_MODULE || path.resolve('work/browser-qa/node_modules/playwright-core/index.mjs')).href);
 const origin = process.env.HSC_PREVIEW_ORIGIN || 'http://127.0.0.1:5173';
 const output = process.env.HSC_MOBILE_OUTPUT || path.resolve('work/device-interactions');
-const models = process.argv.length>2 ? process.argv.slice(2) : ['iPhone 17 Pro', 'Galaxy Z Flip 6', 'iPhone 17 Pro Max'];
+const models = phoneModels();
 const orientations = ['portrait','landscape'];
 const locales = ['en','zh'];
 const day = '2026-11-08';

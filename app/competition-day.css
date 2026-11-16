@@ -7,3 +7,16 @@
 @media(max-width:600px){.day-heading{margin-bottom:10px}.day-heading h1{font-size:18px}.day-controls{padding:10px}.day-controls label{gap:3px}.day-time-note{font-size:10px;margin:8px 0 11px}.day-heading>div>p{display:none}}
 @media print{.day-heading>div>p{display:block}.day-heading h1{font-size:19px}}
 @media(max-width:360px){.day-heading h1{white-space:nowrap}.day-print{min-width:40px;min-height:40px;justify-content:center}.day-print>span{display:none}.day-controls label:first-child{min-width:170px}.day-time-note{margin-bottom:8px}.day-session{padding:13px}.day-session header p{margin-bottom:10px}}
+@media screen and (max-width:600px){
+  .club-main:has(>.competition-day){display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 10px;padding-top:12px!important}
+  .club-main:has(>.competition-day)>*{grid-column:1/-1;min-width:0}
+  .club-main:has(>.competition-day)>.club-page-heading{grid-column:2;grid-row:1;margin:0;align-self:center}
+  .club-main:has(>.competition-day)>.club-back{grid-column:1;grid-row:1;margin:0;align-self:center;text-align:left;font-size:11px}
+  .club-main:has(>.competition-day) .club-data-controls{justify-content:flex-end}
+  .club-main:has(>.competition-day) .club-data-controls .club-text-button{font-size:11px}
+  .day-heading{margin-bottom:8px}
+  .day-controls{padding:8px;gap:6px}
+  .day-controls label{gap:2px}
+  .day-time-note{margin:6px 0 8px}
+  .day-session header p{margin-bottom:8px}
+}

@@ -40,6 +40,6 @@ node scripts/check-family-calendar-browser.mjs
 node scripts/check-calendar-notice.mjs dist/client capacitor/dist capacitor/android/app/src/main/assets/public capacitor/ios/App/App/public
 ```
 
-浏览器脚本复用 `work/browser-qa` 的 Chromium/WebKit，使用隔离 API 和固定时钟，覆盖三款手机、中英文及横竖屏，另加320px中英文竖屏，共14组。逐项验证预计热身／开滑标签与时间值，并检查卡片内每段文字的实际渲染边界，防止文字存在于DOM却被裁切。CI 在生产构建后核对许可原文，并通过既有日历浏览器任务验证新交互。
+浏览器脚本复用 `work/browser-qa` 的 Chromium/WebKit，使用隔离 API 和固定时钟，默认覆盖六款手机、中英文及横竖屏，另加320px中英文竖屏，共26组。机型和CI分组见 [mobile-web-install.md](mobile-web-install.md)。逐项验证预计热身／开滑标签与时间值，并检查卡片内每段文字的实际渲染边界，防止文字存在于DOM却被裁切。CI 在生产构建后核对许可原文，并通过既有日历浏览器任务验证新交互。
 
 参考：[FullCalendar 授权](https://fullcalendar.io/license)、[RFC 5545](https://www.rfc-editor.org/rfc/rfc5545.html)。

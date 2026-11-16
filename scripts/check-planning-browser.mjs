@@ -1,3 +1,4 @@
+import {phoneGroups,browserGroup} from './browser-devices.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import {existsSync} from 'node:fs';
@@ -101,8 +102,11 @@ async function journey(browser,profile,language,folder,engine) {
     await choose(ui('Competition day date','比赛日日期'),day);await checkboxState(true);
     await choose(ui('Skaters on competition day','比赛日选手'),'');
     await noOverflow();await page.evaluate(()=>scrollTo(0,0));await screenshot('competition-day');
-    const firstArrival=await cards.first().locator('.day-time-grid strong').first().boundingBox();
-    assert.ok(firstArrival.y+firstArrival.height<profile.viewport.height-65,'the first arrival time is visible above phone navigation on the initial screen');
+    const navigation=await page.locator('.club-sidebar').boundingBox();
+    for(const value of await cards.first().locator('.day-time-grid strong').all()){
+      const box=await value.boundingBox();
+      assert.ok(box.y>=0&&box.y+box.height<=navigation.y-4,'first arrival and official time fit above phone navigation: '+JSON.stringify({text:await value.innerText(),box,navigation}));
+    }
     await page.screenshot({path:path.join(folder,'competition-day-full.png'),fullPage:true,scale:'css',animations:'disabled'});
     await page.evaluate(()=>{window.__planningPrintCount=0;window.print=()=>{window.__planningPrintCount++;};});
     await page.getByRole('button',{name:ui('Print / Save PDF','打印 / 保存 PDF'),exact:true}).click();
@@ -162,16 +166,29 @@ async function journey(browser,profile,language,folder,engine) {
   } finally {await context.close();}
 }
 
-const profiles={chromium:{...pw.devices['Galaxy Z Flip 6'],viewport:{width:320,height:740}},webkit:{...pw.devices['iPhone 17 Pro'],viewport:{width:390,height:844}}};
-const engines=process.env.HSC_PLANNING_ENGINE?[process.env.HSC_PLANNING_ENGINE]:['chromium','webkit'];
+const originalProfiles=[
+  {name:'320px Chromium',folder:'chromium',profile:{...pw.devices['Galaxy Z Flip 6'],viewport:{width:320,height:740}}},
+  {name:'390px WebKit',folder:'webkit',profile:{...pw.devices['iPhone 17 Pro'],viewport:{width:390,height:844}}},
+];
+const namedModels=process.argv.slice(2);
+const profiles=namedModels.length?namedModels.map(name=>({name,folder:name.replaceAll(' ','-'),profile:pw.devices[name]})):[
+  ...(browserGroup!=='representative'?originalProfiles:[]),
+  ...(browserGroup!=='existing'?phoneGroups.representative.map(name=>({name,folder:name.replaceAll(' ','-'),profile:pw.devices[name]})):[]),
+];
 const languages=process.env.HSC_PLANNING_LANGUAGE?[process.env.HSC_PLANNING_LANGUAGE]:['en','zh'];
-for(const engine of engines){
-  assert.ok(profiles[engine],'HSC_PLANNING_ENGINE must be chromium or webkit');
-  const browser=await pw[engine].launch(engine==='chromium'&&process.platform==='win32'?{executablePath:process.env.HSC_CHROME_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe'}:{});
-  try {for(const language of languages){
-    assert.ok(['en','zh'].includes(language),'HSC_PLANNING_LANGUAGE must be en or zh');
-    const folder=path.join(output,engine+'-'+language);await fs.mkdir(folder,{recursive:true});
-    await journey(browser,profiles[engine],language,folder,engine);
-    console.log(JSON.stringify({engine,language,width:profiles[engine].viewport.width,competitionDay:true,registrations:true,subscriptionLifecycle:true}));
-  }}finally{await browser.close();}
-}
+if(process.env.HSC_PLANNING_ENGINE)assert.ok(['chromium','webkit'].includes(process.env.HSC_PLANNING_ENGINE),'HSC_PLANNING_ENGINE must be chromium or webkit');
+const browsers=new Map();
+try {
+  for(const {name,folder:prefix,profile} of profiles){
+    assert.ok(profile,'Unknown device profile: '+name);
+    const engine=profile.defaultBrowserType;
+    if(process.env.HSC_PLANNING_ENGINE&&engine!==process.env.HSC_PLANNING_ENGINE)continue;
+    if(!browsers.has(engine))browsers.set(engine,await pw[engine].launch(engine==='chromium'&&process.platform==='win32'?{executablePath:process.env.HSC_CHROME_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe'}:{}));
+    for(const language of languages){
+      assert.ok(['en','zh'].includes(language),'HSC_PLANNING_LANGUAGE must be en or zh');
+      const folder=path.join(output,prefix+'-'+language);await fs.mkdir(folder,{recursive:true});
+      await journey(browsers.get(engine),profile,language,folder,engine);
+      console.log(JSON.stringify({model:name,engine,language,viewport:profile.viewport,competitionDay:true,registrations:true,subscriptionLifecycle:true}));
+    }
+  }
+}finally{await Promise.all([...browsers.values()].map(browser=>browser.close()));}

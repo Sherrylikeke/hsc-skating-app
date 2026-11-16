@@ -34,4 +34,4 @@ node scripts/check-calendar-subscription.mjs
 node scripts/check-planning-browser.mjs
 ```
 
-综合浏览器脚本使用隔离API与固定时钟，覆盖320px Chromium、390px WebKit各中英两组，检查清单恢复、个人报名与官方状态分离、订阅管理、打印和横向溢出。真实构建Worker另用临时D1验证新迁移、报名API和订阅读取／撤销。实际第三方日历订阅刷新和手机真机验收仍未进行。
+综合浏览器脚本使用隔离API与固定时钟，覆盖320px Chromium、390px WebKit及 iPhone 16、iPhone SE（第三代）、Galaxy S24 的实际设备视口，各中英文竖屏共10组。检查首项到场／官方时间在底部导航上方完整可见、清单恢复、个人报名与官方状态分离、订阅管理、打印和横向溢出。可用 `HSC_BROWSER_GROUP=existing`／`representative` 分组，或追加一个机型名称定向复验。真实构建Worker另用临时D1验证新迁移、报名API和订阅读取／撤销。实际第三方日历订阅刷新和手机真机验收仍未进行。

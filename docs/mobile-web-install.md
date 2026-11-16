@@ -23,3 +23,26 @@ Android Chrome 可打开站点，点右上角更多菜单，选择“安装并�
 复现：在忽略的 work/browser-qa 安装 playwright-core@1.64.1，使用系统 Chrome；WebKit 浏览器缓存也放在该目录。启动本机开发预览后运行 scripts/check-mobile-layout.mjs，HSC_PREVIEW_ORIGIN 指定预览网址；HSC_MOBILE_ENGINE=webkit 可切换引擎，HSC_MOBILE_ROLE=admin 与 HSC_MOBILE_WIDTHS=320,390 为管理员窄屏检查。截图／几何报告写到 HSC_MOBILE_OUTPUT。
 
 Safari 官方说明：[WebKit：主屏幕网页应用](https://webkit.org/blog/17333/webkit-features-in-safari-26-0/#every-site-can-be-a-web-app-on-ios-and-ipados)。
+
+## 代表机型回归（2026-11-16）
+
+原有 iPhone 17 Pro、iPhone 17 Pro Max、Galaxy Z Flip 6 保留，新增以下三款。尺寸是 Playwright 1.64.1 的浏览器可用视口（CSS像素），不是面板物理分辨率。
+
+| 代表机型 | 覆盖类型 | 竖屏视口 | 横屏视口 | 浏览器引擎 |
+| --- | --- | --- | --- | --- |
+| iPhone 16 | 普通 iPhone | 393 × 659 | 734 × 343 | WebKit |
+| iPhone SE（第三代） | 小屏 iPhone | 375 × 667 | 667 × 375 | WebKit |
+| Galaxy S24 | 安卓直板机 | 360 × 780 | 780 × 360 | Chromium |
+
+导航／选择器及赛程日历覆盖每款中英文横竖屏；观赛与比赛准备（比赛日、清单、报名、订阅）覆盖每款中英文竖屏。使用隔离API与固定时钟，保留点击、选择、滚动、账号隔离、完整文字边界和导出断言。未代替真机、软键盘或厂商浏览器验收。
+
+`scripts/browser-devices.mjs` 集中维护机型分组。CI用 `HSC_BROWSER_GROUP=existing` 和 `representative` 并行运行两组，分别上传截图；不改变原有断言或移除旧机型。以下命令不传机型时覆盖默认矩阵，也可以追加一款设备名称做定向复验：
+
+```text
+node scripts/check-device-interactions-browser.mjs "iPhone SE (3rd gen)"
+node scripts/check-family-calendar-browser.mjs "iPhone SE (3rd gen)"
+node scripts/check-event-watch-browser.mjs "Galaxy S24"
+node scripts/check-planning-browser.mjs "iPhone 16"
+```
+
+新增机型36组全部通过；比赛日短屏首项时间原被底部导航遮住，已合并顶部读取／返回为同一行并收紧间距，保留时间字号。新增几何断言同时核对到场和官方时间完整显示在实际导航边界上方，原320/390px四组也通过。

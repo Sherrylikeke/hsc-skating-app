@@ -1,3 +1,4 @@
+import {phoneModels} from './browser-devices.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import {existsSync} from 'node:fs';
@@ -156,7 +157,7 @@ async function walk(browser,profile,language,folder) {
   } finally { await context.close(); }
 }
 
-const models=process.argv.length>2?process.argv.slice(2):['iPhone 17 Pro','Galaxy Z Flip 6','iPhone 17 Pro Max'];
+const models=phoneModels();
 for(const model of models) {
   const profile=pw.devices[model],engine=profile.defaultBrowserType;
   const browser=await pw[engine].launch(engine==='chromium'&&process.platform==='win32'?{executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe'}:{});
