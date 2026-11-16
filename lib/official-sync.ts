@@ -1,5 +1,6 @@
 import {readOfficialPdfItems} from './official-pdf';
 import {selectDetailEvents} from './sync-selection';
+import {selectLinkEvents,refreshEventLinks} from './event-document-sync';
 import {db,putLiveEvent,readLiveEvents,readLiveEvent,putSyncStatus,readSyncStatus,profiles} from './club-store';
 import {calendarEvent,discoverDocuments,parseScheduleDocument,competitionSchedule,scheduleRows} from './official-parser';
 import {importEntries} from './entry-import';
@@ -45,9 +46,16 @@ async function syncCalendarBody(){
     for(const raw of gathered){const item=calendarEvent(raw,now);if(!item.name||!/^20\d\d-\d\d-\d\d$/.test(item.start)||!allowedHosts.has(new URL(item.url).hostname))continue;const previous=existing.get(item.id);
       if(previous){incoming.push({...previous,...item,registrations:mergeRegistrations(item.registrations||[],previous.registrations||[]),offeredCategories:[...new Set([...(previous.offeredCategories||[]),...(item.offeredCategories||[])])],documents:previous.documents,participants:previous.participants,blocks:previous.blocks,entryStatus:previous.entryStatus,scheduleStatus:previous.scheduleStatus,detailCheckedAt:previous.detailCheckedAt,detailError:previous.officialModified!==item.officialModified?'官网页面有修订，名单与赛程等待复核':previous.detailError});}else incoming.push(item);
     }
+    const linkChecks=[];
+    for(const candidate of selectLinkEvents(incoming,start)){
+      const refreshed=await refreshEventLinks(candidate,now,async url=>new TextDecoder().decode(await source(url)));
+      incoming[incoming.indexOf(candidate)]=refreshed;
+      linkChecks.push({id:refreshed.id,checkedAt:refreshed.linksCheckedAt,error:refreshed.linksError,documents:refreshed.documents.map(({url,label,kind})=>({url,label,kind}))});
+    }
     for(const event of incoming)await putLiveEvent(event);
-    await putSyncStatus({lastSuccess:now,lastCalendarSuccess:now,events:incoming.length,error:null});
-    return {events:incoming.length,checkedAt:now,source:'https://skateontario.org/events/',nextEvents:selectDetailEvents(incoming,start).map(event=>({id:event.id,name:event.name,start:event.start}))};
+    const errors=linkChecks.filter(check=>check.error).map(check=>check.id+': '+check.error);
+    await putSyncStatus({lastSuccess:errors.length?undefined:now,lastCalendarSuccess:now,events:incoming.length,error:errors.join('；')||null});
+    return {events:incoming.length,checkedAt:now,source:'https://skateontario.org/events/',linkChecks,errors,nextEvents:selectDetailEvents(incoming,start).map(event=>({id:event.id,name:event.name,start:event.start}))};
   }catch(error){await putSyncStatus({error:message(error)});throw error;}
 }
 async function syncEventBody(id:string){
@@ -57,6 +65,7 @@ async function syncEventBody(id:string){
   const now=new Date().toISOString();let event={...existing,detailSuccessAt:existing.detailSuccessAt||(!eventNeedsReview(existing)?existing.detailCheckedAt:undefined),detailCheckedAt:now};const errors:string[]=[];let changed=0;
   try{
     const html=new TextDecoder().decode(await source(event.url));const discovered=discoverDocuments(html,event.url);
+    event.linksAttemptedAt=now;event.linksCheckedAt=now;delete event.linksError;
     const details=registrationDetails(html,event.name,event.url);
     // Page updates take priority; announcements fill missing windows and offered categories.
     for(const url of announcementLinks(html,event.url))try{
@@ -127,9 +136,9 @@ async function syncEventBody(id:string){
     }else event.startingOrderStatus=existing.startingOrders?.length?'官网当前未列出出场链接，保留已读取版本':'官网尚未发现 Starting Order 链接';
     event.detailError=errors.join('；')||undefined;if(!eventNeedsReview(event))event.detailSuccessAt=now;await putLiveEvent(event);await putSyncStatus({lastAttempt:now,lastSuccess:errors.length?undefined:now,error:errors.join('；')||null,entries:event.participants.filter(row=>row.skaterIds.length).length,blocks:event.blocks.length});
     return {id:event.id,name:event.name,changed,registrationPreview:event.registrations,participants:event.participants.length,matchedSkaters:new Set(event.participants.flatMap(row=>row.skaterIds)).size,blocks:event.blocks.length,entryFiles:entryProgress(event),startingOrderFiles:startingOrderProgress(event),startingOrderStatus:event.startingOrderStatus,entryStatus:event.entryStatus,scheduleStatus:event.scheduleStatus,scheduleSource:schedule?{url:schedule.url,hash:schedule.hash,parserVersion:schedule.parserVersion}:undefined,scheduleBlocksPreview:event.blocks.map(block=>({date:block.date,start:block.start,end:block.end,category:block.category,rink:block.rink})),clubEntriesPreview:event.participants.filter(entry=>entry.skaterIds.length).slice(0,80).map(entry=>({name:entry.name,category:entry.category,skaterIds:entry.skaterIds})),schedulePreview:scheduleRows([event],roster).filter(row=>row.activity==='competition').slice(0,40).map(row=>({name:row.skaterName,category:row.category,date:row.date,start:row.start,end:row.end,rink:row.rink,uncertain:row.uncertain,startNumber:row.startingOrder?.startNumber,warmupGroup:row.startingOrder?.warmupGroup,individualTime:row.startingOrder?.individualTime,sourceUrl:row.startingOrder?.sourceUrl})),checkedAt:now,errors};
-  }catch(error){event.detailError=message(error);event.scheduleRetained=existing.blocks.length>0;await putLiveEvent(event);await putSyncStatus({lastAttempt:now,error:message(error)});throw error;}
+  }catch(error){event.detailError=message(error);if(event.linksCheckedAt!==now){event.linksAttemptedAt=now;event.linksError=message(error);}event.scheduleRetained=existing.blocks.length>0;await putLiveEvent(event);await putSyncStatus({lastAttempt:now,error:message(error)});throw error;}
 }
-export async function syncStatus(){return {status:await readSyncStatus(),events:(await readLiveEvents()).map(event=>({id:event.id,name:event.name,start:event.start,end:event.end,detailCheckedAt:event.detailCheckedAt,error:event.detailError,matched:event.participants.filter(row=>row.skaterIds.length).length,participants:event.participants.length,blocks:event.blocks.length,entryFiles:entryProgress(event),entryStatus:event.entryStatus,scheduleStatus:event.scheduleStatus})),scope:'Skate Ontario 官方日历与网页／Announcement报名日期；DSTools HTML 名单；已验证的三列Interim PDF；同源目录内 Name/Club/Section 与总人数可核对的报名 PDF，每场每轮最多四份；明确日期分区、START/END 与 RINK 表头的赛程 PDF。其他格式或未完成批次保留链接并提示核对。',instructions:'先同步日历，再依次检查返回的 nextEvents（未来183天，最近两场加一场报名资料优先轮换：优先7日内开放或仍开放且类别/时分不完整的赛事，当天已尝试者冷却；最多三场，包含 STAR 1–4）。PDF 名单分批轮转，待处理不等于全量成功。读取失败不删除旧数据。官方时段是组别时间，不推算个人时间；教练集合与备注独立保存。'};}
+export async function syncStatus(){return {status:await readSyncStatus(),events:(await readLiveEvents()).map(event=>({id:event.id,name:event.name,start:event.start,end:event.end,linksAttemptedAt:event.linksAttemptedAt,linksCheckedAt:event.linksCheckedAt,linksError:event.linksError,documents:event.documents.filter(document=>document.kind==='schedule'||document.kind==='entries').map(({kind,url,label})=>({kind,url,label})),detailCheckedAt:event.detailCheckedAt,detailSuccessAt:event.detailSuccessAt,error:event.detailError,matched:event.participants.filter(row=>row.skaterIds.length).length,participants:event.participants.length,blocks:event.blocks.length,entryFiles:entryProgress(event),entryStatus:event.entryStatus,scheduleStatus:event.scheduleStatus})),scope:'Skate Ontario 官方日历与网页／Announcement报名日期；DSTools HTML 名单；已验证的三列Interim PDF；同源目录内 Name/Club/Section 与总人数可核对的报名 PDF，每场每轮最多四份；明确日期分区、START/END 与 RINK 表头的赛程 PDF。其他格式或未完成批次保留链接并提示核对。',instructions:'日历每轮已独立按最久未尝试顺序读取最多三场官网链接，不依赖 PDF 导入；lastCalendarSuccess不代表文件导入成功，逐场核对linksCheckedAt、detailSuccessAt及error。先同步日历，再依次检查返回的 nextEvents，保持返回顺序，不要重新按日期取最近三场（未来183天，最近两场加一场报名资料优先轮换：优先7日内开放或仍开放且类别/时分不完整的赛事，当天已尝试者冷却；最多三场，包含 STAR 1–4）。PDF 名单分批轮转，待处理不等于全量成功。读取失败不删除旧数据。官方时段是组别时间，不推算个人时间；教练集合与备注独立保存。'};}
 async function withSyncLock<T>(operation:()=>Promise<T>):Promise<T>{
   const lock=JSON.stringify({token:crypto.randomUUID(),expiresAt:Date.now()+300000});
   const acquired=await db().prepare("INSERT INTO app_meta (key,value) VALUES ('official-source-lock',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value WHERE CAST(json_extract(app_meta.value,'$.expiresAt') AS INTEGER) <= ? RETURNING value").bind(lock,Date.now()).first();

@@ -5,7 +5,7 @@ function documentNeedsReview(document:OfficialDocument):boolean{
   return !!document.error||(document.kind==='start-order'&&(!document.checkedAt||![STARTING_DRAW_VERSION,'starting-api-1'].includes(document.parserVersion||'')))||!!document.entryFiles?.some(file=>!file.checkedAt||file.parserVersion!==ENTRY_PDF_VERSION||file.matchingRosterHash!==document.matchingRosterHash||documentNeedsReview(file));
 }
 
-export const eventNeedsReview=(event:LiveEvent)=>!!event.detailError||event.documents.some(documentNeedsReview);
+export const eventNeedsReview=(event:LiveEvent)=>!!event.detailError||!!event.linksError||event.documents.some(documentNeedsReview);
 
 export function clubEventResponse(event:LiveEvent,admin:boolean):ClubEvent{
   const needsReview=eventNeedsReview(event);

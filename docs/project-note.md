@@ -2,6 +2,14 @@
 
 这是项目负责人的持续维护记录，不属于会员网页内容。后续会话先读取本文件与 AGENTS.md，在完成实质修改或验收后更新；不自动轮询、不新增定时任务。下列运行数据是查询快照，不是实时监控。
 
+## 2026-11-16 Niagara Schedule链接与更新成功判断
+
+- 用户反馈Niagara已有Schedule而应用赛事页只有Interim/官网链接，要求核对频率与更新成功依据。实时Sites为V50/public，原Automation_a2b3ae8946b48191937bd484365e1ec2仍启用、每小时America/Toronto执行；同步快照lastCalendarSuccess为2026-11-16T15:15:02.574Z，而Niagara详细检查仍是11-11T14:24:06.541Z。不能将任务启用或日历成功当成每场文件成功。
+- 官方页明确Schedule已发布、正式Entry Lists稍后；Schedule.pdf为两页。2026-11-16T16:07:08.219Z仅定向同步SO-325865，保存https://skateontario.org/wp-content/uploads/2026/08/Schedule.pdf，仍保留Interim547条/23位关联选手。两页缺少解析器可确认的独立日期，blocks=0/errors非空；不制造最终分组与个人时间。当前链接可打开，PDF解析未成功。近180分钟Worker errors_only日志为空，但业务解析警告属于HTTP200内的部分失败，不能据此断言全量健康。
+- 新增日历内部独立官网链接轮换，每次最多三场、按最久未尝试排序，失败也轮换；不等待或下载PDF，不改变既有详细导入上限、小时任务、名单/赛程/私人数据。当前37场约13个成功小时轮次覆盖链接，不承诺每场每小时更新。赛事页明确标Schedule PDF并保留较完整的带日期标签；赛事卡片区分PDF已公布与时段尚未导入。
+- 管理员诊断区分linksAttemptedAt/linksCheckedAt和detailCheckedAt/detailSuccessAt；普通账号只返回链接与待确认提示，不返回原始错误与内部时戳。增加逐场同步状态返回官方Schedule/Entries链接供核对，提醒自动任务按nextEvents原序执行，不能重新取最近三场。没有新增任务、schema、账号或邮件配置。原工作区本轮核对为21个未提交PDF删除，继续隔离保留。GitHub main已推进到44c5cb9，包含尚未部署的日历/比赛准备/订阅与0006/0007迁移；本次Sites只部署现有线上基线的链接修复，另在最新GitHub主线合入同一修复，保留未上线功能及其发布范围。
+- 源码基线d28bfe4；官方助手同项目打开成功。完整回归21/21、最终Web类型、8组同步客户端及官方生产构建通过；真实Worker/临时D1验证7场3轮独立链接更新、部分失败不阻塞且不读取PDF。Chrome/WebKit×320/1280px×中英文×家长/管理员共16视图全部通过，Schedule链接/带日期标签/新窗口/普通账号诊断隐藏及无溢出均核对；复看320px家长截图。浏览器报告位于本会话outputs/niagara-documents-browser，均隔离API，无生产账号操作。默认临时Chrome配置与开发HMR曾阻断检查，改用工作区临时配置和已构建生产预览后完整通过，未放宽断言。最终部署和GitHub结果完成后补记。 最新GitHub main上的合并保留全部待发布功能，类型与25/25回归通过；该完整主线不用于本次生产部署。
+
 ## 2026-11-16 补充普通／小屏 iPhone 与安卓直板机
 
 - 在main ffaf95d干净工作区上补充 iPhone 16、iPhone SE（第三代）、Galaxy S24；采用仓库现有Playwright 1.64.1设备参数，不把物理分辨率当浏览器视口。原iPhone 17 Pro／Pro Max、Z Flip 6及320px专项均保留。

@@ -25,7 +25,8 @@ export function discoverDocuments(html:string,base:string):OfficialDocument[]{
     // Keep entry lists and actual schedule files, not navigation/category pages.
     if(kind==='schedule' && !/\.pdf$/i.test(url.pathname))continue;
     if(kind==='results' && !/\.pdf$|index\.|\.htm$|\/$/i.test(url.pathname))continue;
-    found.set(url.href,{url:url.href,label:label||kind,kind});
+    const previous=found.get(url.href);
+    found.set(url.href,{url:url.href,label:previous&&previous.label.length>label.length?previous.label:label||kind,kind});
   }
   return [...found.values()];
 }
