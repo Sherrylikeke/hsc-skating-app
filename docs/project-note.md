@@ -9,7 +9,7 @@
 - 浏览器断言分别核对预计热身/开滑标签和时间值，并逐段检查实际文字矩形是否越过卡片边界；新增320px中英文竖屏。三机型、中英、横竖屏及新增窄屏共14组Chromium/WebKit完整流程通过，含筛选、返回、当前线、ICS及账号朋友隔离。截图在本机忽略目录work/calendar-layout-fix/after，使用隔离API，未登录生产账号或发信。
 - 本轮Web类型、20/20功能回归、官方Sites助手生产构建、构建许可检查及真实Worker/临时D1回归通过。Windows默认沙箱临时目录下D1初始化报internal error，改为仅本次进程使用工作区work/calendar-layout-fix/tmp后通过；未改测试或系统配置来跳过断言。
 - 2026-11-16只读Sites get_site确认原项目active、latest_version_number=50、正式网址https://hamiltonskatingclub.memberportal.dev；源码凭据接口仍返回Sites project not found，官方源码同步/部署未完成。未查询实时Worker及小时同步执行状态，不沿用历史快照。后续待Sites恢复原项目源码访问后再部署，GitHub推送不等于网站上线。
-- 本地验收完成；本轮按用户要求正常推送原GitHub main并核对关联Web regression，云端结果在完成后补记。
+- 修复源码8437658496410a1c50498ec8b8afbfe65f493773已正常推送原GitHub main；2026-11-16关联[Web regression 43828851574](https://github.com/Sherrylikeke/hsc-skating-app/actions/runs/43828851574)整体success，regression、dependencies、mobile-browser三项全部通过。云端手机任务已执行新增窄屏断言及后续个人赛程检查。后续仅补记本条验收结果，不重复部署或更改运行源码。
 
 
 ## 2026-11-15 免费日历优化与 MIT 声明（已验收，待部署）
