@@ -12,6 +12,7 @@
 - 新增D1迁移0006／0007与对应schema快照，旧迁移未改。本轮24项功能回归、最终相关回归、Web类型、生产构建、许可检查及真实Worker／临时D1回归通过，包含新API和失败后赛程保留；新流程320px Chromium／390px WebKit中英4组、原日历14组、390px个人赛程中英2组均通过。清单日期切换后的WebKit断言原先未等待本机状态恢复，补充就绪等待后通过，未削弱持久化断言。主代理复看窄屏及完整页面截图，首项到场／官方时间可在首屏查看，打印PDF留作本地验收。资料与实施配置见docs/planning.md和docs/calendar.md。
 - 本轮没有查询或修改Sites、生产D1、Worker实时状态或小时同步执行记录；遵照用户暂停Sites问题的要求，生产发布及两项迁移仍待拥有原Sites项目权限的所有者完成。不能把GitHub源码同步视作网站上线；未验证真实第三方日历刷新或手机真机。
 - 首次源码0da04a3已推送main；[CI 43837607041](https://github.com/Sherrylikeke/hsc-skating-app/actions/runs/43837607041)发现资料状态模块新增运行时导入缺少.ts扩展名，两项直接运行TypeScript的Starting Order回归失败。已补齐扩展名并在本地重过这两项，未改变业务行为或放宽断言。比赛日中英样本PDF均为A4一页；所有截图和本地日志保存在忽略目录work/planning-browser及work/planning-*.log。
+- 最终运行源码e014397b32f4b831e6c284459a9d87be8f9a9758已正常推送原GitHub main；2026-11-16 [Web regression 43838133221](https://github.com/Sherrylikeke/hsc-skating-app/actions/runs/43838133221)整体success，regression、dependencies、mobile-browser三项全部通过，含新增4组比赛准备完整流程。后续仅补本条验收记录，不修改运行代码或重新部署。
 
 ## 2026-11-16 窄屏日历预计时间裁切修复
 
