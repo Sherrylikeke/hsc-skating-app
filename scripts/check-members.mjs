@@ -217,7 +217,7 @@ assert.deepEqual(scheduleRows([projectedEvent],fixtureSkaters),scheduleRows([dia
 assert.deepEqual(diagnosticEvent,originalDiagnosticEvent);
 assert.equal(clubEventResponse({...diagnosticEvent,detailError:undefined,documents:[]},false).needsReview,false);
 assert.equal(clubEventResponse({...diagnosticEvent,detailError:undefined,documents:[{url:'https://example.test/entries',label:'Entries',kind:'entries',entryFiles:[{url:'https://example.test/pending.pdf',label:'Pending',kind:'entries'}]}]},false).needsReview,true);
-assert.deepEqual(clubSyncResponse({},false),{needsReview:false});
+assert.deepEqual(clubSyncResponse({},false),{needsReview:false,sourceStatus:{lastSuccess:undefined,lastAttempt:undefined,needsReview:false}});
 database.database.prepare('INSERT INTO live_events (id,payload,updated_at) VALUES (?,?,?)').run(diagnosticEvent.id,JSON.stringify(diagnosticEvent),diagnosticTime);
 database.database.prepare('INSERT INTO app_meta (key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run('official-sync-status',JSON.stringify({error:diagnosticMarker,lastAttempt:diagnosticTime,lastSuccess:diagnosticTime,lastCalendarSuccess:diagnosticTime,events:1,entries:1,blocks:1,internalDiagnostic:diagnosticMarker}));
 const viewer={identity:identity('viewer'),cookie:''};await login(viewer,'parent');
@@ -225,7 +225,7 @@ database.database.prepare("UPDATE hsc_members SET role=NULL,status='club-viewer'
 async function assertOrdinaryDiagnostics(user){
   const data=await route(user,clubAPI.GET,'/api/club',undefined,200,{'oai-authenticated-user-id':'owner'});
   const event=data.events.find(event=>event.id===diagnosticEvent.id);
-  assert.equal(event.needsReview,true);assert.deepEqual(data.sync,{needsReview:true});
+  assert.equal(event.needsReview,true);assert.deepEqual(data.sync,{needsReview:true,sourceStatus:{lastSuccess:diagnosticTime,lastAttempt:diagnosticTime,needsReview:true}});
   for(const field of ['officialModified','checkedAt','detailCheckedAt','detailError','entryStatus','scheduleStatus','startingOrderStatus','internalDiagnostic'])assert.equal(Object.hasOwn(event,field),false,field);
   assert.deepEqual(event.documents,[{url:'https://example.test/entries',label:'Official entries',kind:'entries',category:'Novice Men'}]);
   assert.equal(event.participants[0].name,'Test Alpha');assert.equal(event.blocks[0].start,'09:00');assert.equal(event.startingOrders[0].individualTime,'09:05');

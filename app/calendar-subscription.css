@@ -1,0 +1,10 @@
+.calendar-subscription{border-top:1px solid var(--border,#dce5e2);margin-top:1.1rem;padding-top:1rem;font-size:.875rem;line-height:1.55}
+.calendar-subscription h3{font-size:.95rem;margin:0 0 .5rem}
+.calendar-subscription p{margin:.4rem 0;color:var(--muted,#52635e)}
+.calendar-subscription-actions{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin:.8rem 0}
+.calendar-subscription button{min-height:44px;border:1px solid var(--border,#ccd9d3);border-radius:.5rem;background:var(--surface,#fff);padding:.45rem .7rem;color:inherit;font:inherit;cursor:pointer}
+.calendar-subscription button:disabled{opacity:.6;cursor:wait}
+.calendar-subscription-url label{display:block;font-weight:600;margin-bottom:.4rem}
+.calendar-subscription-url>div{display:flex;gap:.5rem;align-items:stretch;flex-wrap:wrap}
+.calendar-subscription-url input{flex:1 1 15rem;min-width:0;width:100%;font:inherit;font-size:.8rem;padding:.5rem;border:1px solid var(--border,#ccd9d3);border-radius:.5rem;background:var(--surface,#fff);color:inherit}
+.calendar-subscription [role=alert]{color:#a12d29}

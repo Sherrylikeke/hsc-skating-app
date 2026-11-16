@@ -15,6 +15,8 @@ type Props = {
   onSkater:(id:string)=>void;
   onWatch:()=>void;
   onCalendar:()=>void;
+  onDay?:()=>void;
+  onRegistrations?:()=>void;
   rows:ScheduleRow[];
   skaters:ClubSkater[];
   ownIds:string[];
@@ -24,7 +26,7 @@ type Props = {
   renderRows:(rows:ScheduleRow[], showArrival?:boolean)=>ReactNode;
 };
 
-export default function PersonalSchedule({events,rows,skaters,ownIds,scope,onScope,onChange,renderRows,onWatch,onCalendar,onSkater,limit,editableIds,onCoachChange}:Props) {
+export default function PersonalSchedule({events,rows,skaters,ownIds,scope,onScope,onChange,renderRows,onWatch,onCalendar,onDay,onRegistrations,onSkater,limit,editableIds,onCoachChange}:Props) {
   const [now,setNow] = useState(Date.now);
   useEffect(() => {
     const update = () => setNow(Date.now());
@@ -55,6 +57,8 @@ export default function PersonalSchedule({events,rows,skaters,ownIds,scope,onSco
         </CompactSelect>
       </div>
       <HomeSkaters limit={limit} editableIds={editableIds} onCoachChange={onCoachChange} onSkater={onSkater} skaters={skaters} ownIds={ownIds} onChange={onChange}/>
+      {onDay&&<button type="button" className="cal-entry" onClick={onDay}>{text('Competition day','比赛日')}</button>}
+      {onRegistrations&&<button type="button" className="cal-entry" onClick={onRegistrations}>{text('Registration board','报名看板')}</button>}
       <button type="button" className="cal-entry" onClick={onCalendar}>{text('Schedule calendar','赛程日历')}</button>
       <button type="button" className="watch-entry" onClick={onWatch}>{text('Cheer from now','从现在看 · 给朋友加油')}</button>
     </section>

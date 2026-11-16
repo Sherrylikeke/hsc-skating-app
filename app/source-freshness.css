@@ -1,0 +1,4 @@
+.source-freshness{display:grid;gap:5px;margin:12px 0;color:var(--muted-foreground,#607065);font-size:12px;line-height:1.5;overflow-wrap:anywhere;white-space:normal;text-align:left}
+.source-freshness time{font-weight:600}
+.source-freshness-pending{color:#805500}
+@media print{.source-freshness{font-size:10pt;color:#333}}

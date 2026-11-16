@@ -81,6 +81,7 @@ jobs:
           node scripts/check-device-interactions-browser.mjs
           node scripts/check-event-watch-browser.mjs
           node scripts/check-family-calendar-browser.mjs
+          node scripts/check-planning-browser.mjs
           HSC_MOBILE_WIDTHS=390 node scripts/check-family-schedule-browser.mjs
       - name: Save browser journey diagnostics
         if: always()
@@ -91,6 +92,7 @@ jobs:
             work/device-interactions/**
             work/event-watch/**
             work/family-calendar/**
+            work/planning-browser/**
             work/family-schedule/**
             ${{ runner.temp }}/hsc-preview.log
           if-no-files-found: ignore

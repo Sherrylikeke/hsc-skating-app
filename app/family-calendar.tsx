@@ -14,6 +14,7 @@ import SessionTiming from './session-timing';
 import {text,useLanguage} from '../lib/i18n';
 import CompactSelect from './compact-select';
 import CalendarNotice from './calendar-notice';
+import CalendarSubscription from './calendar-subscription';
 import {calendarExport} from '../lib/calendar-export';
 import {saveTextFile} from '../lib/client-platform';
 import '@fullcalendar/react/skeleton.css';
@@ -251,6 +252,7 @@ export default function FamilyCalendar({events,skaters,ownIds,memberId,onNavigat
       {registrations.map(r=><p key={r.id}><strong>{r.name}</strong> · {r.category} · {r.event.name} · {text('Rink pending','冰面待公布')}
         {r.event.start!==r.event.end&&<small>{text('Competition dates · ','赛事日期 · ')}{r.event.start} – {r.event.end}</small>}</p>)}
     </section>}
+    <CalendarSubscription key={memberId} memberId={memberId}/>
     <CalendarNotice/>
   </section>;
 }

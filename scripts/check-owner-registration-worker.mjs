@@ -16,7 +16,7 @@ const markFixture=JSON.parse(fs.readFileSync('tests/fixtures/results-skate-canad
 const startingFixture=JSON.parse(fs.readFileSync('tests/fixtures/sectionals-2026-starting-order-api.json','utf8'));
 const fixtureCarson=JSON.parse(fs.readFileSync('data/roster.json','utf8')).find(row=>row.name==='Carson Wang');
 const startingHtml='<script>var EVENT_ID="'+startingFixture.eventId+'";var API="/api/results";</script>';
-let awardsFetches=0;
+let awardsFetches=0,failFreshnessSchedule=false;
 const fixtureHost='sc-css-public-api-cmh9d3htgxfpdkb7.canadacentral-01.azurewebsites.net';
 let officialRequests=0;
 const keswickReads=[];
@@ -26,6 +26,7 @@ const workerOptions={cf:false,modules,modulesRoot:root,compatibilityDate:runtime
 },outboundService:request=>{const url=new URL(request.url);
 if(url.hostname==='skatingresults.ca'){if(url.pathname.endsWith('/categories'))return Response.json({Categories:[startingFixture.category]});if(url.pathname.endsWith('/segments'))return Response.json({Segments:startingFixture.segments});const id=url.pathname.match(/segment\/([^/]+)\/entries$/)?.[1];if(id)return Response.json(startingFixture.entries[id]);return new Response(startingHtml);}
 if(url.hostname==='www.skateontario.org'){
+if(failFreshnessSchedule&&url.pathname==='/fixture-keswick-schedule.pdf')return new Response('Fixture unavailable',{status:503});
 if(url.pathname==='/fixture-home/')return new Response('<p>Assigned athlete registration opens at 10:00 AM ET November 9, 2026 and closes November 11, 2026 at 11:59 PM ET.</p><p>Public Registration: Registration opens at 12:00 PM ET November 12, 2026 and closes November 16, 2026 at 11:59 PM ET.</p><a href="https://www.skateontario.org/fixture-interim.pdf">Interim List</a>');
 if(url.pathname==='/fixture-interim.pdf')return new Response(fs.readFileSync('tests/fixtures/niagara-2026-interim-entry.pdf'));
 if(url.pathname==='/fixture-max/')return new Response('<a href="https://www.skateontario.org/fixture-keswick-schedule.pdf">Schedule</a><a href="https://www.skateontario.org/fixture-max-entries.html">Entry List</a><a href="https://www.skateontario.org/results/27KES/27KesSTAR5MenU10FP2SO.pdf">Starting Order</a>');
@@ -130,6 +131,41 @@ try {
   assert.ok(maxRow,JSON.stringify({entries:maxSaved.participants,blocks:maxSaved.blocks.filter(b=>b.date==='2026-11-20'&&b.start>='17:00'&&b.start<'18:00')}));
   assert.equal(maxRow.date,'2026-11-20');assert.equal(maxRow.start,'17:35');assert.equal(maxRow.end,'18:10');assert.equal(maxRow.rink,'BLUE RINK');assert.equal(maxRow.startNumber,2);assert.equal(maxRow.warmupGroup,1);
   console.log('Real Keswick PDF in Worker: Max Wang retains Friday 17:35–18:10 BLUE RINK, official #2 and warm-up 1 in the shared regular/NQ session.');
+  assert.equal(maxSaved.detailSuccessAt,undefined,'Partial PDF import must not claim full success');
+  const lastCompleteCheck='2026-10-01T12:00:00Z';
+  await database.prepare('UPDATE live_events SET payload=? WHERE id=?').bind(JSON.stringify({...maxSaved,detailSuccessAt:lastCompleteCheck}),maxEvent.id).run();
+  failFreshnessSchedule=true;
+  const partialResponse=await post('/api/sync',{eventId:maxEvent.id},platformHeaders);
+  assert.equal(partialResponse.status,200);
+  const retainedSchedule=JSON.parse((await database.prepare('SELECT payload FROM live_events WHERE id=?').bind(maxEvent.id).first()).payload);
+  assert.equal(retainedSchedule.detailSuccessAt,lastCompleteCheck);
+  assert.equal(retainedSchedule.scheduleRetained,true);
+  assert.deepEqual(retainedSchedule.blocks,maxSaved.blocks);
+  failFreshnessSchedule=false;
+  assert.equal((await post('/api/sync',{eventId:maxEvent.id},platformHeaders)).status,200);
+  const recoveredSchedule=JSON.parse((await database.prepare('SELECT payload FROM live_events WHERE id=?').bind(maxEvent.id).first()).payload);
+  assert.equal(recoveredSchedule.scheduleRetained,false);
+  assert.equal(recoveredSchedule.detailSuccessAt,lastCompleteCheck);
+  assert.ok(recoveredSchedule.detailError,'Unsupported PDF rows remain pending even after network recovery');
+  console.log('Source freshness keeps the successful timestamp and valid schedule during a failed read, then clears retained status after recovery.');
+  // New planning routes use the same authenticated member; no private relation is created.
+  const maxSkater=JSON.parse(fs.readFileSync('data/roster.json','utf8')).find(row=>row.name==='Max Wang');
+  const planningEvent={...recoveredSchedule,id:'SO-planning-fixture',start:'2099-11-20',end:'2099-11-20',blocks:recoveredSchedule.blocks.map(block=>({...block,date:'2099-11-20'}))};
+  await database.prepare('INSERT INTO live_events (id,payload,updated_at) VALUES (?,?,?)').bind(planningEvent.id,JSON.stringify(planningEvent),new Date().toISOString()).run();
+  assert.equal((await post('/api/member?action=home-skater',{skaterId:maxSkater.id,pinned:true},platformHeaders)).status,200);
+  assert.equal((await post('/api/registrations',{skaterId:maxSkater.id,eventId:planningEvent.id,status:'submitted'},platformHeaders)).status,200);
+  const planningList=await mf.dispatchFetch(origin+'/api/registrations',{headers:platformHeaders});
+  assert.equal(planningList.status,200);assert.equal((await planningList.json()).plans.find(plan=>plan.eventId===planningEvent.id).status,'submitted');
+  assert.equal((await mf.dispatchFetch(origin+'/api/registrations')).status,401);
+  const subscription=await post('/api/calendar/subscription',{action:'create'},platformHeaders);
+  assert.equal(subscription.status,200,await subscription.clone().text());
+  const feedURL=(await subscription.json()).url;
+  const feed=await mf.dispatchFetch(feedURL);assert.equal(feed.status,200);assert.match(feed.headers.get('content-type'),/text\/calendar/);
+  const feedText=await feed.text();assert.match(feedText,/Max Wang/);assert.doesNotMatch(feedText,/Carson Wang|VALARM/);
+  assert.equal((await post('/api/calendar/subscription',{action:'revoke'},platformHeaders)).status,200);
+  assert.equal((await mf.dispatchFetch(feedURL)).status,404);
+  console.log('Built Worker planning routes persist a personal plan and serve/revoke an official-only subscription with temporary D1.');
+
   const newSkater={name:'Fixture Added Skater',coach:'Jen Jackson/Bryce Davidson',training:true,identityPending:false,profileRevision:null,coachRevision:0};
   assert.equal((await post('/api/skaters',newSkater)).status,401);
   for(const role of ['parent','coach']){
@@ -181,6 +217,7 @@ try {
   await database.prepare('INSERT INTO live_events (id,payload,updated_at) VALUES (?,?,?)').bind(homeEvent.id,JSON.stringify(homeEvent),new Date().toISOString()).run();
   const homeSync=await post('/api/sync',{eventId:homeEvent.id},platformHeaders);assert.equal(homeSync.status,200,await homeSync.clone().text());const homeResult=await homeSync.json();assert.equal(homeResult.participants,547);assert.equal(homeResult.registrationPreview.find(window=>window.kind==='public').closes,'2026-11-16');
   const homeSaved=JSON.parse((await database.prepare('SELECT payload FROM live_events WHERE id=?').bind(homeEvent.id).first()).payload);
+  assert.ok(homeSaved.detailSuccessAt,'A complete successful detail check records its own timestamp');
   assert.deepEqual(homeSaved.registrations.map(({kind,opensTime,closesTime,timezone})=>({kind,opensTime,closesTime,timezone})),[{kind:'assigned',opensTime:'10:00',closesTime:'23:59',timezone:'America/Toronto'},{kind:'public',opensTime:'12:00',closesTime:'23:59',timezone:'America/Toronto'}]);
   const homePublic=homeSaved.registrations.find(window=>window.kind==='public');assert.equal(homePublic.opens,'2026-11-12');assert.equal(homePublic.closes,'2026-11-16');assert.equal(homePublic.url,'https://uplifterfigureskating.com/');assert.ok(homeSaved.offeredCategories.includes('STAR 2'));assert.equal(homeSaved.blocks.length,0);
   console.log('Worker homepage: current interim PDF persists 547 records without invented times, plus official registration windows and category metadata.');

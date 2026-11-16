@@ -4,7 +4,7 @@ import type {MouseEvent} from 'react';
 import type {HomeScope} from '../lib/home-schedule';
 import {text} from '../lib/i18n';
 
-const views=['home','skaters','events','personal','coach','watch','calendar'] as const;
+const views=['home','skaters','events','personal','coach','watch','calendar','day','registrations'] as const;
 type View=typeof views[number];
 type Destination=View|'member'|'profile'|'competition';
 const defaults={
@@ -59,7 +59,7 @@ function destinationLabel(destination:Destination){
     home:['Back to club overview','返回俱乐部概览'],skaters:['Back to all skaters','返回选手列表'],
     events:['Back to competitions','返回比赛中心'],personal:['Back to personal schedule','返回个人赛程'],
     coach:['Back to coach schedule','返回教练总赛程'],watch:['Back to event watch','返回比赛关注'],
-    calendar:['Back to calendar','返回赛程日历'],member:['Back to member workspace','返回会员工作区'],
+    calendar:['Back to calendar','返回赛程日历'],day:['Back to competition day','返回比赛日'],registrations:['Back to registration board','返回报名看板'],member:['Back to member workspace','返回会员工作区'],
     profile:['Back to skater profile','返回选手档案'],competition:['Back to competition details','返回比赛详情']
   };
   return text(...labels[destination]);

@@ -16,6 +16,16 @@
 
 文件采用 RFC 5545：UTC 起止时间、稳定事件 UID、CRLF、文本转义及按 UTF-8 75 字节折行。浏览器下载使用 text/calendar；Capacitor 复用缓存文件＋系统分享通道。它是一次性副本，不是订阅，后续官网修订不会自动更新；实际 Apple/Google 日历导入和手机系统分享仍需真机验收。
 
+## 可更新的个人订阅
+
+日历底部“订阅我的选手日历”可创建个人网址，添加到日历应用的“订阅／通过网址添加”。订阅范围始终是服务端当前My Skaters，不包含浏览器临时关注的朋友。每次读取重新检查账号状态、认证版本及邮箱条件；停用、撤销全部会话、替换网址或撤销订阅会使旧网址失效。
+
+网址使用32字节随机令牌，D1 `hsc_calendar_subscriptions` 只存SHA-256哈希。原始网址只在创建／更换当次显示，普通读取不能找回；持有网址即可读取这份官方日程，因此应妥善保存。撤销无法远程删除第三方日历已缓存的事件。
+
+订阅沿用确定官方组别时段过滤，不含私人备注、教练安排、估算或闹钟。UID由赛事、选手、练习／比赛和既有类别时段身份组成，正常时间修订不新增重复事件。日历应用自行决定刷新频率，网站不能保证即时更新；出发前仍应核对HSC。原一次性导出保留。
+
+管理接口为已登录同源 `GET/POST /api/calendar/subscription`，订阅读取为令牌授权的 `GET /api/calendar/feed?token=…`。它不建立应用会话，也不授予其他API权限。新迁移和验收说明见 [planning.md](planning.md)。
+
 ## MIT 声明随构建分发
 
 `scripts/fullcalendar-notice.ts` 为 Web 和 Capacitor 共用的 Vite 插件，从当前安装版本读取 FullCalendar React/Core、headless-calendar 和 temporal-polyfill 的完整 MIT 许可，生成 `third-party/fullcalendar.txt`，包含包名、版本及上游版权。许可改变或文件缺失会阻止构建，防止静默遗漏。

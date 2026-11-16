@@ -109,3 +109,12 @@ export const hscReminderRules = sqliteTable('hsc_reminder_rules', {
   packing:text('packing').notNull(), enabled:integer('enabled').notNull().default(1),
   revision:integer('revision').notNull().default(1), updatedAt:text('updated_at').notNull(),
 }, table=>[index('hsc_reminder_member').on(table.memberId)]);
+
+export const hscRegistrationPlans = sqliteTable('hsc_registration_plans', {
+  id:text('id').primaryKey(), memberId:text('member_id').notNull(), skaterId:text('skater_id').notNull(),
+  eventId:text('event_id').notNull(), status:text('status').notNull(), updatedAt:text('updated_at').notNull(),
+}, table=>[uniqueIndex('hsc_registration_plan_member_skater_event').on(table.memberId,table.skaterId,table.eventId)]);
+export const hscCalendarSubscriptions = sqliteTable('hsc_calendar_subscriptions', {
+  memberId:text('member_id').primaryKey(), hash:text('hash').notNull(), authVersion:integer('auth_version').notNull(),
+  createdAt:text('created_at').notNull(), updatedAt:text('updated_at').notNull(),
+}, table=>[uniqueIndex('hsc_calendar_subscription_hash').on(table.hash)]);

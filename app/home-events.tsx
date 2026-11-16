@@ -5,6 +5,7 @@ import {todayToronto} from '../lib/club-types';
 import {homeEventCards,validRegistrationTime} from '../lib/event-registration';
 import {text} from '../lib/i18n';
 import './home-events.css';
+import SourceFreshness from './source-freshness';
 
 export default function HomeEvents({events,skaters,ownIds,onEvent}:{events:ClubEvent[];skaters:ClubSkater[];ownIds:string[];onEvent?:(id:string)=>void}){
   const [now,setNow]=useState(Date.now),today=todayToronto();
@@ -38,6 +39,7 @@ export default function HomeEvents({events,skaters,ownIds,onEvent}:{events:ClubE
         {windows.some(window=>window.kind==='assigned')&&<small>{text('Assigned registration is for athletes with an official assignment or invitation. All times are Eastern Time (ET).','Assigned 仅适用于已获官方分配或邀请的选手。以上均为加拿大东部时间（ET）。')}</small>}
         <a className="home-register-link" href={(windows.find(window=>window.kind==='public')||windows[0]).url} target="_blank" rel="noreferrer">{text('Open SkateReg / Uplifter ↗','前往 SkateReg / Uplifter ↗')}</a>
       </div>}
+      <SourceFreshness status={event.sourceStatus}/>
       <div className="home-event-links"><a href={'/workspace?view=events&event='+encodeURIComponent(event.id)} onClick={onEvent?e=>{e.preventDefault();onEvent(event.id);}:undefined}>{text('Entries & schedule','名单与赛程')}</a><a href={event.url} target="_blank" rel="noreferrer">{text('Skate Ontario event details ↗','Skate Ontario 赛事详情 ↗')}</a></div>
     </article>)}</div>
   </section>;
