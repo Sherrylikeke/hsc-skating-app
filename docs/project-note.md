@@ -8,7 +8,13 @@
 - 官方页明确Schedule已发布、正式Entry Lists稍后；Schedule.pdf为两页。2026-11-16T16:07:08.219Z仅定向同步SO-325865，保存https://skateontario.org/wp-content/uploads/2026/08/Schedule.pdf，仍保留Interim547条/23位关联选手。两页缺少解析器可确认的独立日期，blocks=0/errors非空；不制造最终分组与个人时间。当前链接可打开，PDF解析未成功。近180分钟Worker errors_only日志为空，但业务解析警告属于HTTP200内的部分失败，不能据此断言全量健康。
 - 新增日历内部独立官网链接轮换，每次最多三场、按最久未尝试排序，失败也轮换；不等待或下载PDF，不改变既有详细导入上限、小时任务、名单/赛程/私人数据。当前37场约13个成功小时轮次覆盖链接，不承诺每场每小时更新。赛事页明确标Schedule PDF并保留较完整的带日期标签；赛事卡片区分PDF已公布与时段尚未导入。
 - 管理员诊断区分linksAttemptedAt/linksCheckedAt和detailCheckedAt/detailSuccessAt；普通账号只返回链接与待确认提示，不返回原始错误与内部时戳。增加逐场同步状态返回官方Schedule/Entries链接供核对，提醒自动任务按nextEvents原序执行，不能重新取最近三场。没有新增任务、schema、账号或邮件配置。原工作区本轮核对为21个未提交PDF删除，继续隔离保留。GitHub main已推进到44c5cb9，包含尚未部署的日历/比赛准备/订阅与0006/0007迁移；本次Sites只部署现有线上基线的链接修复，另在最新GitHub主线合入同一修复，保留未上线功能及其发布范围。
-- 源码基线d28bfe4；官方助手同项目打开成功。完整回归21/21、最终Web类型、8组同步客户端及官方生产构建通过；真实Worker/临时D1验证7场3轮独立链接更新、部分失败不阻塞且不读取PDF。Chrome/WebKit×320/1280px×中英文×家长/管理员共16视图全部通过，Schedule链接/带日期标签/新窗口/普通账号诊断隐藏及无溢出均核对；复看320px家长截图。浏览器报告位于本会话outputs/niagara-documents-browser，均隔离API，无生产账号操作。默认临时Chrome配置与开发HMR曾阻断检查，改用工作区临时配置和已构建生产预览后完整通过，未放宽断言。最终部署和GitHub结果完成后补记。 最新GitHub main上的合并保留全部待发布功能，类型与25/25回归通过；该完整主线不用于本次生产部署。
+- 源码基线d28bfe4；官方助手同项目打开成功。完整回归21/21、最终Web类型、8组同步客户端及官方生产构建通过；真实Worker/临时D1验证7场3轮独立链接更新、部分失败不阻塞且不读取PDF。Chrome/WebKit×320/1280px×中英文×家长/管理员共16视图全部通过，Schedule链接/带日期标签/新窗口/普通账号诊断隐藏及无溢出均核对；复看320px家长截图。浏览器报告位于本会话outputs/niagara-documents-browser，均隔离API，无生产账号操作。默认临时Chrome配置与开发HMR曾阻断检查，改用工作区临时配置和已构建生产预览后完整通过，未放宽断言。发布与回读结果见下方。最新GitHub main上的合并保留全部待发布功能，类型与25/25回归通过；该完整主线不用于本次生产部署。
+
+
+- 已部署V51，Sites运行源码b77337bd42c848fe73b96f80ebdf6141345c20ae，保存版本appgprj_6ad76ca2dba481919ba883865cbd5a0d~appgver_744d8fc48af48191a4b3257ea829d6ce；部署appgdep_6afb312965988191837df183a8997e95于2026-11-16T16:37:12.409057Z succeeded，env9/MCP ready/public。未包含GitHub主线上未部署的0006/0007迁移及准备/订阅功能。
+- 16:37:52Z定向重读Niagara，16:38只读状态再次确认linksCheckedAt/linksAttemptedAt已持久化、Schedule as of Nov.11与Interim链接均存在，547条/23位关联、blocks=0；两页PDF日期警告保留，detailSuccessAt尚无成功记录。全量日历的人工验证被自动审批拒绝，理由是超出本轮Niagara范围，未重试或间接绕过；独立轮换通过离线及临时D1验证，生产仅验证单场写入/回读。
+- 正式域名16:38:34Z首页200、匿名club401，线上BpqZDo6J.js与本地构建SHA256一致（2133083b90a758e7a6b7d98ca801616847311e5818c087860cb052c012bebd92）。重新查询原小时任务仍启用且无更改，最近日历成功为16:07:27Z。没有重建手机原生包；开发和生产本地预览均已停止。安全验收记录位于本会话outputs/niagara-documents-release。
+- 最新GitHub main已正常推送7b985c2f682ca4df17d5b7014ad04ac6ed28fcf5，保留全部待发布功能；其CI43909315702的类型/25项回归/构建/临时D1及依赖检查成功，手机浏览器两组仍执行中。当前收尾将已部署Sites源码提交作为第二父项合入主线历史，树中保留已验收的新主线实现，便于后续正常快进同步Sites；仅补文档，不重部署。
 
 ## 2026-11-16 补充普通／小屏 iPhone 与安卓直板机
 
