@@ -1,16 +1,16 @@
 import type {LiveEvent} from './club-types.ts';
 import {outboxStatement} from './member-messages.ts';
 import {nowISO} from './member-access.ts';
+import {officialUpdate} from './official-updates.ts';
+import {categoryCompatible,groupOf} from './official-parser.ts';
 
 export function officialSnapshot(event: LiveEvent | null, skaterId: string) {
   if (!event) return null;
   const entries = event.participants.filter(row => row.skaterIds.includes(skaterId)).map(row => ({name: row.name, category: row.category, club: row.club})).sort((first, second) => JSON.stringify(first).localeCompare(JSON.stringify(second)));
   const orders = (event.startingOrders || []).filter(row => row.skaterIds.includes(skaterId)).map(row => ({name: row.name, category: row.category, program: row.program, startNumber: row.startNumber, warmupGroup: row.warmupGroup, individualTime: row.individualTime})).sort((first, second) => JSON.stringify(first).localeCompare(JSON.stringify(second)));
   if (!entries.length && !orders.length) return null;
-  const categories = new Set([...entries, ...orders].map(row => row.category.toLocaleLowerCase().replace(/[^a-z0-9]/g, '')));
   const blocks = event.blocks.filter(block => {
-    const key = block.category.toLocaleLowerCase().replace(/[^a-z0-9]/g, '');
-    return [...categories].some(category => key.includes(category) || category.includes(key));
+    return entries.some(entry=>categoryCompatible(entry.category,block.category)&&(groupOf(entry.category)===null||block.group==null||groupOf(entry.category)===block.group||new RegExp('\\bGROUPS?\\s*\\d+\\s*(?:&|AND)\\s*'+groupOf(entry.category)+'\\b','i').test(block.category)));
   }).map(block => ({date: block.date, start: block.start, end: block.end, rink: block.rink, category: block.category, activity: block.activity})).sort((first, second) => JSON.stringify(first).localeCompare(JSON.stringify(second)));
   return {event: event.name, start: event.start, end: event.end, venue: event.venue, timezone: event.timezone, officialNotice: event.updateText, entries, blocks, orders};
 }
@@ -24,9 +24,10 @@ export function eventWriteStatements(database: D1Database, event: LiveEvent, pre
     const before = officialSnapshot(previous, skaterId), after = officialSnapshot(event, skaterId);
     if (JSON.stringify(before) === JSON.stringify(after)) continue;
     const id = crypto.randomUUID();
-    const payload = {eventId: event.id, eventName: event.name, before, after, action: !before ? '新增官方安排' : !after ? '已从官方名单移除，请核对' : '官方安排有实质修订', source: event.url, documents: documents.map(document => ({url: document.url, hash: document.hash, checkedAt: document.checkedAt})), checkedAt: event.detailCheckedAt || event.checkedAt || time};
+    const payload = {changeId:id,eventId: event.id, eventName: event.name, before, after, action: !before ? '新增官方安排' : !after ? '已从官方名单移除，请核对' : '官方安排有实质修订', source: event.url, documents: documents.map(document => ({url: document.url, hash: document.hash, checkedAt: document.checkedAt})), checkedAt: event.detailCheckedAt || event.checkedAt || time};
     statements.push(database.prepare('INSERT INTO hsc_changes (id,event_id,skater_id,payload,created_at) VALUES (?,?,?,?,?)').bind(id, event.id, skaterId, JSON.stringify(payload), time));
     statements.push(outboxStatement(database, {id: `schedule|${id}`, kind: 'schedule', subjectId: id, skaterId, payload}));
+    statements.push(outboxStatement(database,{id:`updates|${id}`,kind:'official-update',subjectId:id,skaterId,payload:officialUpdate(event,previous,skaterId,id)}));
   }
   return statements;
 }

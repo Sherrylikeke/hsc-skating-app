@@ -54,17 +54,25 @@ function time24(value:string){const match=value.match(/^(\d{1,2}):(\d{2})\s*(AM|
 function pdfLines(items:PdfItem[],tolerance=2){
   const lines:Array<{y:number;items:PdfItem[]}>=[];for(const item of [...items].sort((first,second)=>second.y-first.y||first.x-second.x)){if(!item.str.trim())continue;let line=lines.find(value=>Math.abs(value.y-item.y)<tolerance);if(!line){line={y:item.y,items:[]};lines.push(line);}line.items.push(item);}return lines;
 }
-function dateOnLine(text:string){
-  const matches=[...text.matchAll(/(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(20\d{2})/gi)];
+function dateOnLine(text:string,documentYear?:string){
+  const matches=[...text.matchAll(/(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})(?:,?\s+(20\d{2}))?/gi)];
   if(matches.length!==1)return '';const match=matches[0],months=['january','february','march','april','may','june','july','august','september','october','november','december'];
-  const date=match[3]+'-'+String(months.indexOf(match[1].toLowerCase())+1).padStart(2,'0')+'-'+match[2].padStart(2,'0');
+  const year=match[3]||documentYear;if(!year)return '';
+  const date=year+'-'+String(months.indexOf(match[1].toLowerCase())+1).padStart(2,'0')+'-'+match[2].padStart(2,'0');
+  const instant=new Date(date+'T12:00:00Z');if(!Number.isFinite(instant.getTime())||instant.toISOString().slice(0,10)!==date)return '';
+  if(!match[3]){
+    const weekday=new Intl.DateTimeFormat('en-US',{weekday:'long',timeZone:'UTC'}).format(new Date(date+'T12:00:00Z'));
+    if(!match[0].toLowerCase().startsWith(weekday.toLowerCase()))return '';
+  }
   return new Date(date+'T12:00:00Z').toISOString().slice(0,10)===date?date:'';
 }
 export function parseScheduleDocument(pages:PdfItem[][],sourceUrl:string):{blocks:ScheduleBlock[];warnings:string[]}{
   const blocks:ScheduleBlock[]=[],warnings=new Set<string>();
   const pauses:Array<{date:string;rink:string;start:string;end:string}>=[];
+  const years=new Set(pages.flat().flatMap(item=>item.str.match(/\b20\d{2}\b/g)||[]));
+  const documentYear=years.size===1?[...years][0]:undefined;
   for(const [page,items] of pages.entries()){
-    const anchors=pdfLines(items).map(line=>({y:line.y,text:line.items.map(item=>item.str).join(' ')})).filter(line=>/\b(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+/i.test(line.text)).map(line=>({y:line.y,date:dateOnLine(line.text)}));
+    const anchors=pdfLines(items).map(line=>({y:line.y,text:line.items.map(item=>item.str).join(' ')})).filter(line=>/\b(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+/i.test(line.text)).map(line=>({y:line.y,date:dateOnLine(line.text,documentYear)}));
     const starts=items.filter(item=>item.str.trim()==='START').sort((first,second)=>second.y-first.y||first.x-second.x);
     if(!starts.length){warnings.add('第 '+(page+1)+' 页缺少可确认的 START/END 赛程表头');continue;}
     for(const header of starts){
@@ -84,7 +92,7 @@ export function parseScheduleDocument(pages:PdfItem[][],sourceUrl:string):{block
         const text=line.items.sort((first,second)=>first.x-second.x).map(item=>item.str).join(' ').replace(/\s+/g,' ').trim();
         const match=text.match(/^(\d{1,2}:\d{2}\s*[AP]M)\s+(\d{1,2}:\d{2}\s*[AP]M)\s+(.+)$/i);
         if(!match){
-          if(shared&&/^STAR\s*[1-4]\b/i.test(text)&&categoryKey(text)===shared.categoryKey&&/shared warm[ -]?up/i.test(shared.category)&&text!==shared.category){blocks.push({...shared,id:date+'|'+rink+'|'+shared.start+'|'+text,category:text,group:groupOf(text)});shared=undefined;continue;}
+          if(shared&&/^STAR\s*[1-4]\b/i.test(text)&&categoryKey(text)===shared.categoryKey&&/shared warm[ -]?up/i.test(shared.category)&&text!==shared.category){blocks.push({...shared,id:date+'|'+rink+'|'+shared.start+'|'+text,category:text,group:groupOf(text)});continue;}
           shared=undefined;if(categoryKey(text))warnings.add('第 '+(page+1)+' 页有未明确列出完整起止时间的类别，暂不导入');continue;
         }
         shared=undefined;
@@ -140,7 +148,7 @@ export function scheduleRows(events:Array<Pick<LiveEvent,'id'|'name'|'url'|'time
   const skaterMap=new Map(skaters.map(row=>[row.id,row]));const output=new Map<string,ScheduleRow>();
   for(const event of events)for(const entry of event.participants){
     const key=categoryKey(entry.category),group=groupOf(entry.category);if(!key)continue;
-    const matching=event.blocks.filter(block=>categoryCompatible(entry.category,block.category)&&(group===null||block.group===null||group===block.group));
+    const matching=event.blocks.filter(block=>categoryCompatible(entry.category,block.category)&&(group===null||block.group===null||group===block.group||new RegExp('\\bGROUPS?\\s*\\d+\\s*(?:&|AND)\\s*'+group+'\\b','i').test(block.category)));
     for(const id of entry.skaterIds){const skater=skaterMap.get(id);if(!skater)continue;
       for(const block of matching){const startingOrder=block.activity==='competition'?orderFor(event.startingOrders||[],id,block.category):undefined;if(block.range&&startingOrder&&(startingOrder.startNumber<block.range[0]||startingOrder.startNumber>block.range[1]))continue;const entryDetails=categoryDetails(entry.category),blockDetails=categoryDetails(block.category);const uncertain=(block.group!==null&&group===null)||(block.range!==null&&!startingOrder)||!!(blockDetails.ages.length&&!entryDetails.ages.length)||!!(blockDetails.band&&!entryDetails.band);const rowId=`${event.id}|${id}|${block.id}`;
         const normalized=block.category.toUpperCase().replace(/\s+/g,' ').trim();
