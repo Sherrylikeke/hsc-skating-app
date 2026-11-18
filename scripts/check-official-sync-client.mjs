@@ -46,4 +46,6 @@ assert.equal(distant.calls.length,1);checks.push('events beyond the 183-day cale
 
 const boundary=mock([Response.json({events:1,nextEvents:[{id:'SO-7',start:'2027-04-24'}]}),Response.json({errors:[]})]);
 assert.equal((await checkOfficialSources(boundary.request,'2026-10-23')).checkedEvents,1);checks.push('183-day boundary includes distant competition announcements for registration reminders');
+const batched=mock([Response.json({events:37,checkedEvents:3,nextEvents:[],errors:['SO-9: Pending PDF']})]);
+assert.deepEqual(await checkOfficialSources(batched.request,'2026-11-18'),{events:37,checkedEvents:3,errors:['SO-9: Pending PDF']});assert.equal(batched.calls.length,1);checks.push('server-completed import round is counted without duplicate detail requests');
 console.log(JSON.stringify({passed:checks.length,checks,fixtureOnly:true,productionWrites:0},null,2));

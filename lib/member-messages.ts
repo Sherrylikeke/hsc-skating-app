@@ -1,6 +1,7 @@
 import {AccessError, accessibleSkaters, admittedIDs, assertSkater, idsField, nowISO, parseIDs, requireRole, stringField} from './member-access.ts';
 import type {Member} from './member-access.ts';
 import {reconcileReminders,reminderIsCurrent} from './reminders.ts';
+import {officialRecipientMap} from './official-updates.ts';
 
 type Requirement = {id: string; author_id: string; title: string; body: string; skater_ids: string; event_id: string | null; slot_key: string | null; due_at: string | null; state: string; revision: number; created_at: string; updated_at: string};
 type Outbox = {id: string; kind: string; subject_id: string; skater_id: string; author_id: string | null; payload: string; attempts: number};
@@ -14,6 +15,7 @@ export async function drainOutbox(database: D1Database, limit = 30) {
   const time = nowISO();
   const {results} = await database.prepare("SELECT * FROM hsc_outbox WHERE (state='pending' AND available_at<=?) OR (state='processing' AND lease_until<?) ORDER BY created_at,id LIMIT ?").bind(time, time, limit).all<Outbox>();
   let delivered = 0, retried = 0;
+  let publicRecipients:Awaited<ReturnType<typeof officialRecipientMap>>|undefined;
   for (const item of results) {
     const lease = new Date(Date.now() + 120000).toISOString();
     const acquired = await database.prepare("UPDATE hsc_outbox SET state='processing',lease_until=?,attempts=attempts+1 WHERE id=? AND ((state='pending' AND available_at<=?) OR (state='processing' AND lease_until<?)) RETURNING id").bind(lease, item.id, time, time).first();
@@ -23,7 +25,8 @@ export async function drainOutbox(database: D1Database, limit = 30) {
         await database.prepare("UPDATE hsc_outbox SET state='cancelled',lease_until=NULL WHERE id=?").bind(item.id).run();
         continue;
       }
-      const {results: recipients} = item.kind==='reminder'
+      if(item.kind==='official-update')publicRecipients??=await officialRecipientMap(database);
+      const {results: recipients} = item.kind==='official-update'?{results:publicRecipients!.get(item.skater_id)||[]}:item.kind==='reminder'
         ? await database.prepare("SELECT id FROM hsc_members WHERE id=? AND status='active'").bind(item.author_id).all<{id:string}>()
         : await database.prepare("SELECT DISTINCT m.id FROM hsc_members m JOIN hsc_relations r ON r.member_id=m.id AND r.kind=m.role AND r.active=1 JOIN hsc_admissions a ON a.skater_id=r.skater_id AND a.admitted=1 WHERE m.status='active' AND r.skater_id=? AND (?='schedule' OR m.role IN ('parent','skater') OR m.id=?)").bind(item.skater_id, item.kind, item.author_id).all<{id: string}>();
       await database.batch([
@@ -40,13 +43,14 @@ export async function drainOutbox(database: D1Database, limit = 30) {
   return {delivered, retried, channel: 'in-app'};
 }
 export async function listNotifications(database: D1Database, member: Member) {
-  const {results} = await database.prepare('SELECT * FROM hsc_notifications WHERE member_id=? ORDER BY created_at DESC LIMIT 200').bind(member.id).all<Notification>();
+  const {results} = await database.prepare("SELECT * FROM hsc_notifications WHERE member_id=? AND kind!='official-update' ORDER BY created_at DESC LIMIT 200").bind(member.id).all<Notification>();
   const allowed = await accessibleSkaters(database, member);
-  return results.filter(row => (member.role === 'admin' || allowed.includes(row.skater_id)) && (member.role !== 'coach' || row.kind === 'schedule' || row.author_id === member.id)).map(row => ({...row, payload: JSON.parse(row.payload)}));
+  return results.filter(row => row.kind!=='official-update'&&(member.role === 'admin' || allowed.includes(row.skater_id)) && (member.role !== 'coach' || row.kind === 'schedule' || row.author_id === member.id)).map(row => ({...row, payload: JSON.parse(row.payload)}));
 }
 export async function markNotification(database: D1Database, member: Member, id: string) {
   if (!(await listNotifications(database, member)).some(row => row.id === id)) throw new AccessError(404, '通知不存在或已无访问权限');
   await database.prepare('UPDATE hsc_notifications SET read_at=COALESCE(read_at,?) WHERE id=? AND member_id=?').bind(nowISO(), id, member.id).run();
+  await database.prepare("UPDATE hsc_notifications SET read_at=COALESCE(read_at,?) WHERE member_id=? AND kind='official-update' AND json_extract(payload,'$.changeId')=(SELECT json_extract(payload,'$.changeId') FROM hsc_notifications WHERE id=? AND member_id=?)").bind(nowISO(),member.id,id,member.id).run();
 }
 async function visibleRecipients(database: D1Database, member: Member, requirement: Requirement) {
   const recipients = parseIDs(requirement.skater_ids);

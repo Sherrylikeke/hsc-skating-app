@@ -1,4 +1,5 @@
 'use client';
+import OfficialNotifications from './official-notifications';
 import {apiFetch as fetch,saveTextFile} from '../lib/client-platform';
 import {translate,text,useLanguage,LanguageSwitch,currentLocale} from '../lib/i18n';
 import {lazy,Suspense,useEffect,useMemo,useRef,useState} from 'react';
@@ -67,6 +68,7 @@ export default function ClubApp(){
       const next=await response.json() as ClubData;setData(next);setAccessStatus(null);setError('');setLoading(false);return next;
     }catch(e){setError((e as Error).message);setLoading(false);}
   }
+  useEffect(()=>{const refresh=()=>void load();window.addEventListener('hsc-official-updated',refresh);return()=>window.removeEventListener('hsc-official-updated',refresh);},[]);
   async function sync(id?:string){
     if(busy||refreshing||!adminRole)return;setBusy(id?translate("正在读取这场比赛的官网资料…"):translate("正在同步官网赛事日历…"));setError('');setNotice('');
     try{
@@ -165,7 +167,7 @@ export default function ClubApp(){
   const recentRecords = data?.recent.filter(record=>adminRole||record.skater_ids.some(id=>data.ownSkaterIds.includes(id)))??[];
   const title=view==='day'?text('Competition day','比赛日'):view==='registrations'?text('Registration board','报名看板'):view==='calendar'?text('Schedule calendar','赛程日历'):view==='watch'?text('Who to cheer for','今天给谁加油'):nav.find(item=>item.id===view)?.label||translate("俱乐部概览");
   return <div className={'club-app role-'+(data?.member.status==='active'?data.member.role||'none':'none')}><aside className="club-sidebar"><a className="club-brand" href="/"><span className="club-logo">HSC</span><span>HAMILTON<small>SKATING CLUB</small></span></a><p className="club-nav-label">CLUB WORKSPACE</p><nav>{nav.map(item=><button key={item.id} aria-label={item.label} title={item.label} aria-current={view===item.id?'page':undefined} className={view===item.id?'active':''} onClick={()=>navigate(item.id)}><item.icon size={18}/><span className="club-nav-full">{item.label}</span><span className="club-nav-short">{item.shortLabel}</span>{item.id==='skaters'&&data&&<small>{data.skaters.length}</small>}</button>)}</nav><div className="club-sidebar-bottom"><a href="/">{translate("通知、教练要求与会员入口 →")}</a>{adminRole&&<a href="/coaches"><PencilLine size={17}/><span>{translate("维护教练资料")}</span><ArrowUpRight size={13}/></a>}<span className="club-owner-note"><i/>{translate("会员俱乐部工作区")}</span></div></aside>
-    <div className="club-body"><header className="club-topbar"><span><a className="club-member-home" href="/">{text('Member home','会员主页')}</a> <b>/</b> {title}</span><div><LanguageSwitch/><button className="club-text-button club-topbar-home" onClick={()=>navigate('personal')}><span className="club-topbar-home-full">{text("My skater homepage","返回我的选手主页")}</span><span className="club-topbar-home-short">← {text("My skaters","我的选手")}</span></button>{data&&<span className="club-local-date">{dateLabel(today)}</span>}{adminRole&&<a href="/coaches" className="club-maintain"><PencilLine size={13}/>{translate("教练资料")}</a>}{accessStatus!==401&&<a className="club-account-link" href="/?tab=account">{adminRole?text('Admin account','管理员账户'):text('Account','账户')}</a>}</div></header>
+    <div className="club-body"><header className="club-topbar"><span><a className="club-member-home" href="/">{text('Member home','会员主页')}</a> <b>/</b> {title}</span><div>{data&&<OfficialNotifications key={data.member.id}/>}<LanguageSwitch/><button className="club-text-button club-topbar-home" onClick={()=>navigate('personal')}><span className="club-topbar-home-full">{text("My skater homepage","返回我的选手主页")}</span><span className="club-topbar-home-short">← {text("My skaters","我的选手")}</span></button>{data&&<span className="club-local-date">{dateLabel(today)}</span>}{adminRole&&<a href="/coaches" className="club-maintain"><PencilLine size={13}/>{translate("教练资料")}</a>}{accessStatus!==401&&<a className="club-account-link" href="/?tab=account">{adminRole?text('Admin account','管理员账户'):text('Account','账户')}</a>}</div></header>
       <main className="club-main">{accessStatus?<section className="club-panel club-signin"><h1>{translate("欢迎来到 HSC")}</h1>{accessStatus===401
         ? <><p>{text('Sign in to view this shared club schedule.','登录后即可查看这份俱乐部共享赛程。')}</p><a className="button primary" href={'/?'+new URLSearchParams({schedule:location.search.slice(1)})}>{text('Sign in','登录')}</a></>
         : <><p>{text('Your account does not have access to this schedule.','你的账号暂时无法访问这份赛程。')}</p><a className="button primary" href="/?tab=account">{text('View account','查看账户')}</a></>}</section>:<>

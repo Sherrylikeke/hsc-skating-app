@@ -1,5 +1,12 @@
 import {discoverDocuments} from './official-parser.ts';
 import type {LiveEvent} from './club-types.ts';
+export const eventLinkSignature=(event:Pick<LiveEvent,'documents'>)=>JSON.stringify(event.documents.filter(d=>d.kind==='schedule'||d.kind==='entries').map(d=>[d.kind,d.url,d.label]).sort((a,b)=>a[1].localeCompare(b[1])));
+export function resolvedSourceUrl(bytes:Uint8Array,requested:string){
+  const original=new URL(requested),resolved=new URL((bytes as Uint8Array&{resolvedUrl?:string}).resolvedUrl||requested);
+  if(resolved.hostname.replace(/^www\./,'')===original.hostname.replace(/^www\./,''))resolved.hostname=original.hostname;
+  if(resolved.origin!==original.origin)throw new Error('官网目录跳转到不同来源，保留上次有效资料');
+  return resolved.href;
+}
 
 // Page links rotate independently of the more expensive PDF/entry imports.
 export function selectLinkEvents<T extends Pick<LiveEvent,'id'|'start'|'end'|'linksAttemptedAt'|'linksCheckedAt'|'detailCheckedAt'>>(events:T[],today:string):T[]{

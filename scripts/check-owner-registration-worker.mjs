@@ -36,9 +36,12 @@ if(url.pathname.startsWith('/wp-json/tribe/events/v1/events'))return Response.js
 if(url.pathname.startsWith('/fixture-links/')){
   const index=Number(url.pathname.split('/')[2]);linkOnlyPages.push(index);
   if(index===0)return new Response('Source failed',{status:503});
-  return new Response('<a href="https://skateontario.org/link-only-schedule.pdf">Schedule as of Nov. 11</a>');
+  return new Response('<a href="https://skateontario.org/link-only-schedule.pdf">Schedule as of Nov. 17</a><a href="https://skateontario.org/niagara-entry-index">Entry Lists</a>');
 }
-if(url.pathname==='/link-only-schedule.pdf'){linkOnlyPdfFetches++;return new Response('Must not parse PDF during link discovery',{status:500});}
+if(url.pathname==='/link-only-schedule.pdf'){linkOnlyPdfFetches++;return new Response(fs.readFileSync('tests/fixtures/niagara-2026-nov17-schedule.pdf'));}
+if(url.pathname==='/niagara-entry-index')return new Response(null,{status:301,headers:{location:'https://www.skateontario.org/niagara-entry-index/'}});
+if(url.pathname==='/niagara-entry-index/')return new Response('<a href="final-entry.pdf">Entry List</a>');
+if(url.pathname==='/niagara-entry-index/final-entry.pdf')return new Response(fs.readFileSync('tests/fixtures/niagara-2026-star2-group1-entry.pdf'));
 
 if(failFreshnessSchedule&&url.pathname==='/fixture-keswick-schedule.pdf')return new Response('Fixture unavailable',{status:503});
 if(url.pathname==='/fixture-home/')return new Response('<p>Assigned athlete registration opens at 10:00 AM ET November 9, 2026 and closes November 11, 2026 at 11:59 PM ET.</p><p>Public Registration: Registration opens at 12:00 PM ET November 12, 2026 and closes November 16, 2026 at 11:59 PM ET.</p><a href="https://www.skateontario.org/fixture-interim.pdf">Interim List</a>');
@@ -417,17 +420,41 @@ try {
   const neverRegistered=(await clubFor(platformHeaders)).skaters.find(row=>row.id===addedChildId);
   assert.equal(neverRegistered.hasRegistrationHistory,false);assert.deepEqual(neverRegistered.registrationHistory,[]);
   console.log('Worker recommendations: dated individual registration history is read independently of recent cards; future, stale, withdrawn and team rows are excluded, and old registrations retain the ever-registered flag. No production writes.');
+  const noticeHeaders={};
+  const leiaId=JSON.parse(fs.readFileSync('data/roster.json','utf8')).find(row=>row.name==='Leia Jin').id;
+  for(const [suffix,skaterId] of [['leia',leiaId],['other',fixtureCarson.id]]){
+    const memberId='official-notice-'+suffix,email=memberId+'@example.test',token=memberId+'-fixture-session';
+    await database.prepare("INSERT INTO hsc_members(id,email,name,role,requested_role,status,auth_version,created_at) VALUES (?,?,?,NULL,'parent','club-viewer',1,?)").bind(memberId,email,memberId,new Date().toISOString()).run();
+    await database.prepare('INSERT INTO hsc_sessions(hash,member_id,auth_version,expires_at,created_at) VALUES (?,?,1,?,?)').bind(hash(token),memberId,new Date(Date.now()+3600000).toISOString(),new Date().toISOString()).run();
+    await database.prepare('INSERT INTO hsc_home_skaters(id,member_id,skater_id,pinned,updated_at) VALUES (?,?,?,1,?)').bind(memberId+'|'+skaterId,memberId,skaterId,new Date().toISOString()).run();
+    noticeHeaders[suffix]={'oai-authenticated-user-id':memberId,'oai-authenticated-user-email':email,cookie:'__Host-hsc_session='+token};
+  }
   const firstCalendar=await post('/api/sync',{},platformHeaders);assert.equal(firstCalendar.status,200);
   const calendarResult=await firstCalendar.json();assert.equal(calendarResult.linkChecks.length,3);
-  assert.equal(calendarResult.errors.length,1);assert.equal(linkOnlyPdfFetches,0);
+  assert.ok(calendarResult.errors.length>=1);assert.equal(calendarResult.checkedEvents,3);assert.deepEqual(calendarResult.nextEvents,[]);assert.ok(linkOnlyPdfFetches>0);
   const readEvent=async eventId=>JSON.parse((await database.prepare('SELECT payload FROM live_events WHERE id=?').bind(eventId).first()).payload);
   const firstLinkEvent=await readEvent('SO-999971');assert.ok(firstLinkEvent.linksCheckedAt);
   assert.ok(firstLinkEvent.documents.some(document=>document.kind==='schedule'));
-  assert.equal(firstLinkEvent.detailCheckedAt,undefined);assert.equal(firstLinkEvent.detailSuccessAt,undefined);assert.equal(firstLinkEvent.blocks.length,0);
+  assert.ok(firstLinkEvent.detailCheckedAt);assert.ok(firstLinkEvent.detailSuccessAt);assert.equal(firstLinkEvent.blocks.length,74);
   const failedLinks=await readEvent('SO-999970');assert.ok(failedLinks.linksAttemptedAt);assert.equal(failedLinks.linksCheckedAt,undefined);assert.ok(failedLinks.linksError);
   for(let round=0;round<2;round++)assert.equal((await post('/api/sync',{},platformHeaders)).status,200);
-  assert.deepEqual([...new Set(linkOnlyPages)].sort(),[0,1,2,3,4,5,6]);assert.equal(linkOnlyPdfFetches,0);
+  assert.deepEqual([...new Set(linkOnlyPages)].sort(),[0,1,2,3,4,5,6]);assert.ok(linkOnlyPdfFetches>0);
   const linkedClub=await clubFor(platformHeaders);assert.ok(linkedClub.events.find(event=>event.id==='SO-999971').documents.some(document=>document.kind==='schedule'));
   assert.ok((await readEvent('SO-999970')).linksError,'Other successful imports must not erase an event failure');
-  console.log('Worker calendar: three independent page checks per round persist schedule links without entry/PDF imports; seven events rotate across three rounds despite one source failure, and per-event attempts/success/errors remain distinct.');
+  console.log('Worker calendar: a single request performs link rotation and three full imports, persists 74 Niagara blocks and final entries, rotates seven events despite one failure, and returns no duplicate nextEvents.');
+  const noticeGet=headers=>mf.dispatchFetch(origin+'/api/official-notifications',{headers});
+  assert.equal((await noticeGet({})).status,401);
+  const publicResponse=await noticeGet(noticeHeaders.leia);assert.equal(publicResponse.status,200);
+  const publicNotices=(await publicResponse.json()).notifications;assert.ok(publicNotices.length>0);
+  assert.ok(publicNotices.every(n=>n.skater_id===leiaId&&n.payload.sessions.length===1&&n.payload.sessions[0].start==='08:00'));
+  assert.deepEqual((await (await noticeGet(noticeHeaders.other)).json()).notifications,[]);
+  assert.equal((await post('/api/official-notifications',{id:publicNotices[0].id},noticeHeaders.other)).status,404);
+  assert.equal((await post('/api/official-notifications',{id:publicNotices[0].id},{...noticeHeaders.leia,origin:'https://other.example.test'})).status,403);
+  assert.equal((await post('/api/official-notifications',{id:publicNotices[0].id},noticeHeaders.leia)).status,200);
+  assert.ok((await (await noticeGet(noticeHeaders.leia)).json()).notifications.find(n=>n.id===publicNotices[0].id).read_at);
+  assert.equal((await mf.dispatchFetch(origin+'/api/member?action=notifications',{headers:noticeHeaders.leia})).status,403,'Public schedule notices must not authorize private notifications');
+  await database.prepare("UPDATE hsc_home_skaters SET pinned=0 WHERE member_id='official-notice-leia'").run();
+  assert.deepEqual((await (await noticeGet(noticeHeaders.leia)).json()).notifications,[]);
+  console.log('Worker official notifications: a schedule-only member receives only My Skaters updates; anonymous, cross-account and wrong-origin requests remain blocked, read state persists, removed preferences hide notices and private notifications remain forbidden.');
+
 }finally{await mf.dispose();}

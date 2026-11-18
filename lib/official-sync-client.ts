@@ -1,4 +1,4 @@
-type SyncResponse={events?:number;nextEvents?:Array<{id:string;start:string}>;errors?:string[];error?:string};
+type SyncResponse={events?:number;checkedEvents?:number;nextEvents?:Array<{id:string;start:string}>;errors?:string[];error?:string};
 export type SyncSummary={events:number;checkedEvents:number;errors:string[]};
 type RequestSync=(path:string,init:RequestInit)=>Promise<Response>;
 
@@ -19,5 +19,5 @@ export async function checkOfficialSources(request:RequestSync,today:string,even
     try{const result=await check(event.id);errors.push(...(result.errors||[]).map(error=>`${event.id}: ${error}`));}
     catch(failure){errors.push(`${event.id}: ${failure instanceof Error?failure.message:'Official source check failed.'}`);}
   }
-  return {events:first.events??0,checkedEvents:selected.length,errors};
+  return {events:first.events??0,checkedEvents:(first.checkedEvents??0)+selected.length,errors};
 }

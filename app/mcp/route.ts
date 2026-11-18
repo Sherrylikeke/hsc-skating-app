@@ -2,7 +2,7 @@ import {syncCalendar,syncEvent,syncStatus} from '../../lib/official-sync';
 import {syncOperator} from '../../lib/member-runtime';
 import {failure} from '../../lib/member-access';
 const tools=[
-  {name:'sync_hsc_calendar',description:'同步 Skate Ontario 官方赛事日历，保留已保存的名单、赛程和教练备注。',inputSchema:{type:'object',properties:{},additionalProperties:false}},
+  {name:'sync_hsc_calendar',description:'完成一次自动更新：同步日历、轮换官网链接，并在服务器导入最多三场新发布/修订或未完成的名单与赛程；自动任务每小时只调用本工具一次，检查detailChecks/errors，不再自行取最近三场。保留旧有效资料和教练备注。',inputSchema:{type:'object',properties:{},additionalProperties:false}},
   {name:'sync_hsc_event',description:'读取一场已在日历内的比赛的官方名单与赛程，识别同链接文件修订。失败保留旧数据。',inputSchema:{type:'object',properties:{event_id:{type:'string',pattern:'^SO-[0-9]+$'}},required:['event_id'],additionalProperties:false}},
   {name:'get_hsc_sync_status',description:'查看最近成功同步、异常、未来比赛和无人值守同步规则。',inputSchema:{type:'object',properties:{},additionalProperties:false}},
 ];
