@@ -11,6 +11,12 @@ export async function checkAccountRecovery(browser,profile,origin){
     await context.route('**/api/**',async route=>{
       const url=new URL(route.request().url());
       const action=url.pathname==='/api/member'?url.searchParams.get('action'):url.pathname;
+      // The authenticated header independently reads the public update feed.
+      // Keep it out of the strict identity/session recovery sequence below.
+      if(action==='/api/official-notifications'){
+        assert.equal(route.request().method(),'GET');
+        return route.fulfill({json:{notifications:[]}});
+      }
       calls.push(action);
       if(action==='identity')return route.fulfill({json:{identity:signedIn?{name:member.name,email:member.email,provider:'password'}:null}});
       if(action==='/api/auth/config')return route.fulfill({json:{deliveryConfigured:false,registrationConfigured:false}});

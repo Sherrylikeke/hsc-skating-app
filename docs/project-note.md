@@ -2,7 +2,11 @@
 
 这是项目负责人的持续维护记录，不属于会员网页内容。后续会话先读取本文件与 AGENTS.md，在完成实质修改或验收后更新；不自动轮询、不新增定时任务。下列运行数据是查询快照，不是实时监控。
 
-## 2026-11-18 Niagara正式分组、自动导入及站内通知（V52已发布，线上名单批次核对中）
+## 2026-11-18 Niagara正式分组、自动导入及站内通知（V52已发布，线上全量核对完成）
+
+- 17:38:40Z完成Niagara七轮定向导入，正式目录83/83份、pending0、579条报名、23位生产档案关联选手及74条时段；errors为空。后续独立只读同步状态确认detailCheckedAt/detailSuccessAt均为17:38:40Z，23条预览全部为确定组别时段。生产含现有人工档案关联，故匹配人数与静态本地候选样本22不同；没有改写身份匹配。Leia Jin为12-05 08:00–08:30/Duliban Rink，属于官方组别窗口。
+- 重新读取Site确认V52/public、原Automation_a2b3ae8946b48191937bd484365e1ec2启用、HOURLY/INTERVAL1/Toronto。17:38:27Z正式域名首页200、匿名club及official-notifications均401；线上By0YKQ30.js与本地SHA256一致A13907EBED26396670AE12B68FA563C735336D1E54CABD383ADE3B2BB96E4EE6。验收记录outputs/niagara-auto-notifications-release；已打开正式网址。
+- 原GitHub main已正常推送ec165446bdf08794e2b1f47c4d4625f6536c4f60，运行CI44360510837的regression/依赖通过（含27项测试、类型、构建、临时D1）。两组手机检查在账号恢复测试中因新增official-notifications读取未被fixture识别而失败；现为该独立公开通知端点提供空列表fixture，严格identity/me/session顺序断言不变。Chrome/WebKit账号恢复专项通过，随后重新提交并检查完整CI；生产运行源码无需变更。
 
 - 用户已明确批准官方Sites助手在沙箱外隐藏stdin使用本站短期令牌、推送原Sites仓库并发布及定向同步Niagara。原审批阻断已通过这一明确授权解决，未写入文件或输出令牌。官方助手已验证推送运行源码5a428ad28be7b20d8fa676a63bda8b2b0289038c；V52保存版本appgprj_6ad76ca2dba481919ba883865cbd5a0d~appgver_da52b372703c8191a1036c886a78f402，部署appgdep_6afde194608c8191a5570be80ec7973f于2026-11-18T17:34:24Z成功，env9/MCP ready，保留public和既有小时任务。首轮线上已导入74条时段、核对12/83份正式名单，继续顺序核对剩余批次；尚不声称全量完成。
 - 最终构建上的Chrome/WebKit、中英、320/1280px与两入口16视图全部复验通过，报告outputs/niagara-auto-notifications-browser-final；真实Worker/临时D1最终测试也覆盖无末尾斜杠的真实目录重定向和跨来源拒绝。独立GitHub主线合并保留未部署功能，类型与27/27功能回归通过，未将主线0006/0007迁移或其他功能加入本次Sites包。
