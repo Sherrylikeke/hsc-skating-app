@@ -50,6 +50,7 @@ async function checkMembershipControls(page, language) {
   const writes = [];
   await page.route('**/api/**', async route => {
     const req = route.request(), url = new URL(req.url()), action = url.searchParams.get('action');
+    if(url.pathname==='/api/official-notifications')return route.fulfill({json:{notifications:[]}});
     if (url.pathname === '/api/club' && !url.search)
       return route.fulfill({json:{...club,member:account,ownSkaterIds:preferredSkaterIds,membershipClaimStatus}});
     if (action === 'me')
@@ -272,6 +273,7 @@ async function walk(width, language, browser) {
     assert.deepEqual(errors,[]);
     return {width,language,entryY,firstRowY,firstRow};
   } catch(error) {
+    console.error({url:page?.url(),snapshot:await page?.locator('body').ariaSnapshot().catch(()=>null)});
     await page?.screenshot({path:path.join(output,width+'-'+language+'-failure.png'),fullPage:true,animations:'disabled'}).catch(()=>{});
     throw error;
   } finally {
