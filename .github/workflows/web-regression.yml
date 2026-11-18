@@ -77,11 +77,13 @@ jobs:
             sudo apt-get update
             sleep 5
           done
+      - name: Build the production Worker for browser journeys
+        run: npm run build
       - name: Check phone navigation, layout and picker interactions
         env:
           HSC_PREVIEW_ORIGIN: http://127.0.0.1:5173
         run: |
-          npm run dev -- --host 127.0.0.1 --port 5173 --strictPort > "$RUNNER_TEMP/hsc-preview.log" 2>&1 &
+          node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js dev --config dist/server/wrangler.json --local --persist-to .wrangler/browser-ci --ip 127.0.0.1 --port 5173 --inspector-port 0 > "$RUNNER_TEMP/hsc-preview.log" 2>&1 &
           preview=$!
           trap 'kill "$preview" 2>/dev/null || true' EXIT
           curl --fail --silent --show-error --retry 45 --retry-delay 1 --retry-all-errors "$HSC_PREVIEW_ORIGIN/favicon.svg" -o /dev/null || { cat "$RUNNER_TEMP/hsc-preview.log"; exit 1; }
