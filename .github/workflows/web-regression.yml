@@ -67,14 +67,17 @@ jobs:
         run: |
           npm install --prefix work/browser-qa --no-save --package-lock=false --ignore-scripts playwright-core@1.64.1
           # Refresh stale apt metadata and retry transient mirror/download failures.
+          # Bound stalled mirrors so the retry actually runs before the job expires.
           # Browser assertions below still fail immediately; they are never retried.
           for attempt in 1 2 3; do
-            if node work/browser-qa/node_modules/playwright-core/cli.js install --with-deps chromium webkit; then
+            if timeout --kill-after=15s 180s node work/browser-qa/node_modules/playwright-core/cli.js install --with-deps chromium webkit; then
               break
             fi
             if [ "$attempt" -eq 3 ]; then exit 1; fi
             echo "::warning::Browser dependency install failed (attempt $attempt/3); refreshing package metadata before retry."
-            sudo apt-get update
+            if ! timeout --kill-after=15s 60s sudo apt-get update; then
+              echo "::warning::Package metadata refresh did not finish; continuing the bounded install retry."
+            fi
             sleep 5
           done
       - name: Build the production Worker for browser journeys

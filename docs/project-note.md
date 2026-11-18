@@ -2,28 +2,19 @@
 
 这是项目负责人的持续维护记录，不属于会员网页内容。后续会话先读取本文件与 AGENTS.md，在完成实质修改或验收后更新；不自动轮询、不新增定时任务。下列运行数据是查询快照，不是实时监控。
 
-## 2026-11-18 Niagara正式分组、自动导入及站内通知（V53已发布，线上全量核对完成）
+## 2026-11-18 Niagara正式分组、自动导入及站内通知（V53已发布）
 
-- CI44364141817的regression/依赖/representative机型组全部success；existing机型组导航、观赛、日历和准备流程均通过，后续会员审核的页面诊断明确为Vite开发预览RSC错误“Cannot read properties of null (reading 'use')”，不是审核状态断言本身给出的业务差异。手机CI改为先构建，再以本地Wrangler运行dist/server/wrangler.json，使用生产Worker和静态资源执行原全部旅程；不重试浏览器断言、不减机型、不改权限或预期。该方式已用于本轮16视图通知与会员审核专项的本地验收，后续整体验收看新CI。此处仅改CI与文档，不重部署Sites。
+- CI44365996146已通过regression、dependencies和existing生产Worker机型组，证明原RSC开发预览崩溃已被生产预览方式避开；representative停在浏览器依赖安装阶段超过十分钟，尚未运行UI断言。给现有三次安装重试增加单次180秒及kill-after15秒边界，apt metadata刷新60秒，避免卡住安装独占整个20分钟job。仅重试安装，不重试网页断言；不调整机型或期待。后续整体验收以该CI修复的新run为准。
 
-- 18:02仅只读核对，已观察原小时任务实际自行运行：lastCalendarSuccess推进到17:59:59Z，Whitby于18:00:32Z、Keswick18:00:50Z、Nickel Blades18:01:04Z及Nepean18:01:17Z有新的详细检查记录。本轮人工仅定向导入Niagara，最后17:38:40Z，未调用全量日历或上述其他赛事工具。可确认网页关闭时的原任务仍自动执行并进入详细导入；不能承诺所有赛事每小时完成全量文件。Nepean的PDF仍因缺少明确START/END或冰场表头而待核对，未把该轮称全量成功；Niagara83/83、579/23/74和detailSuccessAt保持完整。记录outputs/niagara-auto-notifications-release/automatic-round.json。
-
-- 最终Sites运行源码daded9fc1aeee6e7255d0c80257a52e161b7e375；V53保存版本appgprj_6ad76ca2dba481919ba883865cbd5a0d~appgver_3df6e5d1c85081918da5380811a490ab，部署appgdep_6afde70949f88191b75ecd8d9c279839于17:57:41Z成功，env9/MCP ready。V52上线后完整主线CI暴露铃铛在手机页头产生隐式第三行，已将其定位到现有第二行，保留44px触控及所有入口；V53只增加这一CSS修正。最终构建的16种通知视图复验通过并复看320px截图，报告outputs/niagara-auto-notifications-browser-header。17:58/17:59正式JS与CSS均200且与本地SHA256相同，CSS为BrP-lQga.css/F22E9D255B5F5981C3C7157C29C3EB853DD5F6BC38CE0F723C87BC34E6DF562A；再次只读确认Niagara83/83、579/23/74和detailSuccessAt仍持久化。所有本轮本地预览已停止。
-- GitHub主线最新运行合并7f09b23d791a185742f9fbbb36fd0285770e45a5，保留Sites最终源码为父项及原有未部署功能。CI44361350418中导航/观赛/日历和原有320/390px准备流程通过；新增机型比赛日因上述隐式行失败，个人赛程的会员审核fixture也未适配新增通知端点。已补空通知列表fixture并保留严格账号恢复/审核/权限断言、增加失败页面诊断。独立会员审核控件完整通过；完整本地主线流程因收停预览被中断，不冒称通过，以后续CI44364141817为整体验收依据。当前其regression与dependencies已success，手机两组仍在运行。
-
-- 17:38:40Z完成Niagara七轮定向导入，正式目录83/83份、pending0、579条报名、23位生产档案关联选手及74条时段；errors为空。后续独立只读同步状态确认detailCheckedAt/detailSuccessAt均为17:38:40Z，23条预览全部为确定组别时段。生产含现有人工档案关联，故匹配人数与静态本地候选样本22不同；没有改写身份匹配。Leia Jin为12-05 08:00–08:30/Duliban Rink，属于官方组别窗口。
-- 重新读取Site确认V52/public、原Automation_a2b3ae8946b48191937bd484365e1ec2启用、HOURLY/INTERVAL1/Toronto。17:38:27Z正式域名首页200、匿名club及official-notifications均401；线上By0YKQ30.js与本地SHA256一致A13907EBED26396670AE12B68FA563C735336D1E54CABD383ADE3B2BB96E4EE6。验收记录outputs/niagara-auto-notifications-release；已打开正式网址。
-- 原GitHub main已正常推送ec165446bdf08794e2b1f47c4d4625f6536c4f60，运行CI44360510837的regression/依赖通过（含27项测试、类型、构建、临时D1）。两组手机检查在账号恢复测试中因新增official-notifications读取未被fixture识别而失败；现为该独立公开通知端点提供空列表fixture，严格identity/me/session顺序断言不变。Chrome/WebKit账号恢复专项通过，随后重新提交并检查完整CI；生产运行源码无需变更。
-
-- 用户已明确批准官方Sites助手在沙箱外隐藏stdin使用本站短期令牌、推送原Sites仓库并发布及定向同步Niagara。原审批阻断已通过这一明确授权解决，未写入文件或输出令牌。官方助手已验证推送运行源码5a428ad28be7b20d8fa676a63bda8b2b0289038c；V52保存版本appgprj_6ad76ca2dba481919ba883865cbd5a0d~appgver_da52b372703c8191a1036c886a78f402，部署appgdep_6afde194608c8191a5570be80ec7973f于2026-11-18T17:34:24Z成功，env9/MCP ready，保留public和既有小时任务。首轮线上已导入74条时段、核对12/83份正式名单，继续顺序核对剩余批次；尚不声称全量完成。
-- 最终构建上的Chrome/WebKit、中英、320/1280px与两入口16视图全部复验通过，报告outputs/niagara-auto-notifications-browser-final；真实Worker/临时D1最终测试也覆盖无末尾斜杠的真实目录重定向和跨来源拒绝。独立GitHub主线合并保留未部署功能，类型与27/27功能回归通过，未将主线0006/0007迁移或其他功能加入本次Sites包。
-
-- 修复前只读核对生产为V51/public，原每小时任务启用。2026-11-18日历最近成功15:59:09Z；Niagara已于12:05:14Z发现Entry Lists及Schedule as of Nov.17（Schedule-1.pdf），但详细导入仍停11-16T16:37:52Z，547条Interim、blocks=0。上一轮仅解决链接发现，未解决省略年份的PDF及详细导入选择，不能称当时个人赛程自动更新已完成。
-- 官网当前Entry List为83份PDF、579条公开报名。只读逐份解析均成功；本地HSC候选名单样本中22条已关联报名均能匹配确定组别时段。新Schedule可解析74条时段、无警告，真实样本Leia Jin为STAR2 Group1，12-05 08:00–08:30、Duliban Rink。日期实际在页首且省略年份；网页抽取文本顺序将其排在后方，不能据此声称日期在页脚。解析只借用文档唯一明确年份并校验星期，不猜个人分钟。
-- 服务器接管每轮最多三场详细导入，新发布/修订与未完成批次优先，保留近赛及最久未检查轮换；默认4份名单PDF，已有HSC关联选手每轮最多12份。正式分组替换同人的旧Interim泛化记录，未完成时保留其他类别；全部核对后清理被正式名单取代的旧来源，移除的旧PDF仍保留待核对。解析版本schedule-bands-6。
-- 新增公开官方更新通知outbox、小铃铛与60秒可见页面检查，新通知自动重读已存赛程。按当前My Skaters投递，已读归属、移除偏好和停用即时核对；不扩大私人要求/教练备注权限，不发邮件或系统推送，不改schema。仅实质变更提醒，检查时间/哈希不造成重复通知，原队列去重/重试保留。
-- 使用隔离工作树work/niagara-auto-notifications，基于已部署b77337b；原工作区21个PDF删除未动。Sites凭据隐藏stdin写入被自动审批拒绝，理由为令牌传递到沙箱外终端且未取得该传递方式的明确授权；终端已取消，未绕过。先完成本地验证、可审查提交和发布包，再请求批准这一具体发布步骤。尚未创建新生产版本或宣称上线，GitHub其他待部署功能/0006–0007迁移继续独立保留。
-- 本地23项回归及相关修复复验、类型检查、生产构建通过。真实Worker/临时D1已验证单个日历请求自动导入74条Niagara时段、单场失败不阻塞，以及仅看共享赛程账号的My Skaters通知、已读归属、跨账号/来源拒绝、移除偏好与私人权限隔离。Chrome/WebKit×320/1280px×中英文×会员首页/个人页16视图通过，包含未读角标、模拟新更新后自动重读赛程、已读状态跨刷新保存及无溢出；预览截图已复看，使用隔离API。报告在本会话outputs/niagara-auto-notifications-browser，原始只读83份PDF核对报告在work/niagara-verified.json，不用于覆盖生产资料。
+- 最终Sites运行源码daded9fc1aeee6e7255d0c80257a52e161b7e375；V53保存版本appgprj_6ad76ca2dba481919ba883865cbd5a0d~appgver_3df6e5d1c85081918da5380811a490ab，部署appgdep_6afde70949f88191b75ecd8d9c279839于17:57:41Z成功，env9/MCP ready/public。V52先发布完整导入与通知，V53仅补小屏页头定位。用户已明确批准官方Sites助手在沙箱外隐藏stdin使用本站短期令牌、推送原Sites仓库并发布及定向同步Niagara，最初凭据审批阻断已解决；没有在文件或输出中保存令牌。正式域名首页200、匿名club及official-notifications均401；最终JS/CSS与验收构建SHA256一致。CSS为BrP-lQga.css/F22E9D255B5F5981C3C7157C29C3EB853DD5F6BC38CE0F723C87BC34E6DF562A。验收记录outputs/niagara-auto-notifications-release。
+- 修复前V51虽能发现Entry Lists与Schedule as of Nov.17，Niagara详细导入仍停11-16、547条Interim且blocks0。根因包括详细选择没有稳定续导、省略年份日期不被解析，以及无末尾斜杠的目录重定向导致相对PDF地址错误。现仅借用文档唯一明确年份并校验星期；按实际重定向地址解析相对链接，同时保留www别名缓存键和同源边界。明确STAR1双组及连续STAR4 Boys共用热身时段可匹配；不猜个人分钟。
+- 每次sync_hsc_calendar由服务器完成日历、最多三场独立链接轮换及最多三场完整导入，返回detailChecks/checkedEvents/errors，nextEvents为空时不重复执行。新发布/修订和未完成批次优先，保留近赛和最久未检查轮换；默认每场4份PDF，已有HSC关联选手最多12份，45分钟尝试冷却。正式分组逐人替换旧Interim，未完成保留其他资料；全部核对后清理被替代旧来源，移除的有效旧PDF仍保留待核对。解析版本schedule-bands-6。
+- 新增公开官方更新outbox、小铃铛及60秒可见页面检查，新通知自动重读已存赛程，已读状态跨刷新保存。按当前My Skaters投递并即时核对移除偏好、停用和读取归属；不扩大私人要求/教练备注权限，不发邮件或系统推送，不改schema。仅实质变化通知，检查时间/哈希不重复提醒，原队列重试保留。通知按钮在手机现有页头第二行，44px触控，不产生额外隐式行。
+- 17:38:40Z完成七轮Niagara定向导入：83/83份正式名单、pending0、579条报名、23位生产档案关联选手、74条时段、errors空；独立只读状态确认detailCheckedAt/detailSuccessAt相同，23条预览均为确定组别时间。Leia Jin为12-05 08:00–08:30/Duliban Rink。生产包含既有人工档案关联，故匹配23与静态本地候选样本22不同；没有改写身份匹配。V53上线后再次确认数据保持完整。只读逐份官网83PDF报告work/niagara-verified.json不用于覆盖生产资料。
+- 原Automation_a2b3ae8946b48191937bd484365e1ec2仍启用、HOURLY/INTERVAL1/Toronto，没有新增任务或恢复已删除heartbeat。18:02只读已观察实际无人值守执行：lastCalendarSuccess推进17:59:59Z，Whitby18:00:32Z、Keswick18:00:50Z、Nickel Blades18:01:04Z及Nepean18:01:17Z有新详细检查。人工最后一次仅Niagara17:38:40Z，未调用全量日历或其他赛事工具。Nepean仍因不明确的START/END或冰场表头待核对，不能称该轮全量成功，也不承诺所有赛事一小时内导完。记录automatic-round.json。
+- 本地线上基线23项回归、主线27项回归、类型、构建与真实Worker/临时D1通过；覆盖自动服务端导入、七场轮转/单场失败不阻塞、真实目录重定向、账号/来源/已读隔离和私人权限。最终构建Chrome/WebKit×320/1280px×中英文×两入口16通知视图全部通过，含自动重读、已读持久化及无溢出，已复看320px截图，报告outputs/niagara-auto-notifications-browser-header；不冒称生产账号登录或真机验收。所有本轮本地预览已停止。
+- GitHub运行与CI提交c6d22205ae17b07d3465d626cb4548f4aeb6d00d已正常推送原main，保留Sites最终源码为祖先。CI44365996146的核心回归/依赖已通过，手机两组仍待最终结果。此前CI先发现未适配通知端点的账号/会员fixture及页头隐式行，均已修复且保留严格断言；随后失败页面捕获Vite开发预览RSC“Cannot read properties of null (reading 'use')”，手机CI改为构建后用Wrangler本地生产Worker执行全部原旅程，无断言重试、无减少机型。独立会员审核控件通过；曾被收停预览中断的本地主线全流程不计通过。
+- 使用隔离工作树niagara-auto-notifications及niagara-main-integration；原工作区21份PDF删除逐项保护，未暂存/恢复/提交。GitHub待发布的日历/比赛准备/订阅及0006–0007迁移独立保留，没有加入本次Sites包；原生工程、邮件配置、站点受众和小时任务均未改变。GitHub更新与Sites上线分开记录。
 
 ## 2026-11-16 Niagara Schedule链接与更新成功判断
 
