@@ -2,6 +2,13 @@
 
 这是项目负责人的持续维护记录，不属于会员网页内容。后续会话先读取本文件与 AGENTS.md，在完成实质修改或验收后更新；不自动轮询、不新增定时任务。下列运行数据是查询快照，不是实时监控。
 
+## 2026-11-19 门户 v1 提交与 GitHub 同步
+
+- 用户明确要求 commit 并 push。实际核对当前 GitHub 远端名为 `origin`，地址 `https://github.com/Sherrylikeke/hsc-skating-app.git`，分支 `main`；没有改远端、分支或仓库可见性。保留远端至 `dacaded` 的赛程自动导入、通知与 CI 更新，将未发布的门户提交重放到其后；仅项目 Note 出现冲突，已保留双方记录，运行代码无冲突。
+- 门户运行源码、Markdown PRD、公开素材、发现／比较文档和回归脚本以 `7fc19ffe97f4d552a4f018f36413b249dbf57b50` 提交，标题 `feat: add HSC portal v1 review experience and PRD`，已正常推送 GitHub `main`。忽略目录中的本地数据库、运行密钥、截图与构建产物未加入提交；无 PRD PDF。后续文档提交仅记录本次同步与验证结果。
+- 合入远端更新后重新验证：Web TypeScript、`npm test` 全部 27 项、门户检查 16 组及 Sites 官方构建通过，变更空白检查通过。未为源码同步重复运行上一阶段浏览器验收；本次未查询 GitHub Actions 最终结果，不将本地通过写成云端 CI 已通过。
+- 本轮只做 GitHub 源码同步，未调用 Sites 发布、修改生产数据／配置、发邮件或付款；未重新查询生产 Worker、D1 和小时同步状态。门户仍是本地评审 v1，真实收款、旧系统迁移及完整验收后统一切换继续待办。
+
 ## 2026-11-19 门户 PRD v1 与本地评审版本
 
 - 用户最新要求“今天出 PRD 和 v1”替代下方讨论期的暂缓成文安排。当前需求基线为 `docs/portal-prd-v1.zh-CN.md`，决策记录为 `docs/portal-decisions.zh-CN.md`；旧 `portal-prd.zh-CN.md` 仅保留历史。PRD 只交付 Markdown，再次核对没有 PRD PDF。分期实现、正式域名、付款页面形态仍明确待定，未代替用户决定。
