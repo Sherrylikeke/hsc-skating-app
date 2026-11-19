@@ -7,6 +7,9 @@ export function activeMemberRole(member:{role?:string|null;status:string}|null,r
 
 export function destinationAfterSignIn(search:string,member?:{role?:string|null;requested_role?:string;status:string}){
   const params=new URLSearchParams(search);
+  const portalReturn=params.get('portalReturn');
+  // Only the new local portal route is permitted; never accept an arbitrary redirect.
+  if(portalReturn&&/^\/portal(?:\/[a-zA-Z0-9_./-]*)?$/.test(portalReturn)&&!portalReturn.includes('..'))return portalReturn;
   if(params.get('tab')==='account')return '/?tab=account';
   // Only the query is carried across sign-in. The path is always our workspace.
   const schedule=params.get('schedule');

@@ -118,3 +118,25 @@ export const hscCalendarSubscriptions = sqliteTable('hsc_calendar_subscriptions'
   memberId:text('member_id').primaryKey(), hash:text('hash').notNull(), authVersion:integer('auth_version').notNull(),
   createdAt:text('created_at').notNull(), updatedAt:text('updated_at').notNull(),
 }, table=>[uniqueIndex('hsc_calendar_subscription_hash').on(table.hash)]);
+
+// Portal content is separate from member roles, private relations and financial authority.
+export const hscPortalPages=sqliteTable('hsc_portal_pages',{
+ path:text('path').primaryKey(),published:text('published'),draft:text('draft').notNull(),revision:integer('revision').notNull(),
+ updatedBy:text('updated_by').notNull(),updatedAt:text('updated_at').notNull(),operationId:text('operation_id').notNull(),
+});
+export const hscPortalVersions=sqliteTable('hsc_portal_versions',{
+ id:text('id').primaryKey(),path:text('path').notNull(),revision:integer('revision').notNull(),content:text('content').notNull(),
+ published:integer('published').notNull(),actorId:text('actor_id').notNull(),createdAt:text('created_at').notNull(),
+},table=>[uniqueIndex('hsc_portal_version').on(table.path,table.revision)]);
+export const hscPortalEditors=sqliteTable('hsc_portal_editors',{
+ memberId:text('member_id').primaryKey(),active:integer('active').notNull().default(1),updatedBy:text('updated_by').notNull(),updatedAt:text('updated_at').notNull(),
+});
+export const hscPortalMedia=sqliteTable('hsc_portal_media',{
+ id:text('id').primaryKey(),objectKey:text('object_key').notNull(),filename:text('filename').notNull(),mimeType:text('mime_type').notNull(),byteSize:integer('byte_size').notNull(),sha256:text('sha256').notNull(),visibility:text('visibility').notNull().default('private'),createdBy:text('created_by').notNull(),createdAt:text('created_at').notNull(),
+});
+export const hscPortalContacts=sqliteTable('hsc_portal_contacts',{
+ id:text('id').primaryKey(),name:text('name').notNull(),email:text('email').notNull(),department:text('department').notNull(),message:text('message').notNull(),state:text('state').notNull().default('new'),createdAt:text('created_at').notNull(),
+});
+export const hscPortalCart=sqliteTable('hsc_portal_cart',{
+ id:text('id').primaryKey(),memberId:text('member_id').notNull(),itemId:text('item_id').notNull(),skaterId:text('skater_id').notNull().default(''),quantity:integer('quantity').notNull(),updatedAt:text('updated_at').notNull(),
+},table=>[uniqueIndex('hsc_portal_cart_owner_item').on(table.memberId,table.itemId,table.skaterId)]);

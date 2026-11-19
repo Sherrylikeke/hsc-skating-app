@@ -12,7 +12,7 @@
 - Web：TypeScript、React、Next 路由体系、Vinext/Vite、Tailwind。页面在 `app/`，业务逻辑在 `lib/`。
 - 后端：由 Sites 管理部署的 Cloudflare Worker；`app/api/`、`app/mcp/route.ts` 为服务端入口。
 - 数据库：Cloudflare D1，采用 SQLite SQL 语义；Drizzle schema 在 `db/schema.ts`，增量迁移在 `drizzle/`。
-- `.openai/hosting.json` 的 D1 绑定为 `DB`，R2 未启用。构建配置中的全零 database_id 是本地占位值，不是生产数据库标识。
+- `.openai/hosting.json` 的 D1 绑定为 `DB`；2026-11-19 门户 v1 源码已声明 R2 `BUCKET`，仅在隔离本地验收，尚未部署接通生产。构建配置中的全零 database_id 是本地占位值，不是生产数据库标识。
 - 手机端：`capacitor/` 为本地静态打包的 Capacitor 8 客户端，复用 Web 组件；`mobile/` 原 Expo 工程保留对照。原生端令牌存系统安全存储，Worker/D1 不打入手机；配置见 `docs/capacitor.md`。
 - 原私人站点：https://hsc-coach-roster.sherrylikeke.chatgpt.site/
 - 自定义域名：`hamiltonskatingclub.memberportal.dev`，用户于 2026-11-03 购买父域并授权绑定；Sites 已于 2026-11-03 接通，域名／SSL active，新网址 HTTPS 200；后续状态以原生工具重新读取为准。应用密码登录仅允许该确切 HTTPS origin 与既有域名／开发入口，不使用任意 Host 放宽校验。
@@ -71,6 +71,7 @@
 - Android 便携构建：`capacitor/scripts/build-android.ps1 -ToolchainRoot <工具目录> -OutputDirectory <交付目录>`；用户已于 2026-10-22 批准精简工具下载及 SDK 许可。只使用 `ANDROID_USER_HOME`，避免与旧目录变量冲突，不将 SDK、缓存和调试密钥提交 Git。配置见 `docs/android-build.md`。
 - 手机网页布局用 `scripts/check-mobile-layout.mjs` 进行 Chromium／WebKit 手机浏览器模拟，复用忽略目录 `work/browser-qa` 的 Playwright 1.64.1 与 WebKit 缓存；说明见 `docs/mobile-web-install.md`。隔离 API 测试数据不能冒称生产账号登录或真机验收；当前可做实际浏览器渲染，不再仅以静态 CSS 检查替代手机复核。
 - 核心回归：`node scripts/check-members.mjs`；语言：`node scripts/check-locales.mjs`。
+- 门户 v1：需求见 `docs/portal-prd-v1.zh-CN.md`，决定见 `docs/portal-decisions.zh-CN.md`，运行／验收见 `docs/portal-v1-review.zh-CN.md`。`/portal` 为本地评审入口，`/member` 复用会员应用，原根页保持；不把评审版当成已完成生产迁移。回归 `node scripts/check-portal.mjs`，浏览器 `node scripts/check-portal-browser.mjs`。预览 `node scripts/preview-portal.mjs` 仅使用 `work/portal-v1/runtime` 合成数据，不能将测试账号与本地密钥部署生产。
 - 相关解析/编辑回归：`check-paste.mjs`、`check-athlete-history.mjs`、`check-official-source.mjs`、`check-starting-order.mjs`，均位于 `scripts/`。
 - 报名 PDF / 多日期赛程回归：`node scripts/check-official-import.mjs`；真实样本来源、人数校验、分批轮转和格式边界见 `docs/official-import-formats.md`。目录每轮最多四份，未完成不能报全量成功；同步后保留嵌套 PDF 来源修订。
 - 网页官网同步客户端：`node scripts/check-official-sync-client.mjs`；逐场 HTTP/网络/解析失败必须展示部分失败，不得报全量成功。普通会员只重新读取存档，手动官网检查仍限管理员。
