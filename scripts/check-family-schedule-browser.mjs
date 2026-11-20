@@ -154,21 +154,23 @@ async function walk(width, language, browser) {
     const firstRowY = await y(rows.first());
     const firstRow = await rows.first().innerText();
     const current = page.locator('.family-upcoming tbody tr');
-    assert.deepEqual(await current.locator('.club-session-skater>.club-text-button').allTextContents(),['Ana Reed','Ben Reed']);
+    assert.deepEqual(await page.locator('.family-upcoming h2').allTextContents(),['Ana Reed','Ben Reed']);
+    assert.equal(await page.locator('.home-events').count(),0);
+    assert.deepEqual(await current.locator('.club-session-skater>.club-text-button').allTextContents(),['Ana Reed','Ana Reed','Ben Reed']);
     assert.ok(firstRow.includes('11:15–12:00') && firstRow.includes('11:38') && firstRow.includes('#8'));
     assert.match(await current.first().locator('.family-arrival').innerText(), /10:15/);
     const navTop = desktop ? 844 : await page.locator('.club-sidebar').evaluate(el=>el.getBoundingClientRect().top);
-    // Upcoming competition cards now precede the detailed schedule. Check the
-    // actual scrolling journey, while the member-home entry stays above the fold.
+    // Check the scrolling journey while the member-home entry stays above the fold.
     await rows.first().evaluate(el=>el.scrollIntoView({block:'center',behavior:'instant'}));
     const visibleRow=await rows.first().evaluate(el=>{
       const rect=el.getBoundingClientRect();return {top:rect.top,bottom:rect.bottom};
     });
     assert.ok(visibleRow.top>=0&&visibleRow.bottom<=navTop,'The entire current session must be readable above the bottom navigation: '+JSON.stringify({visibleRow,navTop}));
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth > innerWidth+1),false,'No page-wide scrolling');
-    const pending = page.locator('.family-pending tbody tr');
+    const pending = current.filter({hasText:'FREE'});
     assert.equal(await pending.count(),1);
     assert.match(await pending.innerText(), /FREE/);
+    assert.match(await pending.innerText(), /15:00–16:40/);
     assert.doesNotMatch(await pending.innerText(), /#8|11:38/);
     assert.equal(await pending.locator('.family-arrival').count(),0);
     assert.equal(await page.locator('.family-past').getAttribute('open'),null);

@@ -32,3 +32,28 @@ export function groupHomeSchedule(rows:ScheduleRow[], now:number) {
   }
   return {upcoming,pending,past};
 }
+
+// Display-only windows. Keep the original rows for calendars, alerts and coach plans.
+export function upcomingGroupWindows(rows:ScheduleRow[]) {
+  const windows = new Map<string, ScheduleRow>();
+  const pending: ScheduleRow[] = [];
+  for (const row of rows) {
+    const category = row.category.replace(/\s*\bGROUPS?\s*\d+(?:\s*(?:&|AND|,|[-–])\s*\d+)*/gi,'').trim();
+    const candidates = (row.candidates ?? (category !== row.category ? [row] : []))
+      .filter(slot=>slot.start && slot.end && slot.start < slot.end);
+    if (row.activity !== 'competition' || !candidates.length) {
+      pending.push(row);
+      continue;
+    }
+    const id = [row.eventId,row.skaterId,row.date,category.toUpperCase()].join('|');
+    const window: ScheduleRow = windows.get(id) ?? {...row,id,category,start:'',end:'',candidates:[],startingOrder:undefined};
+    for (const slot of candidates) {
+      if (!window.candidates!.some(current=>current.slotKey===slot.slotKey)) window.candidates!.push(slot);
+      if (!window.start || slot.start < window.start) window.start = slot.start;
+      if (slot.end > window.end) window.end = slot.end;
+      if (window.rink !== slot.rink) window.rink = '';
+    }
+    windows.set(id,window);
+  }
+  return {windows:[...windows.values()],pending};
+}

@@ -118,12 +118,12 @@ export default function ClubApp(){
         const skater=data?.skaters.find(skater=>skater.id===row.skaterId);
         const arrival=showArrival ? arrivalReference(row,plan?.meetingTime) : null;
         const meeting=plan?.meetingTime && <span className="club-meeting">{view==='personal'?text("Coach meeting · ","教练集合 · "):translate("集合 ")}{dateLabel(plan.meetingTime)} {plan.meetingTime.slice(11,16)}</span>;
-        const order=row.startingOrder;
+        const order=row.startingOrder; const estimated=view==='personal'&&row.uncertain&&row.candidates&&row.start&&row.end;
         return <tr role="row" key={row.id}>
           <td role="cell" className="club-session-time">
             <span className="club-date">{dateLabel(row.date)}</span>
-            <strong className="club-time">{row.uncertain?text("Time to be confirmed","时间待确认"):row.start+'–'+row.end}</strong>
-            <span className={'club-tag '+(row.uncertain?'amber':'')}>{row.uncertain?translate("候选时段 · 待确认"):translate("官方组别时间")}</span>
+            <strong className="club-time">{row.uncertain&&!estimated?text("Time to be confirmed","时间待确认"):row.start+'–'+row.end}</strong>
+            <span className={'club-tag '+(row.uncertain?'amber':'')}>{estimated?text("Estimated window · exact group time pending","预计范围 · 具体组别时间待确认"):row.uncertain?translate("候选时段 · 待确认"):translate("官方组别时间")}</span>
             {arrival&&<span className="family-arrival">{text("Arrival guide (1 hour early)","到场参考（提前 1 小时）")} · {arrival}</span>}
             {view==='personal'&&meeting}
             {row.candidates&&<details className="club-candidate-times">
@@ -191,7 +191,7 @@ export default function ClubApp(){
           {view==='registrations'&&<RegistrationBoard key={data.member.id} memberId={data.member.id} events={data.events} skaters={data.skaters} ownIds={data.ownSkaterIds} onNavigate={visit}/>}
           {view==='calendar'&&<Suspense fallback={<p role="status">{text('Loading calendar…','正在读取日历…')}</p>}><FamilyCalendar onNavigate={visit} key={data.member.id} events={data.events} skaters={data.skaters} ownIds={data.ownSkaterIds} memberId={data.member.id}/></Suspense>}
           {view==='personal' && data.member.status==='club-viewer' && <MembershipReviewNotice status={data.membershipClaimStatus} className="club-panel membership-review-notice"/>}
-          {view==='personal'&&<PersonalSchedule onDay={()=>navigate('day')} onRegistrations={()=>navigate('registrations')} onCalendar={()=>navigate('calendar')} onWatch={()=>navigate('watch')} rows={allSchedule} skaters={data.skaters} ownIds={data.ownSkaterIds} scope={personal}
+          {view==='personal'&&<PersonalSchedule events={data.events} onEvent={id=>navigate('events',id)} onDay={()=>navigate('day')} onRegistrations={()=>navigate('registrations')} onCalendar={()=>navigate('calendar')} onWatch={()=>navigate('watch')} rows={allSchedule} skaters={data.skaters} ownIds={data.ownSkaterIds} scope={personal}
             limit={isParentAccount(data.member)?PARENT_SKATER_LIMIT:undefined} editableIds={data.parentEditableSkaterIds??[]} onCoachChange={()=>void load()} onScope={personal=>updateFilters({personal})} onSkater={id=>navigate('skaters',id)} onChange={ids=>{setData({...data,ownSkaterIds:ids});void load();}}
             renderRows={(rows,showArrival)=>renderSchedule(rows,false,showArrival)}/>}
           {view==='coach'&&<>

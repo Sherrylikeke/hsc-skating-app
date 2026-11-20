@@ -6,6 +6,7 @@ import {parseEntryPdf} from '../lib/entry-pdf.ts';
 import {readOfficialPdfItems} from '../lib/official-pdf.ts';
 import {selectDetailEvents} from '../lib/sync-selection.ts';
 import {attachRegistrationHistory,homeRegistrationCategories,registrationYearStart} from '../lib/registration-categories.ts';
+import {upcomingGroupWindows} from '../lib/home-schedule.ts';
 
 const source='https://skateontario.org/event/test/',checks=[];
 const description=`<p>Advanced Registration: Registration for assigned athletes will open at 10:00 AM ET Monday, November 9, 2026 and will close at 11:59 PM ET Wednesday, November 11, 2026.</p>
@@ -175,4 +176,17 @@ dueEvents[3].detailCheckedAt='2026-11-12T10:00:00Z';
 assert.equal(selectDetailEvents(dueEvents,'2026-11-12')[2].id,phasesFixture.waterloo.id,'A failed attempt must not starve the next imminent registration');
 const app=fs.readFileSync('app/club-app.tsx','utf8');assert.ok(!app.includes('className="club-metrics"'));assert.ok(app.includes("documents.filter(document=>document.kind!=='start-order')"));assert.ok(app.includes('Skate Ontario event details'));
 checks.push('distant registration announcements rotate into three-event sync; stats and duplicate order links removed');
+const groupSlots = ['09:00','10:00','11:00'].map((start,index)=>({
+  id:String(index),slotKey:String(index),eventId:'fixture',skaterId:skater.id,date:'2026-12-04',
+  category:'STAR 4 GIRLS U12 GROUP '+(index+1),start,end:start.slice(0,2)+':40',
+  rink:'A',activity:'competition',uncertain:true,
+}));
+const firstWindow=upcomingGroupWindows([groupSlots[2],groupSlots[0],groupSlots[1]]).windows[0];
+assert.deepEqual([firstWindow.category,firstWindow.start,firstWindow.end,firstWindow.uncertain,firstWindow.candidates.length],
+  ['STAR 4 GIRLS U12','09:00','11:40',true,3]);
+const secondDay={...groupSlots[2],date:'2026-12-05'};
+assert.equal(upcomingGroupWindows([groupSlots[0],secondDay]).windows.length,2);
+assert.equal(upcomingGroupWindows([{...groupSlots[0],activity:'practice'}]).pending.length,1);
+checks.push('unknown group shows its full candidate time window without combining dates or practices');
+
 console.log(JSON.stringify({passed:checks.length,checks,fixtureOnly:true,productionWrites:0},null,2));
