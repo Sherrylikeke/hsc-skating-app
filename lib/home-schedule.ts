@@ -1,6 +1,7 @@
 import {formatInTimeZone} from 'date-fns-tz';
+import {compareEventDates} from './event-registration.ts';
 import {scheduleInstant} from './schedule-time.ts';
-import type {ScheduleRow} from './club-types.ts';
+import type {ClubEvent,ClubSkater,ScheduleRow} from './club-types.ts';
 
 export type HomeScope='mine'|'team'|`skater:${string}`;
 export function filterHomeSchedule<Row extends {skaterId:string}>(rows:Row[],ownIds:string[],scope:HomeScope):Row[] {
@@ -56,4 +57,30 @@ export function upcomingGroupWindows(rows:ScheduleRow[]) {
     windows.set(id,window);
   }
   return {windows:[...windows.values()],pending};
+}
+
+export function upcomingCompetitionCards(
+  events:ClubEvent[], rows:ScheduleRow[], skaters:ClubSkater[], ownIds:string[], scope:HomeScope, now:number, today:string,
+){
+  const scopedRows=filterHomeSchedule(rows,ownIds,scope);
+  const scopedSkaters=filterHomeSchedule(skaters.map(skater=>({skaterId:skater.id,skater})),ownIds,scope);
+  const {upcoming,pending,past}=groupHomeSchedule(scopedRows,now);
+  const {windows,pending:unmatched}=upcomingGroupWindows(pending);
+  const scheduled=new Set(scopedRows.map(row=>row.eventId+'|'+row.skaterId));
+  const rowsByEvent=new Map<string,ScheduleRow[]>();
+  for(const row of [...upcoming,...windows,...unmatched].sort((a,b)=>
+    a.date.localeCompare(b.date)||(a.start||'24:00').localeCompare(b.start||'24:00')
+  )){
+    const sessions=rowsByEvent.get(row.eventId);
+    if(sessions)sessions.push(row);
+    else rowsByEvent.set(row.eventId,[row]);
+  }
+  const cards=events.filter(event=>(event.end||event.start)>=today).sort(compareEventDates).flatMap(event=>{
+    const sessions=rowsByEvent.get(event.id)||[];
+    const entered=new Set(event.participants.flatMap(entry=>entry.skaterIds));
+    const waiting=scopedSkaters.filter(({skaterId})=>entered.has(skaterId)&&!scheduled.has(event.id+'|'+skaterId))
+      .map(({skater})=>skater);
+    return sessions.length||waiting.length ? [{event,sessions,waiting}] : [];
+  });
+  return {cards,past};
 }

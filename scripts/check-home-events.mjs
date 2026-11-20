@@ -6,7 +6,7 @@ import {parseEntryPdf} from '../lib/entry-pdf.ts';
 import {readOfficialPdfItems} from '../lib/official-pdf.ts';
 import {selectDetailEvents} from '../lib/sync-selection.ts';
 import {attachRegistrationHistory,homeRegistrationCategories,registrationYearStart} from '../lib/registration-categories.ts';
-import {upcomingGroupWindows} from '../lib/home-schedule.ts';
+import {upcomingCompetitionCards,upcomingGroupWindows} from '../lib/home-schedule.ts';
 
 const source='https://skateontario.org/event/test/',checks=[];
 const description=`<p>Advanced Registration: Registration for assigned athletes will open at 10:00 AM ET Monday, November 9, 2026 and will close at 11:59 PM ET Wednesday, November 11, 2026.</p>
@@ -188,5 +188,25 @@ const secondDay={...groupSlots[2],date:'2026-12-05'};
 assert.equal(upcomingGroupWindows([groupSlots[0],secondDay]).windows.length,2);
 assert.equal(upcomingGroupWindows([{...groupSlots[0],activity:'practice'}]).pending.length,1);
 checks.push('unknown group shows its full candidate time window without combining dates or practices');
+
+const secondSkater={...skater,id:'second',name:'Second Skater'};
+const entriesFor=(...ids)=>ids.map(id=>({skaterIds:[id]}));
+const nextCompetitions=[
+  {id:'later',name:'Later',start:'2026-12-10',end:'2026-12-10',participants:entriesFor('mine')},
+  {id:'fixture',name:'Sooner',start:'2026-12-04',end:'2026-12-05',participants:entriesFor('mine','second')},
+  {id:'past',name:'Past',start:'2026-11-20',end:'2026-11-20',participants:entriesFor('mine')},
+];
+const nearRows=[
+  {...groupSlots[2],skaterId:'second',skaterName:secondSkater.name,timezone:'America/Toronto',uncertain:false},
+  ...groupSlots.map(row=>({...row,skaterName:skater.name,timezone:'America/Toronto'})),
+];
+const upcoming=(scope,rows=nearRows)=>upcomingCompetitionCards(nextCompetitions,rows,[skater,secondSkater],['mine','second'],scope,Date.parse('2026-12-01T15:00:00Z'),'2026-12-01').cards;
+const byCompetition=upcoming('mine');
+assert.deepEqual(byCompetition.map(card=>card.event.id),['fixture','later']);
+assert.deepEqual(byCompetition[0].sessions.map(row=>[row.skaterId,row.start,row.end]),[['mine','09:00','11:40'],['second','11:00','11:40']]);
+assert.deepEqual(byCompetition[1].waiting.map(row=>row.id),['mine']);
+assert.deepEqual(upcoming('skater:second').map(card=>card.sessions.map(row=>row.skaterId)),[['second']]);
+assert.deepEqual(upcoming('team',[])[0].waiting.map(row=>row.id),['mine','second']);
+checks.push('upcoming groups both skaters by competition date and retains unscheduled entries, including when filtering');
 
 console.log(JSON.stringify({passed:checks.length,checks,fixtureOnly:true,productionWrites:0},null,2));

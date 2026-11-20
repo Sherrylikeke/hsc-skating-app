@@ -2,7 +2,7 @@
 import {useEffect, useMemo, useState} from 'react';
 import type {ReactNode} from 'react';
 import {todayToronto,type ClubEvent,type ClubSkater,type ScheduleRow} from '../lib/club-types';
-import {filterHomeSchedule, groupHomeSchedule, upcomingGroupWindows,type HomeScope} from '../lib/home-schedule';
+import {upcomingCompetitionCards,type HomeScope} from '../lib/home-schedule';
 import {text} from '../lib/i18n';
 import CompactSelect from './compact-select';
 import HomeSkaters from './home-skaters';
@@ -23,7 +23,7 @@ type Props = {
   scope:HomeScope;
   onScope:(scope:HomeScope)=>void;
   onChange:(ids:string[])=>void;
-  renderRows:(rows:ScheduleRow[], showArrival?:boolean)=>ReactNode;
+  renderRows:(rows:ScheduleRow[],showArrival?:boolean,showEvent?:boolean)=>ReactNode;
 };
 
 export default function PersonalSchedule({events,onEvent,rows,skaters,ownIds,scope,onScope,onChange,renderRows,onWatch,onCalendar,onDay,onRegistrations,onSkater,limit,editableIds,onCoachChange}:Props) {
@@ -37,27 +37,11 @@ export default function PersonalSchedule({events,onEvent,rows,skaters,ownIds,sco
       document.removeEventListener('visibilitychange', update);
     };
   }, []);
-  const {upcoming,pending,past} = useMemo(()=>{
-    const grouped = groupHomeSchedule(filterHomeSchedule(rows,ownIds,scope),now);
-    const {windows,pending} = upcomingGroupWindows(grouped.pending);
-    return {...grouped,pending,upcoming:[...grouped.upcoming,...windows].sort((a,b)=>
-      (a.date+' '+a.start).localeCompare(b.date+' '+b.start))};
-  },[rows,ownIds,scope,now]);
+  const {cards,past} = useMemo(()=>upcomingCompetitionCards(events,rows,skaters,ownIds,scope,now,todayToronto()),
+    [events,rows,skaters,ownIds,scope,now]);
   const own = new Set(ownIds);
   const mine = text('All my skaters','我的全部');
   const team = text('Whole team','全队');
-  const title = scope === 'mine' ? mine : scope === 'team' ? team : skaters.find(skater => 'skater:'+skater.id === scope)?.name;
-  const ownSkaters = skaters.filter(skater=>own.has(skater.id));
-  const today = todayToronto();
-  const cards = scope === 'mine' && ownSkaters.length
-    ? ownSkaters.map(skater=>({
-      key:skater.id,title:skater.name,rows:upcoming.filter(row=>row.skaterId===skater.id),
-      pending:pending.filter(row=>row.skaterId===skater.id),
-      entries:events.filter(event=>event.end>=today && event.participants.some(entry=>entry.skaterIds.includes(skater.id))
-        && !rows.some(row=>row.skaterId===skater.id && row.eventId===event.id))
-        .sort((a,b)=>a.start.localeCompare(b.start)),
-    }))
-    : [{key:scope,title,rows:upcoming,pending:[],entries:[]}];
   const option = (skater:ClubSkater) => <option key={skater.id} value={'skater:'+skater.id}>{skater.name}</option>;
   return <>
     <section className="club-panel club-personal-picker family-controls">
@@ -76,25 +60,24 @@ export default function PersonalSchedule({events,onEvent,rows,skaters,ownIds,sco
       <button type="button" className="cal-entry" onClick={onCalendar}>{text('Schedule calendar','赛程日历')}</button>
       <button type="button" className="watch-entry" onClick={onWatch}>{text('Cheer from now','从现在看 · 给朋友加油')}</button>
     </section>
-    {cards.map(card=><section className="club-panel family-upcoming" key={card.key}>
-      <div className="club-panel-heading"><h2>{card.title}</h2><span>{text('Current & upcoming','当前及接下来')} · {card.rows.length+card.pending.length+card.entries.length}</span></div>
-      {card.rows.length ? renderRows(card.rows,true) : !card.entries.length && !card.pending.length &&
-        <p className="family-empty">{!ownIds.length && scope==='mine' ? text('Add a skater above to see their schedule.','在上方添加选手，即可查看赛程。') :
-          scope!=='mine' && pending.length ? text('Group times are still to be confirmed. See the possible sessions below.','组别时间待确认，可在下方查看候选安排。') :
-          text('No upcoming official sessions for this selection.','当前选择暂无接下来的官方安排。')}</p>}
-      {card.pending.length>0 && renderRows(card.pending)}
-      {card.entries.map(event=><div className="family-empty" key={event.id}>
-        <button className="club-tiny-link" onClick={()=>onEvent(event.id)}>{event.name}</button>
-        <span> · {event.start}{event.end!==event.start?' – '+event.end:''}</span>
-        <div>{event.documents.some(document=>document.kind==='schedule')
+    {!cards.length&&<p className="club-panel family-empty">{!ownIds.length && scope==='mine'
+      ?text('Add a skater above to see their schedule.','在上方添加选手，即可查看赛程。')
+      :text('No upcoming official sessions for this selection.','当前选择暂无接下来的官方安排。')}</p>}
+    {cards.map(({event,sessions,waiting})=><section className="club-panel family-upcoming" key={event.id}>
+      <div className="club-panel-heading family-event-heading">
+        <h2><button className="club-text-button" type="button" onClick={()=>onEvent(event.id)}>{event.name}</button></h2>
+        <p>{event.start}{event.end&&event.end!==event.start?' – '+event.end:''}</p>
+      </div>
+      {sessions.length>0&&renderRows(sessions,true,false)}
+      {waiting.length>0&&<div className="family-empty">
+        <p>{event.blocks.length||event.documents.some(document=>document.kind==='schedule')
           ?text('Schedule published · category time pending','赛程已公布 · 类别时段待确认')
-          :text('Schedule to be published','赛程待公布')}</div>
-      </div>)}
+          :text('Schedule to be published','赛程待公布')}</p>
+        <ul>{waiting.map(skater=><li key={skater.id}>
+          <button className="club-text-button" type="button" onClick={()=>onSkater(skater.id)}>{skater.name}</button>
+        </li>)}</ul>
+      </div>}
     </section>)}
-    {scope!=='mine' && pending.length>0 && <section className="club-panel family-pending">
-      <div className="club-panel-heading"><h2>{text('Time to be confirmed','时段待确认')}</h2><span>{pending.length}</span></div>
-      {renderRows(pending)}
-    </section>}
     {past.length>0 && <details className="club-panel family-past">
       <summary>{text('Past sessions','已结束的安排')} ({past.length})</summary>
       {renderRows(past)}

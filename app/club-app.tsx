@@ -105,7 +105,7 @@ export default function ClubApp(){
   function editPlan(skater:ClubSkater,event:LiveEvent,row:ScheduleRow){const plan=data?.plans.find(plan=>plan.skaterId===skater.id&&plan.eventId===event.id&&plan.slotKey===row.slotKey);setEditing({skater,event,row,plan});setMeeting(plan?.meetingTime||'');setNote(plan?.note||'');setPlanError('');}
   async function savePlan(){if(!editing)return;setSavingPlan(true);setPlanError('');try{const response=await fetch('/api/plans',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({skaterId:editing.skater.id,eventId:editing.event.id,slotKey:editing.row.slotKey,meetingTime:meeting,note,revision:editing.plan?.revision||0})});const result=await response.json() as {error?:string;plan:CoachPlan};if(!response.ok)throw new Error(result.error||translate("安排未保存"));setData(old=>old?{...old,plans:[...old.plans.filter(plan=>plan.id!==result.plan.id),result.plan]}:old);setEditing(null);setNotice(translate("教练安排已保存，官网更新会保留这些内容。"));}catch(e){setPlanError((e as Error).message);}finally{setSavingPlan(false);}}
   function exportSchedule(){downloadCsv(translate("HSC_教练总赛程.csv"),[[translate("日期"),translate("组别开始"),translate("组别结束"),translate("时间口径"),translate("选手"),translate("项目"),translate("冰场"),translate("负责教练"),translate("教练集合时间（当地）"),translate("教练备注"),translate("比赛"),translate("时区"),translate("官方赛程"),translate("PDF页码"),translate("出场序号"),'Warm-up Group',translate("官方个人时间"),translate("出场信息来源")],...filteredSchedule.map(row=>{const plan=data?.plans.find(plan=>plan.skaterId===row.skaterId&&plan.eventId===row.eventId&&plan.slotKey===row.slotKey);return [row.date,row.uncertain?'':row.start,row.uncertain?'':row.end,row.uncertain?translate("候选组别时段，待确认"):translate("官方组别时段，非个人时间"),row.skaterName,row.category,row.rink,row.coach,plan?.meetingTime||'',plan?.note||'',row.eventName,row.timezone,row.sourceUrl,String(row.page),row.startingOrder?String(row.startingOrder.startNumber):'',row.startingOrder?.warmupGroup!=null?String(row.startingOrder.warmupGroup):'',row.startingOrder?.individualTime||'',row.startingOrder?.sourceUrl||''];})]);}
-  function renderSchedule(rows:ScheduleRow[], showCoaches=true, showArrival=false) {
+  function renderSchedule(rows:ScheduleRow[], showCoaches=true, showArrival=false, showEvent=true) {
     if (!rows.length) return <Empty title={translate("暂无符合条件的官方安排")} detail={translate("名单或赛程公布并成功读取后，这里会显示对应的组别时段。")}/>;
     return <div className="club-table-wrap club-schedule-wrap"><table role="table" className="club-table club-schedule-table">
       <thead role="rowgroup"><tr role="row">
@@ -141,7 +141,7 @@ export default function ClubApp(){
               {order?translate("出场 #{0} · {1}",[order.startNumber,order.warmupGroup!==null?text('Warm-up Group ','热身组 ')+order.warmupGroup:translate('Warm-up Group 待公布')]):translate("出场顺序 / Warm-up Group 待公布")}
               <SessionTiming row={row} event={event}/>
             </span>}
-            <button className="club-tiny-link" onClick={()=>navigate('events',row.eventId)}>{row.eventName}</button>
+            {showEvent&&<button className="club-tiny-link" onClick={()=>navigate('events',row.eventId)}>{row.eventName}</button>}
           </td>
           <td role="cell" className="club-session-rink" data-label={translate("冰场")}>{row.rink}<small>{row.timezone}</small></td>
           {showCoaches&&<td role="cell" className="club-session-coach" data-label={translate("负责教练")}>
@@ -193,7 +193,7 @@ export default function ClubApp(){
           {view==='personal' && data.member.status==='club-viewer' && <MembershipReviewNotice status={data.membershipClaimStatus} className="club-panel membership-review-notice"/>}
           {view==='personal'&&<PersonalSchedule events={data.events} onEvent={id=>navigate('events',id)} onDay={()=>navigate('day')} onRegistrations={()=>navigate('registrations')} onCalendar={()=>navigate('calendar')} onWatch={()=>navigate('watch')} rows={allSchedule} skaters={data.skaters} ownIds={data.ownSkaterIds} scope={personal}
             limit={isParentAccount(data.member)?PARENT_SKATER_LIMIT:undefined} editableIds={data.parentEditableSkaterIds??[]} onCoachChange={()=>void load()} onScope={personal=>updateFilters({personal})} onSkater={id=>navigate('skaters',id)} onChange={ids=>{setData({...data,ownSkaterIds:ids});void load();}}
-            renderRows={(rows,showArrival)=>renderSchedule(rows,false,showArrival)}/>}
+            renderRows={(rows,showArrival,showEvent)=>renderSchedule(rows,false,showArrival,showEvent)}/>}
           {view==='coach'&&<>
             <details className="club-schedule-help"><summary>{text('About group times and coach notes','组别时间与教练安排说明')}</summary><p>{translate("每行对应一位选手的一项官方组别安排。集合时间与备注是教练安排，官网修订会保留。")}</p></details>
             <div className="club-toolbar club-coach-toolbar">

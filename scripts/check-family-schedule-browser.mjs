@@ -39,7 +39,9 @@ addBlock('Pre-Novice Men SHORT', '13:00', '13:40');
 addBlock('Pre-Novice Women FREE (1-10)', '15:00', '15:40', {range:[1,10]});
 addBlock('Pre-Novice Women FREE (11-20)', '16:00', '16:40', {range:[11,20]});
 addBlock('Senior Men SHORT', '12:00', '12:40');
-const club = {member, ownSkaterIds:ownIds, writableSkaterIds:[], skaters, events:[event], plans:[], sync:{},
+const later={...event,id:'winter',name:'Winter Invitational and Provincial Qualifying Competition',start:'2026-11-20',end:'2026-11-21',
+  participants: event.participants.slice(0,1),blocks:[],startingOrders:[]};
+const club = {member, ownSkaterIds:ownIds, writableSkaterIds:[], skaters, events:[later,event], plans:[], sync:{},
   historyEvents:[], recent:[], asOf:day, summary:{category_records:0, team_records:0}, reviews:[], limitations:[]};
 
 async function checkMembershipControls(page, language) {
@@ -145,6 +147,10 @@ async function walk(width, language, browser) {
     const entry = page.locator('.member-heading a[href="/workspace?view=personal"]');
     await entry.waitFor();
     await page.evaluate(() => document.fonts.ready);
+    const homeNames = page.locator('.home-event h3');
+    await homeNames.last().waitFor();
+    assert.deepEqual(await homeNames.allTextContents(),[event.name,later.name]);
+    assert.ok(await homeNames.last().evaluate(el=>parseFloat(getComputedStyle(el).fontSize)>=24));
     const entryY = await y(entry);
     assert.ok(await entry.evaluate(el=>el.getBoundingClientRect().bottom < innerHeight), 'Schedule entry must fit on the first screen');
     await shot('home');
@@ -154,7 +160,9 @@ async function walk(width, language, browser) {
     const firstRowY = await y(rows.first());
     const firstRow = await rows.first().innerText();
     const current = page.locator('.family-upcoming tbody tr');
-    assert.deepEqual(await page.locator('.family-upcoming h2').allTextContents(),['Ana Reed','Ben Reed']);
+    assert.deepEqual(await page.locator('.family-upcoming h2').allTextContents(),[event.name,later.name]);
+    assert.ok(await page.locator('.family-upcoming h2 button').last().evaluate(el=>parseFloat(getComputedStyle(el).fontSize)>=24));
+    assert.match(await page.locator('.family-upcoming').nth(1).innerText(),/Ana Reed/);
     assert.equal(await page.locator('.home-events').count(),0);
     assert.deepEqual(await current.locator('.club-session-skater>.club-text-button').allTextContents(),['Ana Reed','Ana Reed','Ben Reed']);
     assert.ok(firstRow.includes('11:15–12:00') && firstRow.includes('11:38') && firstRow.includes('#8'));
@@ -215,7 +223,7 @@ async function walk(width, language, browser) {
     await rows.getByRole('button',{name:'Kim Park',exact:true}).click();
     await page.getByRole('heading',{level:1,name:'Kim Park'}).waitFor();
     await page.locator('.club-topbar-home').click();
-    await page.getByRole('heading',{name:language==='en'?'All my skaters':'我的全部',exact:true}).waitFor();
+    await page.getByRole('heading',{name:event.name,exact:true}).waitFor();
     assert.equal(await rows.getByRole('button',{name:'Kim Park',exact:true}).count(),0);
     assert.equal(await rows.getByRole('button',{name:'Ben Reed',exact:true}).count(),1);
     assert.equal(await rows.getByRole('button',{name:'Ana Reed',exact:true}).count()>0,true);
@@ -243,7 +251,7 @@ async function walk(width, language, browser) {
     await page.reload();
     await page.locator('.home-events').waitFor();
     await nav.getByRole('button',{name:/Personal schedule|个人赛程/i}).click();
-    await page.getByRole('heading',{name:language==='en'?'All my skaters':'我的全部',exact:true}).waitFor();
+    await page.getByText(language==='en'?'Add a skater above to see their schedule.':'在上方添加选手，即可查看赛程。').waitFor();
     await page.goBack();
     await page.locator('.home-events').waitFor();
     await page.goto(origin+'/');
