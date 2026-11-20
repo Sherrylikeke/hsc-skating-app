@@ -164,7 +164,7 @@ async function walk(width, language, browser) {
     assert.ok(await page.locator('.family-upcoming h2 button').last().evaluate(el=>parseFloat(getComputedStyle(el).fontSize)>=24));
     assert.match(await page.locator('.family-upcoming').nth(1).innerText(),/Ana Reed/);
     assert.equal(await page.locator('.home-events').count(),0);
-    assert.deepEqual(await current.locator('.club-session-skater>.club-text-button').allTextContents(),['Ana Reed','Ana Reed','Ben Reed']);
+    assert.deepEqual(await current.locator('.club-session-skater>.club-text-button').allTextContents(),['Ana Reed','Ben Reed','Ana Reed']);
     assert.ok(firstRow.includes('11:15–12:00') && firstRow.includes('11:38') && firstRow.includes('#8'));
     assert.match(await current.first().locator('.family-arrival').innerText(), /10:15/);
     const navTop = desktop ? 844 : await page.locator('.club-sidebar').evaluate(el=>el.getBoundingClientRect().top);
