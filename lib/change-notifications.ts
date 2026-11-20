@@ -18,6 +18,8 @@ export function eventWriteStatements(database: D1Database, event: LiveEvent, pre
   const time = nowISO();
   const statements = [database.prepare('INSERT INTO live_events (id,payload,updated_at) VALUES (?,?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload,updated_at=excluded.updated_at').bind(event.id, JSON.stringify(event), time)];
   const documents = event.documents.flatMap(document => [document, ...(document.entryFiles || [])]).filter(document => document.hash && !document.error);
+  const interim=event.savedInterimEntry;
+  if(interim?.hash&&!interim.error&&!documents.some(document=>document.url===interim.url))documents.push(interim);
   for (const document of documents) statements.push(database.prepare('INSERT INTO source_revisions (id,event_id,kind,url,hash,checked_at) VALUES (?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING').bind(`${event.id}|${document.kind}|${document.url}|${document.hash}`, event.id, document.kind, document.url, document.hash!, document.checkedAt || time));
   const ids = new Set([...(previous?.participants || []), ...event.participants, ...(previous?.startingOrders || []), ...(event.startingOrders || [])].flatMap(row => row.skaterIds));
   for (const skaterId of ids) {

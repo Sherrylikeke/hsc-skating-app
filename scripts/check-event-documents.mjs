@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import {selectLinkEvents,refreshEventLinks} from '../lib/event-document-sync.ts';
+import {selectLinkEvents,refreshEventLinks,entryDocumentFor} from '../lib/event-document-sync.ts';
+import {selectDetailEvents} from '../lib/sync-selection.ts';
 import {clubEventResponse} from '../lib/club-response.ts';
 const checks=[];
 const event={id:'SO-325865',name:'STAR 1-4 Niagara',url:'https://skateontario.org/event/star-1-4-niagara-2/',start:'2026-12-04',end:'2026-12-06',timezone:'America/Toronto',venue:'Fixture',city:'Fixture',updateText:'',officialModified:'2026-11-12',checkedAt:'2026-11-16T15:00:00Z',detailCheckedAt:'2026-11-11T14:24:06Z',detailError:'PDF date layout needs review',scheduleStatus:'Needs review',entryStatus:'Interim only',documents:[{kind:'entries',url:'https://skateontario.org/interim.pdf',label:'Interim List',hash:'entry-hash',checkedAt:'2026-11-11T14:00:00Z'}],participants:[{id:'fixture',name:'Fixture Skater',category:'STAR 2',skaterIds:['fixture']}],blocks:[]};
@@ -22,6 +23,21 @@ assert.equal(failed.linksCheckedAt,now);assert.equal(failed.linksAttemptedAt,'20
 assert.match(failed.linksError,/unavailable/);assert.deepEqual(failed.documents,refreshed.documents);assert.deepEqual(failed.participants,event.participants);
 assert.equal((await refreshEventLinks(failed,'2026-11-16T18:00:00Z',async()=>page)).linksError,undefined);
 checks.push('page failure retains saved links and data, records only an attempt, and recovery clears only the page error');
+const waiting=await refreshEventLinks({...event,documents:[],participants:[]},now,async()=>page);
+const scheduleOnly=await refreshEventLinks(waiting,now,async()=>'<a href="'+schedule+'">Schedule</a>');
+assert.equal(scheduleOnly.documents.length,1);
+assert.equal(entryDocumentFor(scheduleOnly).url,'https://skateontario.org/interim.pdf');
+assert.equal(entryDocumentFor({...scheduleOnly,participants:event.participants}),undefined);
+const final=await refreshEventLinks(scheduleOnly,now,async()=>page+'<a href="/final.pdf">Official Entry Lists</a>');
+assert.equal(entryDocumentFor(final).url,'https://skateontario.org/final.pdf');
+const recent=Date.parse(now);
+assert.equal(selectDetailEvents([{...event,id:'nearer',start:'2026-11-21'}, {...scheduleOnly,detailCheckedAt:now}],'2026-11-16',recent)[0].id,event.id);
+checks.push('new Interim links keep their first import priority through page removal, and a live official list replaces the fallback');
+const stratford={...event,id:'SO-325466',url:'https://skateontario.org/event/provincial-series-7-stratford/',start:'2026-12-17',end:'2026-12-20',documents:[],participants:[]};
+const archived=await refreshEventLinks(stratford,now,async()=>'');
+assert.match(entryDocumentFor(archived).url,/Stratford-Interim-Entry-Lists_v2_\.pdf$/);
+assert.equal(entryDocumentFor(await refreshEventLinks({...stratford,start:'2025-12-18'},now,async()=>'')),undefined);
+checks.push('the verified Stratford backfill is scoped to the matching event and season');
 const events=Array.from({length:37},(_,index)=>({...event,id:'SO-'+index,start:'2027-01-01',end:'2027-01-02',detailCheckedAt:undefined}));
 for(let round=0;round<13;round++){
   const selected=selectLinkEvents(events,'2026-11-16');assert.equal(selected.length,3);

@@ -6,6 +6,23 @@ import {importEntries} from '../lib/entry-import.ts';
 import {parseScheduleDocument,scheduleRows} from '../lib/official-parser.ts';
 
 const checks=[];
+const item=(str,x,y)=>({str,x,y});
+const provincial=[[
+  item('PROVINCIAL SERIES #7 - TEST',200,710),item('INTERIM ENTRY LISTS BY CATEGORY',205,690),
+  item('FREE SKATE',53,665),item('STAR 7 U12 WOMEN - NON-QUALIFYING',53,645),
+  item('Fixture',53,630),item('Skater',196,630),item('Hamilton SC',346,630)
+],[
+  item('Next',53,710),item('Skater',196,710),item('Test Skating Club',346,710),
+  item('ICE DANCE',53,680),item('PRE-NOVICE DANCE',53,660),
+  item('Dance',53,645),item('Skater',196,645),item('Hamilton SC',346,645)
+]];
+const provincialRows=parseEntryPdf(provincial,'https://skateontario.org/interim.pdf',[{id:'fixture',name:'Fixture Skater'}]);
+assert.deepEqual(provincialRows.map(row=>row.category),['STAR 7 U12 WOMEN - NON-QUALIFYING','STAR 7 U12 WOMEN - NON-QUALIFYING','PRE-NOVICE DANCE']);
+assert.deepEqual(provincialRows[0].skaterIds,['fixture']);
+const missingCategory=structuredClone(provincial);
+missingCategory[1].splice(4,1);
+assert.throws(()=>parseEntryPdf(missingCategory,'https://skateontario.org/interim.pdf',[]),/临时名单/);
+checks.push('Provincial Interim section headings and page continuations retain the exact age, category and NQ qualifier');
 async function pages(bytes){return (await extractTextItems(await getDocumentProxy(bytes,{disableFontFace:true}))).items;}
 const fixtures={};
 for(const name of ['adult-2026-masters-entry','adult-2026-gold-entry','keswick-2026-gold-entry','keswick-2026-schedule','adult-2026-schedule'])fixtures[name]=await pages(new Uint8Array(fs.readFileSync('tests/fixtures/'+name+'.pdf')));

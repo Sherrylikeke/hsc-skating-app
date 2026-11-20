@@ -72,7 +72,7 @@ export function parseScheduleDocument(pages:PdfItem[][],sourceUrl:string):{block
   const years=new Set(pages.flat().flatMap(item=>item.str.match(/\b20\d{2}\b/g)||[]));
   const documentYear=years.size===1?[...years][0]:undefined;
   for(const [page,items] of pages.entries()){
-    const anchors=pdfLines(items).map(line=>({y:line.y,text:line.items.map(item=>item.str).join(' ')})).filter(line=>/\b(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+/i.test(line.text)).map(line=>({y:line.y,date:dateOnLine(line.text,documentYear)}));
+    const anchors=pdfLines(items).map(line=>({y:line.y,text:line.items.map(item=>item.str).join(' ').replace(/\bThusday(?=,?\s)/gi,'Thursday')})).filter(line=>/\b(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+/i.test(line.text)).map(line=>({y:line.y,date:dateOnLine(line.text,documentYear)}));
     const starts=items.filter(item=>item.str.trim()==='START').sort((first,second)=>second.y-first.y||first.x-second.x);
     if(!starts.length){warnings.add('第 '+(page+1)+' 页缺少可确认的 START/END 赛程表头');continue;}
     for(const header of starts){
@@ -118,8 +118,9 @@ export function parseScheduleDocument(pages:PdfItem[][],sourceUrl:string):{block
   return {blocks:[...new Map(blocks.map(block=>[block.id,block])).values()].sort((first,second)=>(first.date+' '+first.start).localeCompare(second.date+' '+second.start)),warnings:[...warnings]};
 }
 export function parseScheduleItems(pages:PdfItem[][],sourceUrl:string):ScheduleBlock[]{return parseScheduleDocument(pages,sourceUrl).blocks;}
-function categoryDetails(value:string){return {ages:[...value.matchAll(/\b([UO])\s*(\d{1,2})\b/gi)].map(match=>match[0].replace(/\s/g,'').toUpperCase()),band:value.match(/\bCLASS\s+([IVX]+)\b/i)?.[1].toUpperCase(),program:/\bSHORT\b/i.test(value)?'short':/\bART(?:ISTIC)?\b/i.test(value)?'artistic':/\bFREE(?:SKATE)?\b/i.test(value)?'free':undefined,nonqualifying:/\bNON[\s\u2010-\u2015-]*QUALIF|\bN\.?\s*Q\b/i.test(value)};}
+function categoryDetails(value:string){return {ages:[...value.matchAll(/\b([UO])\s*(\d{1,2})\b/gi)].map(match=>match[0].replace(/\s/g,'').toUpperCase()),band:value.match(/\bCLASS\s+([IVX]+)\b/i)?.[1].toUpperCase(),adultLevel:value.match(/^ADULT\s+(STAR\s*(?:10|[1-9]|ELITE)(?:\s*\/\s*(?:[1-9]|GOLD))?|INTRO(?:DUCTORY| OPEN)|BRONZE|SILVER|GOLD|ELITE|MASTERS(?: ELITE)?)\b/i)?.[1].replace(/\s+/g,'').toUpperCase(),program:/\bSHORT\b/i.test(value)?'short':/\bART(?:ISTIC)?\b/i.test(value)?'artistic':/\bFREE(?:SKATE)?\b/i.test(value)?'free':undefined,nonqualifying:/\bNON[\s\u2010-\u2015-]*QUALIF|\bN\.?\s*Q\b/i.test(value)};}
 function categoryVariants(value:string){
+  if(categoryDetails(value).adultLevel)return [value];
   const parts=value.split(/\s*\/\s*/);
   // Full category names joined by a slash are explicit shared sessions.
   // Keep age alternatives such as U12/O12 together with their NQ qualifier.
@@ -141,7 +142,7 @@ function categoryVariants(value:string){
 export function categoryCompatible(first:string,second:string){
   return categoryVariants(first).some(entryCategory=>categoryVariants(second).some(blockCategory=>{
     const entry=categoryDetails(entryCategory),block=categoryDetails(blockCategory);
-    return categoryKeys(entryCategory).some(key=>categoryKeys(blockCategory).includes(key))&&entry.nonqualifying===block.nonqualifying&&(entry.program==='artistic')===(block.program==='artistic')&&(!entry.ages.length||!block.ages.length||entry.ages.some(age=>block.ages.includes(age)))&&(!entry.band||!block.band||entry.band===block.band)&&(!entry.program||!block.program||entry.program===block.program);
+    return categoryKeys(entryCategory).some(key=>categoryKeys(blockCategory).includes(key))&&entry.adultLevel===block.adultLevel&&entry.nonqualifying===block.nonqualifying&&(entry.program==='artistic')===(block.program==='artistic')&&(!entry.ages.length||!block.ages.length||entry.ages.some(age=>block.ages.includes(age)))&&(!entry.band||!block.band||entry.band===block.band)&&(!entry.program||!block.program||entry.program===block.program);
   }));
 }
 export function scheduleRows(events:Array<Pick<LiveEvent,'id'|'name'|'url'|'timezone'|'participants'|'blocks'|'startingOrders'>>,skaters:Array<Pick<ClubSkater,'id'|'name'|'coach'>>):ScheduleRow[]{
@@ -150,7 +151,7 @@ export function scheduleRows(events:Array<Pick<LiveEvent,'id'|'name'|'url'|'time
     const key=categoryKey(entry.category),group=groupOf(entry.category);if(!key)continue;
     const matching=event.blocks.filter(block=>categoryCompatible(entry.category,block.category)&&(group===null||block.group===null||group===block.group||new RegExp('\\bGROUPS?\\s*\\d+\\s*(?:&|AND)\\s*'+group+'\\b','i').test(block.category)));
     for(const id of entry.skaterIds){const skater=skaterMap.get(id);if(!skater)continue;
-      for(const block of matching){const startingOrder=block.activity==='competition'?orderFor(event.startingOrders||[],id,block.category):undefined;if(block.range&&startingOrder&&(startingOrder.startNumber<block.range[0]||startingOrder.startNumber>block.range[1]))continue;const entryDetails=categoryDetails(entry.category),blockDetails=categoryDetails(block.category);const uncertain=(block.group!==null&&group===null)||(block.range!==null&&!startingOrder)||!!(blockDetails.ages.length&&!entryDetails.ages.length)||!!(blockDetails.band&&!entryDetails.band);const rowId=`${event.id}|${id}|${block.id}`;
+      for(const block of matching){const startingOrder=block.activity==='competition'?orderFor(event.startingOrders||[],id,block.category):undefined;if(block.range&&startingOrder&&(startingOrder.startNumber<block.range[0]||startingOrder.startNumber>block.range[1]))continue;const entryDetails=categoryDetails(entry.category),blockDetails=categoryDetails(block.category);const uncertain=(block.group!==null&&group===null)||(block.range!==null&&!startingOrder)||!!(blockDetails.ages.length&&!entryDetails.ages.length)||!!(blockDetails.band&&!entryDetails.band)||!!(!startingOrder&&entryDetails.adultLevel&&matching.filter(candidate=>candidate.activity===block.activity).length>1);const rowId=`${event.id}|${id}|${block.id}`;
         const normalized=block.category.toUpperCase().replace(/\s+/g,' ').trim();
         const occurrence=event.blocks.filter(other=>other.category.toUpperCase().replace(/\s+/g,' ').trim()===normalized).findIndex(other=>other.id===block.id);
         const slotKey=`${normalized}:${occurrence}`;

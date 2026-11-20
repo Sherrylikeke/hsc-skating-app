@@ -1,6 +1,6 @@
 import {readOfficialPdfItems} from './official-pdf';
 import {selectDetailEvents} from './sync-selection';
-import {selectLinkEvents,refreshEventLinks,eventLinkSignature,resolvedSourceUrl} from './event-document-sync';
+import {selectLinkEvents,refreshEventLinks,eventLinkSignature,resolvedSourceUrl,discoverEventDocuments,entryDocumentFor,isInterimEntry} from './event-document-sync';
 import {db,putLiveEvent,readLiveEvents,readLiveEvent,putSyncStatus,readSyncStatus,profiles} from './club-store';
 import {calendarEvent,discoverDocuments,parseScheduleDocument,competitionSchedule,scheduleRows} from './official-parser';
 import {importEntries} from './entry-import';
@@ -29,7 +29,7 @@ async function source(url:string,maxBytes=3_000_000):Promise<Uint8Array>{
 }
 const hashBytes=async(bytes:Uint8Array)=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes as BufferSource))).map(n=>n.toString(16).padStart(2,'0')).join('');
 const message=(error:unknown)=>error instanceof Error?error.message:'官网读取失败';
-const SCHEDULE_VERSION='schedule-bands-6';
+const SCHEDULE_VERSION='schedule-bands-7';
 const readPdfItems=readOfficialPdfItems;
 function entryProgress(event:LiveEvent){const files=event.documents.flatMap(document=>(document.entryFiles||[]).map(file=>({file,rosterHash:document.matchingRosterHash})));const verified=files.filter(({file,rosterHash})=>file.checkedAt&&!file.error&&file.parserVersion===ENTRY_PDF_VERSION&&file.matchingRosterHash===rosterHash).length;return {total:files.length,verified,pending:files.length-verified};}
 function startingOrderProgress(event:LiveEvent){const documents=event.documents.filter(document=>document.kind==='start-order');const verified=documents.filter(document=>document.checkedAt&&!document.error&&(document.parserVersion===STARTING_DRAW_VERSION||document.parserVersion==='starting-api-1')).length;return {total:documents.length,verified,pending:documents.length-verified};}
@@ -71,7 +71,8 @@ async function syncEventBody(id:string){
   const matchingRosterHash=await hashBytes(new TextEncoder().encode(JSON.stringify(roster.map(row=>({id:row.id,name:row.name,identityPending:row.identityPending===true})).sort((first,second)=>first.id.localeCompare(second.id)))));
   const now=new Date().toISOString();let event={...existing,detailSuccessAt:existing.detailSuccessAt||(!eventNeedsReview(existing)?existing.detailCheckedAt:undefined),detailCheckedAt:now};const errors:string[]=[];let changed=0;
   try{
-    const html=new TextDecoder().decode(await source(event.url));const discovered=discoverDocuments(html,event.url);
+    const html=new TextDecoder().decode(await source(event.url));
+    const {documents:discovered,savedInterimEntry}=discoverEventDocuments(event,html);
     event.linksAttemptedAt=now;event.linksCheckedAt=now;event.detailLinksSignature=eventLinkSignature({documents:discovered});delete event.linksError;
     const details=registrationDetails(html,event.name,event.url);
     // Page updates take priority; announcements fill missing windows and offered categories.
@@ -98,14 +99,19 @@ async function syncEventBody(id:string){
     }
     const documents=discovered.map(document=>({...existing.documents.find(old=>old.url===document.url),...document}));
     for(const document of documents)if(document.kind==='schedule'&&/AWARDS?/i.test(document.label+document.url))delete document.error;
-    event={...event,documents};
-    const entries=documents.filter(document=>document.kind==='entries').sort((a,b)=>Number(/interim/i.test(a.label+' '+a.url))-Number(/interim/i.test(b.label+' '+b.url)))[0];const schedule=competitionSchedule(documents);
+    event={...event,documents,savedInterimEntry:documents.find(isInterimEntry)||savedInterimEntry};
+    const entries=entryDocumentFor(event);
+    const interim=entries&&isInterimEntry(entries);
+    const schedule=competitionSchedule(documents);
     if(entries){
       try{
-        const imported=await importEntries(entries,existing.participants,roster,matchingRosterHash,now,source,readPdfItems,{registered:existing.participants.some(entry=>entry.skaterIds.length>0)});
+        const imported=await importEntries(entries,existing.participants,roster,matchingRosterHash,now,source,interim?bytes=>readPdfItems(bytes,40):readPdfItems,{registered:existing.participants.some(entry=>entry.skaterIds.length>0)});
         if(JSON.stringify(imported.participants)!==JSON.stringify(existing.participants))changed++;
-        event.participants=imported.participants;Object.assign(entries,imported.document);errors.push(...imported.errors);event.entryStatus=imported.status;
+        event.participants=imported.participants;Object.assign(entries,imported.document);errors.push(...imported.errors);
+        event.entryStatus=interim&&!imported.errors.length?'已读取官方临时名单，等待正式分组':imported.status;
       }catch(error){entries.error=message(error);entries.attemptedAt=now;errors.push(entries.error);event.entryStatus=existing.participants.length?'名单更新待核对，显示上次有效版本':'名单待核对';}
+    }else if(event.savedInterimEntry&&existing.participants.some(row=>row.sourceUrl===event.savedInterimEntry?.url)){
+      event.entryStatus='官网当前未列出名单链接，沿用已读取的临时名单，等待正式分组';
     }else event.entryStatus=existing.participants.length?'官网当前未列出名单链接，保留已读取版本':'官网尚未公布名单链接';
     if(schedule){
       try{
