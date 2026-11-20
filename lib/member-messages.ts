@@ -29,8 +29,12 @@ export async function drainOutbox(database: D1Database, limit = 30) {
       const {results: recipients} = item.kind==='official-update'?{results:publicRecipients!.get(item.skater_id)||[]}:item.kind==='reminder'
         ? await database.prepare("SELECT id FROM hsc_members WHERE id=? AND status='active'").bind(item.author_id).all<{id:string}>()
         : await database.prepare("SELECT DISTINCT m.id FROM hsc_members m JOIN hsc_relations r ON r.member_id=m.id AND r.kind=m.role AND r.active=1 JOIN hsc_admissions a ON a.skater_id=r.skater_id AND a.admitted=1 WHERE m.status='active' AND r.skater_id=? AND (?='schedule' OR m.role IN ('parent','skater') OR m.id=?)").bind(item.skater_id, item.kind, item.author_id).all<{id: string}>();
+      const alreadyRead = item.kind==='official-update'
+        ? "AND NOT EXISTS (SELECT 1 FROM hsc_notifications WHERE member_id=? AND kind='schedule' AND subject_id=? AND read_at IS NOT NULL)" : '';
       await database.batch([
-        ...recipients.map(recipient => database.prepare('INSERT INTO hsc_notifications (id,outbox_id,member_id,skater_id,kind,subject_id,author_id,payload,created_at) VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING').bind(`${item.id}|${recipient.id}`, item.id, recipient.id, item.skater_id, item.kind, item.subject_id, item.author_id, item.payload, nowISO())),
+        ...recipients.map(recipient => database.prepare(`INSERT INTO hsc_notifications (id,outbox_id,member_id,skater_id,kind,subject_id,author_id,payload,created_at)
+          SELECT ?,?,?,?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM hsc_outbox WHERE id=? AND state='processing' AND lease_until=?)
+          ${alreadyRead} ON CONFLICT(id) DO NOTHING`).bind(`${item.id}|${recipient.id}`, item.id, recipient.id, item.skater_id, item.kind, item.subject_id, item.author_id, item.payload, nowISO(), item.id, lease, ...(alreadyRead ? [recipient.id,item.subject_id] : []))),
         database.prepare("UPDATE hsc_outbox SET state='delivered',lease_until=NULL,error=NULL WHERE id=? AND lease_until=?").bind(item.id, lease),
       ]);
       delivered++;
@@ -49,8 +53,10 @@ export async function listNotifications(database: D1Database, member: Member) {
 }
 export async function markNotification(database: D1Database, member: Member, id: string) {
   if (!(await listNotifications(database, member)).some(row => row.id === id)) throw new AccessError(404, '通知不存在或已无访问权限');
-  await database.prepare('UPDATE hsc_notifications SET read_at=COALESCE(read_at,?) WHERE id=? AND member_id=?').bind(nowISO(), id, member.id).run();
-  await database.prepare("UPDATE hsc_notifications SET read_at=COALESCE(read_at,?) WHERE member_id=? AND kind='official-update' AND json_extract(payload,'$.changeId')=(SELECT json_extract(payload,'$.changeId') FROM hsc_notifications WHERE id=? AND member_id=?)").bind(nowISO(),member.id,id,member.id).run();
+  await database.batch([
+    database.prepare('UPDATE hsc_notifications SET read_at=COALESCE(read_at,?) WHERE id=? AND member_id=?').bind(nowISO(), id, member.id),
+    database.prepare("DELETE FROM hsc_notifications WHERE member_id=? AND kind='official-update' AND subject_id=(SELECT subject_id FROM hsc_notifications WHERE id=? AND member_id=? AND kind='schedule')").bind(member.id,id,member.id),
+  ]);
 }
 async function visibleRecipients(database: D1Database, member: Member, requirement: Requirement) {
   const recipients = parseIDs(requirement.skater_ids);

@@ -21,11 +21,21 @@ export async function officialRecipientMap(database:D1Database){
 function requireScheduleAccount(member:Member){if(!['active','club-viewer'].includes(member.status))throw new AccessError(403,'请先完成账号验证');}
 export async function listOfficialNotices(database:D1Database,member:Member):Promise<OfficialNotice[]>{
   requireScheduleAccount(member);
-  const ids=await scheduleSkaterIds(database,member);if(!ids.length)return [];
-  const {results}=await database.prepare("SELECT id,skater_id,read_at,created_at,payload FROM hsc_notifications WHERE member_id=? AND kind='official-update' AND skater_id IN (SELECT value FROM json_each(?)) ORDER BY created_at DESC,id DESC LIMIT 100").bind(member.id,JSON.stringify(ids)).all<Omit<OfficialNotice,'payload'>&{payload:string}>();
+  const ids=await scheduleSkaterIds(database,member);
+  // Older versions kept read bell updates. Remove them when the account next loads the bell.
+  const [, {results}]=await database.batch<Omit<OfficialNotice,'payload'>&{payload:string}>([
+    database.prepare("DELETE FROM hsc_notifications WHERE member_id=? AND kind='official-update' AND read_at IS NOT NULL").bind(member.id),
+    database.prepare("SELECT id,skater_id,read_at,created_at,payload FROM hsc_notifications WHERE member_id=? AND kind='official-update' AND read_at IS NULL AND skater_id IN (SELECT value FROM json_each(?)) ORDER BY created_at DESC,id DESC LIMIT 100").bind(member.id,JSON.stringify(ids)),
+  ]);
   return results.map(row=>({...row,payload:JSON.parse(row.payload) as OfficialUpdate}));
 }
 export async function readOfficialNotice(database:D1Database,member:Member,id:string){
-  const notice=(await listOfficialNotices(database,member)).find(row=>row.id===id);if(!notice)throw new AccessError(404,'通知不存在或已不在我的选手范围');
-  await database.prepare("UPDATE hsc_notifications SET read_at=COALESCE(read_at,?) WHERE member_id=? AND (id=? OR (kind='schedule' AND json_extract(payload,'$.changeId')=?))").bind(nowISO(),member.id,id,notice.payload.changeId).run();
+  requireScheduleAccount(member);
+  const visibleNotice="id=? AND member_id=? AND kind='official-update' AND skater_id IN (SELECT value FROM json_each(?))";
+  const scope=[id,member.id,JSON.stringify(await scheduleSkaterIds(database,member))] as const;
+  const [,deleted]=await database.batch([
+    database.prepare(`UPDATE hsc_notifications SET read_at=COALESCE(read_at,?) WHERE member_id=? AND kind='schedule' AND subject_id=(SELECT subject_id FROM hsc_notifications WHERE ${visibleNotice})`).bind(nowISO(),member.id,...scope),
+    database.prepare(`DELETE FROM hsc_notifications WHERE ${visibleNotice} RETURNING id`).bind(...scope),
+  ]);
+  if(!deleted.results.length)throw new AccessError(404,'通知不存在或已不在我的选手范围');
 }

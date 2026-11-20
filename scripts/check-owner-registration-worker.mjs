@@ -451,7 +451,8 @@ try {
   assert.equal((await post('/api/official-notifications',{id:publicNotices[0].id},noticeHeaders.other)).status,404);
   assert.equal((await post('/api/official-notifications',{id:publicNotices[0].id},{...noticeHeaders.leia,origin:'https://other.example.test'})).status,403);
   assert.equal((await post('/api/official-notifications',{id:publicNotices[0].id},noticeHeaders.leia)).status,200);
-  assert.ok((await (await noticeGet(noticeHeaders.leia)).json()).notifications.find(n=>n.id===publicNotices[0].id).read_at);
+  assert.ok(!(await (await noticeGet(noticeHeaders.leia)).json()).notifications.some(n=>n.id===publicNotices[0].id));
+  assert.equal(await database.prepare('SELECT id FROM hsc_notifications WHERE id=?').bind(publicNotices[0].id).first(),null);
   assert.equal((await mf.dispatchFetch(origin+'/api/member?action=notifications',{headers:noticeHeaders.leia})).status,403,'Public schedule notices must not authorize private notifications');
   await database.prepare("UPDATE hsc_home_skaters SET pinned=0 WHERE member_id='official-notice-leia'").run();
   assert.deepEqual((await (await noticeGet(noticeHeaders.leia)).json()).notifications,[]);
