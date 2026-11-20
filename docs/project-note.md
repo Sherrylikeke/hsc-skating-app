@@ -2,6 +2,11 @@
 
 这是项目负责人的持续维护记录，不属于会员网页内容。后续会话先读取本文件与 AGENTS.md，在完成实质修改或验收后更新；不自动轮询、不新增定时任务。下列运行数据是查询快照，不是实时监控。
 
+## 2026-11-20 小任务提交约定与手机推送交接
+
+- 用户新增长期约定：每个小任务验证完成后立即单独commit、push并给SHA，明确提醒可以compact；已写入AGENTS.md。手机推送另开会话，优先当前网站Web Push，步骤、用户手机操作、官方来源、权限隔离及原生后续条件在docs/mobile-push-handoff.md。本轮只做文档和工作约定，未实施或发布手机远程推送，未给用户设备订阅通知。
+- 原GitHub已推进到f36e30a（未上线门户v1）；本次先正常快进并逐项保护原有21份PDF删除，不把门户/R2/0008顺带部署。11月18日最终运行/CI提交dacaded的[Web regression 44367975890](https://github.com/Sherrylikeke/hsc-skating-app/actions/runs/44367975890)当时四项全部success；此前最后一条文档提交因自动审批服务用量限制未执行，不影响已推送运行代码和V53部署。这里补齐该历史验收，不冒充当前生产/最新门户CI状态。
+
 ## 2026-11-19 门户 v1 提交与 GitHub 同步
 
 - 用户明确要求 commit 并 push。实际核对当前 GitHub 远端名为 `origin`，地址 `https://github.com/Sherrylikeke/hsc-skating-app.git`，分支 `main`；没有改远端、分支或仓库可见性。保留远端至 `dacaded` 的赛程自动导入、通知与 CI 更新，将未发布的门户提交重放到其后；仅项目 Note 出现冲突，已保留双方记录，运行代码无冲突。
