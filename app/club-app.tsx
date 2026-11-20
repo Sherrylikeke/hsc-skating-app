@@ -191,7 +191,7 @@ export default function ClubApp(){
           {view==='registrations'&&<RegistrationBoard key={data.member.id} memberId={data.member.id} events={data.events} skaters={data.skaters} ownIds={data.ownSkaterIds} onNavigate={visit}/>}
           {view==='calendar'&&<Suspense fallback={<p role="status">{text('Loading calendar…','正在读取日历…')}</p>}><FamilyCalendar onNavigate={visit} key={data.member.id} events={data.events} skaters={data.skaters} ownIds={data.ownSkaterIds} memberId={data.member.id}/></Suspense>}
           {view==='personal' && data.member.status==='club-viewer' && <MembershipReviewNotice status={data.membershipClaimStatus} className="club-panel membership-review-notice"/>}
-          {view==='personal'&&<PersonalSchedule onDay={()=>navigate('day')} onRegistrations={()=>navigate('registrations')} events={data.events} onCalendar={()=>navigate('calendar')} onWatch={()=>navigate('watch')} rows={allSchedule} skaters={data.skaters} ownIds={data.ownSkaterIds} scope={personal}
+          {view==='personal'&&<PersonalSchedule onDay={()=>navigate('day')} onRegistrations={()=>navigate('registrations')} onCalendar={()=>navigate('calendar')} onWatch={()=>navigate('watch')} rows={allSchedule} skaters={data.skaters} ownIds={data.ownSkaterIds} scope={personal}
             limit={isParentAccount(data.member)?PARENT_SKATER_LIMIT:undefined} editableIds={data.parentEditableSkaterIds??[]} onCoachChange={()=>void load()} onScope={personal=>updateFilters({personal})} onSkater={id=>navigate('skaters',id)} onChange={ids=>{setData({...data,ownSkaterIds:ids});void load();}}
             renderRows={(rows,showArrival)=>renderSchedule(rows,false,showArrival)}/>}
           {view==='coach'&&<>
