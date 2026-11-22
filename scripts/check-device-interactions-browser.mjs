@@ -130,7 +130,9 @@ async function walk(browser,profile,locale,folder,report) {
     assert.equal(await search.inputValue(),'');
     // Select the last roster entry through the actual scrolling list.
     await list.getByRole('option',{name:skaters.at(-1).name,exact:true}).tap();
-    await page.getByRole('heading',{name:skaters.at(-1).name,exact:true}).waitFor();
+    await picker.getByText(skaters.at(-1).name,{exact:true}).waitFor();
+    await page.getByText(locale==='en'?'No upcoming official sessions for this selection.':'当前选择暂无接下来的官方安排。',{exact:true}).waitFor();
+    assert.equal(await page.locator('.family-upcoming').count(),0);
     assert.equal(await editFocus(),false);
 
     const nav = page.locator('.club-sidebar nav');
@@ -180,7 +182,9 @@ async function walk(browser,profile,locale,folder,report) {
     await page.getByRole('heading',{level:1,name:skaters[0].name}).waitFor();
     await inspectText(page,'.club-page-heading h1','skater',issues);
     await page.locator('.club-topbar-home').tap();
-    await page.locator('.family-upcoming h2').waitFor();
+    const eventHeadings=page.locator('.family-upcoming h2');
+    await eventHeadings.getByRole('button',{name:events[0].name,exact:true}).waitFor();
+    assert.deepEqual(await eventHeadings.allTextContents(),[events[0].name,events[1].name]);
     assert.equal(await page.locator('.family-upcoming tbody tr').count(),2);
   } catch (error) {
     issues.push(error.message);

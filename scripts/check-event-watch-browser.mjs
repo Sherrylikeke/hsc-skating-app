@@ -112,7 +112,9 @@ async function walk(browser,profile,language,folder) {
     await row(names[4]).waitFor();
     await page.reload(); await row(names[4]).waitFor();
     await page.locator('.club-topbar-home').click();
-    await page.locator('.family-upcoming').waitFor();
+    const cards=page.locator('.family-upcoming');
+    await cards.getByRole('heading',{name:event.name,exact:true}).waitFor();
+    assert.deepEqual(await cards.locator('h2').allTextContents(),[event.name,second.name]);
     assert.deepEqual(await page.locator('.family-upcoming .club-session-skater>.club-text-button').allTextContents(),[names[1]]);
     await page.locator('.family-controls .watch-entry').click();
     await row(names[4]).waitFor();

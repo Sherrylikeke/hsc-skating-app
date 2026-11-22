@@ -2,6 +2,11 @@
 
 这是项目负责人的持续维护记录，不属于会员网页内容。后续会话先读取本文件与 AGENTS.md，在完成实质修改或验收后更新；不自动轮询、不新增定时任务。下列运行数据是查询快照，不是实时监控。
 
+## 2026-11-22 修复 main 手机浏览器回归
+
+- [失败检查 45066548003](https://github.com/Sherrylikeke/hsc-skating-app/actions/runs/45066548003) 的两组手机矩阵均在选择名单末位选手后等待旧版姓名标题超时。更新交互检查，验证选手姓名出现在选择器、无赛程时出现提示且赛事卡片为零；从选手档案和观赛页返回个人赛程时均核对两场比赛的标题与顺序。
+- 本地生产构建通过。使用隔离测试数据验证了 iPhone 17 Pro（WebKit）和 Galaxy S24（Chromium）的中英文横竖屏选手切换、两种语言的观赛返回，以及 Chromium 390 px 家庭赛程。完整矩阵结果见本次提交对应的 [Web regression](https://github.com/Sherrylikeke/hsc-skating-app/actions/workflows/web-regression.yml?query=branch%3Amain)。本次只修改测试及交接，核对原 Sites 项目为 active、最新版本 V56，未触发生产部署。
+
 ## 2026-11-22 门户设计稿归档
 
 - 两轮共七张原始 PNG 归档到 `docs/portal-design/`。逐张校验归档前后的 SHA-256，核对 [视觉方案](portal-visual-design.zh-CN.md) 的七个链接。归档提交以原 GitHub `origin/main` 最新版本为基线，仅包含设计资料与本记录。视觉方向待选。本轮未查询线上状态或执行部署。
