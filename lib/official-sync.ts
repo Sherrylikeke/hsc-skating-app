@@ -13,6 +13,7 @@ import type {LiveEvent} from './club-types';
 import {drainOutbox} from './member-messages';
 import {eventNeedsReview} from './club-response';
 import {historyImportStatus,importHistory,resultHub,selectHistoryImports} from './history-import';
+import {reconcileOfficialRoster} from './official-roster';
 const allowedHosts=new Set(['skateontario.org','www.skateontario.org','dstools.ca','www.dstools.ca','skatingresults.ca','www.skatingresults.ca']);
 async function source(url:string,maxBytes=3_000_000):Promise<Uint8Array>{
   let target=new URL(url);if(!allowedHosts.has(target.hostname)||target.protocol!=='https:')throw new Error('来源不在已接入的官方名单中');
@@ -82,7 +83,8 @@ async function syncCalendarBody(){
 }
 async function syncEventBody(id:string){
   const existing=await readLiveEvent(id);if(!existing)throw new Error('请先同步官网日历');
-  const roster=await profiles();
+  let roster=await profiles();
+  let rosterProfilesAdded=0;
   const matchingRosterHash=await hashBytes(new TextEncoder().encode(JSON.stringify(roster.map(row=>({id:row.id,name:row.name,identityPending:row.identityPending===true})).sort((first,second)=>first.id.localeCompare(second.id)))));
   const now=new Date().toISOString();let event={...existing,detailSuccessAt:existing.detailSuccessAt||(!eventNeedsReview(existing)?existing.detailCheckedAt:undefined),detailCheckedAt:now};const errors:string[]=[];let changed=0;
   try{
@@ -121,8 +123,15 @@ async function syncEventBody(id:string){
     if(entries){
       try{
         const imported=await importEntries(entries,existing.participants,roster,matchingRosterHash,now,source,interim?bytes=>readPdfItems(bytes,40):readPdfItems,{registered:existing.participants.some(entry=>entry.skaterIds.length>0)});
-        if(JSON.stringify(imported.participants)!==JSON.stringify(existing.participants))changed++;
-        event.participants=imported.participants;Object.assign(entries,imported.document);errors.push(...imported.errors);
+        event.participants=imported.participants;
+        try{
+          const reconciled=await reconcileOfficialRoster(db(),roster,event.participants,imported.document,now);
+          event.participants=reconciled.participants;
+          rosterProfilesAdded=reconciled.added;
+          if(reconciled.refreshRoster)roster=await profiles();
+        }catch(error){errors.push('官方报名档案：'+message(error));}
+        if(JSON.stringify(event.participants)!==JSON.stringify(existing.participants))changed++;
+        Object.assign(entries,imported.document);errors.push(...imported.errors);
         event.entryStatus=interim&&!imported.errors.length?'已读取官方临时名单，等待正式分组':imported.status;
       }catch(error){entries.error=message(error);entries.attemptedAt=now;errors.push(entries.error);event.entryStatus=existing.participants.length?'名单更新待核对，显示上次有效版本':'名单待核对';}
     }else if(event.savedInterimEntry&&existing.participants.some(row=>row.sourceUrl===event.savedInterimEntry?.url)){
@@ -164,7 +173,7 @@ async function syncEventBody(id:string){
       event.startingOrders=orders;const pending=orderDocs.filter(d=>!d.checkedAt||d.error||(d.parserVersion!==STARTING_DRAW_VERSION&&d.parserVersion!=='starting-api-1')).length;event.startingOrderStatus=pending?`已读取 ${orders.length} 条出场信息，${pending} 份文件待核对`:`已读取 ${orders.length} 条官方出场信息`;
     }else event.startingOrderStatus=existing.startingOrders?.length?'官网当前未列出出场链接，保留已读取版本':'官网尚未发现 Starting Order 链接';
     event.detailError=errors.join('；')||undefined;if(!eventNeedsReview(event))event.detailSuccessAt=now;await putLiveEvent(event);await putSyncStatus({lastAttempt:now,lastSuccess:errors.length?undefined:now,error:errors.join('；')||null,entries:event.participants.filter(row=>row.skaterIds.length).length,blocks:event.blocks.length});
-    return {id:event.id,name:event.name,changed,registrationPreview:event.registrations,participants:event.participants.length,matchedSkaters:new Set(event.participants.flatMap(row=>row.skaterIds)).size,blocks:event.blocks.length,entryFiles:entryProgress(event),startingOrderFiles:startingOrderProgress(event),startingOrderStatus:event.startingOrderStatus,entryStatus:event.entryStatus,scheduleStatus:event.scheduleStatus,scheduleSource:schedule?{url:schedule.url,hash:schedule.hash,parserVersion:schedule.parserVersion}:undefined,scheduleBlocksPreview:event.blocks.map(block=>({date:block.date,start:block.start,end:block.end,category:block.category,rink:block.rink})),clubEntriesPreview:event.participants.filter(entry=>entry.skaterIds.length).slice(0,80).map(entry=>({name:entry.name,category:entry.category,skaterIds:entry.skaterIds})),schedulePreview:scheduleRows([event],roster).filter(row=>row.activity==='competition').slice(0,40).map(row=>({name:row.skaterName,category:row.category,date:row.date,start:row.start,end:row.end,rink:row.rink,uncertain:row.uncertain,startNumber:row.startingOrder?.startNumber,warmupGroup:row.startingOrder?.warmupGroup,individualTime:row.startingOrder?.individualTime,sourceUrl:row.startingOrder?.sourceUrl})),checkedAt:now,errors};
+    return {id:event.id,name:event.name,changed,rosterProfilesAdded,registrationPreview:event.registrations,participants:event.participants.length,matchedSkaters:new Set(event.participants.flatMap(row=>row.skaterIds)).size,blocks:event.blocks.length,entryFiles:entryProgress(event),startingOrderFiles:startingOrderProgress(event),startingOrderStatus:event.startingOrderStatus,entryStatus:event.entryStatus,scheduleStatus:event.scheduleStatus,scheduleSource:schedule?{url:schedule.url,hash:schedule.hash,parserVersion:schedule.parserVersion}:undefined,scheduleBlocksPreview:event.blocks.map(block=>({date:block.date,start:block.start,end:block.end,category:block.category,rink:block.rink})),clubEntriesPreview:event.participants.filter(entry=>entry.skaterIds.length).slice(0,80).map(entry=>({name:entry.name,category:entry.category,skaterIds:entry.skaterIds})),schedulePreview:scheduleRows([event],roster).filter(row=>row.activity==='competition').slice(0,40).map(row=>({name:row.skaterName,category:row.category,date:row.date,start:row.start,end:row.end,rink:row.rink,uncertain:row.uncertain,startNumber:row.startingOrder?.startNumber,warmupGroup:row.startingOrder?.warmupGroup,individualTime:row.startingOrder?.individualTime,sourceUrl:row.startingOrder?.sourceUrl})),checkedAt:now,errors};
   }catch(error){event.detailError=message(error);if(event.linksCheckedAt!==now){event.linksAttemptedAt=now;event.linksError=message(error);}event.scheduleRetained=existing.blocks.length>0;await putLiveEvent(event);await putSyncStatus({lastAttempt:now,error:message(error)});throw error;}
 }
 export async function syncStatus(){return {status:await readSyncStatus(),resultChecks:await historyImportStatus(db()),events:(await readLiveEvents()).map(event=>({id:event.id,name:event.name,start:event.start,end:event.end,linksAttemptedAt:event.linksAttemptedAt,linksCheckedAt:event.linksCheckedAt,linksError:event.linksError,documents:event.documents.filter(document=>document.kind==='schedule'||document.kind==='entries').map(({kind,url,label})=>({kind,url,label})),detailCheckedAt:event.detailCheckedAt,detailSuccessAt:event.detailSuccessAt,error:event.detailError,matched:event.participants.filter(row=>row.skaterIds.length).length,participants:event.participants.length,blocks:event.blocks.length,entryFiles:entryProgress(event),entryStatus:event.entryStatus,scheduleStatus:event.scheduleStatus})),scope:'Skate Ontario 官方日历与网页／Announcement报名日期；DSTools HTML 名单；已验证的三列Interim PDF；同源目录内 Name/Club/Section 与总人数可核对的报名 PDF，目录默认每轮四份，已有HSC关联选手的赛事每轮最多十二份；明确日期分区、START/END 与 RINK 表头的赛程 PDF。其他格式或未完成批次保留链接并提示核对。',instructions:'日历每轮已独立按最久未尝试顺序读取最多三场官网链接，不依赖 PDF 导入；lastCalendarSuccess不代表文件导入成功，逐场核对linksCheckedAt、detailSuccessAt及error。每小时仅调用一次sync_hsc_calendar：服务器已完成日历、链接轮换和最多三场文件导入并返回detailChecks/checkedEvents/errors；nextEvents为空时不要额外重复导入。新发布/修订的名单和赛程、未完成批次优先，失败保留旧资料；检查每场detailChecks和errors而非仅HTTP状态（未来183天，最近两场加一场报名资料优先轮换：优先7日内开放或仍开放且类别/时分不完整的赛事，当天已尝试者冷却；最多三场，包含 STAR 1–4）。PDF 名单分批轮转，待处理不等于全量成功。读取失败不删除旧数据。官方时段是组别时间，不推算个人时间；教练集合与备注独立保存。'};}
