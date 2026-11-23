@@ -82,7 +82,7 @@ jobs:
           done
       - name: Build the production Worker for browser journeys
         run: npm run build
-      - name: Check phone navigation, layout and picker interactions
+      - name: Check phone and desktop layout, navigation and picker interactions
         env:
           HSC_PREVIEW_ORIGIN: http://127.0.0.1:5173
         run: |
@@ -96,6 +96,7 @@ jobs:
           node scripts/check-planning-browser.mjs
           if [ "$HSC_BROWSER_GROUP" = existing ]; then
             HSC_MOBILE_WIDTHS=390 node scripts/check-family-schedule-browser.mjs
+            HSC_DESKTOP_LAYOUT_ONLY=1 HSC_MOBILE_WIDTHS=820,1024,1280 node scripts/check-family-schedule-browser.mjs
           fi
       - name: Save browser journey diagnostics
         if: always()

@@ -1,6 +1,12 @@
 @import "./competition-results.css";
 @import "./coach-daily-schedule.css";
-.club-nav-short{display:none}
+.club-sidebar nav button .club-nav-short{display:none}
+.club-sidebar nav button svg{flex-shrink:0}
+.club-nav-full{min-width:0;overflow-wrap:anywhere}
+@media (min-width:721px){
+  .club-sidebar nav button{width:100%;min-width:0;box-sizing:border-box}
+  .club-sidebar nav button .club-nav-full{display:block;white-space:normal}
+}
 .club-filter-toggle{display:none!important}
 .club-filter-field{display:flex;flex-direction:column;gap:6px;min-width:0;font-size:12px;color:#435971}
 .club-filter-field select,.club-filter-field input{min-height:42px;min-width:0;padding:10px;border:1px solid #c6d2df;border-radius:8px;background:#fff;color:#263e59;font:inherit}

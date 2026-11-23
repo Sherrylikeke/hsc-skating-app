@@ -10,6 +10,7 @@ const origin = process.env.HSC_PREVIEW_ORIGIN || 'http://127.0.0.1:5175';
 const output = process.env.HSC_MOBILE_OUTPUT || path.resolve('work/family-schedule', engine.name());
 const widths = (process.env.HSC_MOBILE_WIDTHS || '320,390,1280').split(',').map(Number);
 const languages = (process.env.HSC_MOBILE_LANGUAGES || 'en,zh').split(',');
+const desktopLayoutOnly = process.env.HSC_DESKTOP_LAYOUT_ONLY === '1';
 await fs.mkdir(output, {recursive:true});
 
 const member = {id:'parent', name:'Taylor Reed', email:'parent@example.test', role:'parent', status:'active'};
@@ -107,13 +108,14 @@ async function checkMembershipControls(page, language) {
 }
 
 async function walk(width, language, browser) {
-  const desktop = width >= 1000;
+  const desktop = width > 720;
   const device = desktop ? (engine === webkit ? 'Desktop Safari':'Desktop Chrome') : (engine === webkit ? 'iPhone 13':'Pixel 7');
   const context = await browser.newContext({...devices[device], viewport:{width,height:844}, deviceScaleFactor:1});
   let page;
   try {
     page = await context.newPage();
-    let savedClub = club;
+    const fixtureMember=desktopLayoutOnly?{...member,role:'admin'}:member;
+    let savedClub = {...club,member:fixtureMember};
     const writes = [];
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
@@ -125,7 +127,7 @@ async function walk(width, language, browser) {
       if (request.method() !== 'GET') writes.push(request.method() + ' ' + url.pathname);
       const payloads = {
         identity:{identity:{name:member.name,email:member.email,provider:'password'}},
-        me:{member,skaterIds:ownIds,preferredSkaterIds:savedClub.ownSkaterIds,claims:[]},
+        me:{member:fixtureMember,skaterIds:ownIds,preferredSkaterIds:savedClub.ownSkaterIds,claims:[]},
         notifications:{notifications:[]}, requirements:{requirements:[]}
       };
       const payload = url.pathname === '/api/club' ? (url.search ? {records:[]} : savedClub) : payloads[url.searchParams.get('action')] || {};
@@ -143,18 +145,23 @@ async function walk(width, language, browser) {
         await picker.getByRole('option', {name:label, exact:true}).click();
       }
     }
-    await page.goto(origin + '/');
-    const entry = page.locator('.member-heading a[href="/workspace?view=personal"]');
-    await entry.waitFor();
-    await page.evaluate(() => document.fonts.ready);
-    const homeNames = page.locator('.home-event h3');
-    await homeNames.last().waitFor();
-    assert.deepEqual(await homeNames.allTextContents(),[event.name,later.name]);
-    assert.ok(await homeNames.last().evaluate(el=>parseFloat(getComputedStyle(el).fontSize)>=24));
-    const entryY = await y(entry);
-    assert.ok(await entry.evaluate(el=>el.getBoundingClientRect().bottom < innerHeight), 'Schedule entry must fit on the first screen');
-    await shot('home');
-    await entry.click();
+    let entryY=0;
+    if(desktopLayoutOnly){
+      await page.goto(origin+'/workspace?view=personal');
+    }else{
+      await page.goto(origin + '/');
+      const entry = page.locator('.member-heading a[href="/workspace?view=personal"]');
+      await entry.waitFor();
+      await page.evaluate(() => document.fonts.ready);
+      const homeNames = page.locator('.home-event h3');
+      await homeNames.last().waitFor();
+      assert.deepEqual(await homeNames.allTextContents(),[event.name,later.name]);
+      assert.ok(await homeNames.last().evaluate(el=>parseFloat(getComputedStyle(el).fontSize)>=24));
+      entryY=await y(entry);
+      assert.ok(await entry.evaluate(el=>el.getBoundingClientRect().bottom < innerHeight), 'Schedule entry must fit on the first screen');
+      await shot('home');
+      await entry.click();
+    }
     await rows.first().waitFor();
     await page.evaluate(() => document.fonts.ready);
     const firstRowY = await y(rows.first());
@@ -165,6 +172,23 @@ async function walk(width, language, browser) {
     assert.match(await page.locator('.family-upcoming').nth(1).innerText(),/Ana Reed/);
     assert.equal(await page.locator('.home-events').count(),0);
     assert.deepEqual(await current.locator('.club-session-skater>.club-text-button').allTextContents(),['Ana Reed','Ben Reed','Ana Reed']);
+    if(desktop){
+      const sidebar=page.locator('.club-sidebar');
+      assert.equal(await sidebar.locator('.club-nav-short:visible').count(),0,'Desktop must render one label for each menu item');
+      assert.equal(await sidebar.evaluate(element=>{
+        const right=element.getBoundingClientRect().right;
+        return Array.from(element.querySelectorAll('nav button .club-nav-full')).every(label=>{
+          const button=label.closest('button');
+          const contentRight=button.getBoundingClientRect().right-parseFloat(getComputedStyle(button).paddingRight);
+          return label.getBoundingClientRect().right<=Math.min(contentRight,right)+1 && label.scrollWidth<=label.clientWidth+1;
+        });
+      }),true,'Desktop navigation stays inside the sidebar');
+      assert.equal(await page.locator('.family-upcoming .club-schedule-wrap').evaluateAll(wrappers=>wrappers.every(
+        wrapper=>wrapper.scrollWidth<=wrapper.clientWidth+1
+      )),true,'All desktop schedule columns, including official links, fit the event card');
+      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'No page-wide horizontal scrolling');
+      if(desktopLayoutOnly){await shot('desktop-layout');return {width,language,desktopLayout:true};}
+    }
     assert.ok(firstRow.includes('11:15–12:00') && firstRow.includes('11:38') && firstRow.includes('#8'));
     assert.match(await current.first().locator('.family-arrival').innerText(), /10:15/);
     const navTop = desktop ? 844 : await page.locator('.club-sidebar').evaluate(el=>el.getBoundingClientRect().top);
