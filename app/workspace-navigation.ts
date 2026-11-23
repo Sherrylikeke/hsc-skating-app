@@ -56,7 +56,7 @@ function readRoute(){
 }
 function destinationLabel(destination:Destination){
   const labels:Record<Destination,[string,string]>={
-    home:['Back to club overview','返回俱乐部概览'],skaters:['Back to all skaters','返回选手列表'],
+    home:['Back to Home','返回首页'],skaters:['Back to all skaters','返回选手列表'],
     events:['Back to competitions','返回比赛中心'],personal:['Back to personal schedule','返回个人赛程'],
     coach:['Back to coach schedule','返回教练总赛程'],watch:['Back to event watch','返回比赛关注'],
     calendar:['Back to calendar','返回赛程日历'],day:['Back to competition day','返回比赛日'],registrations:['Back to registration board','返回报名看板'],member:['Back to member workspace','返回会员工作区'],

@@ -263,7 +263,7 @@ async function walk(width, language, browser) {
     assert.match(await current.locator('.club-session-time .club-meeting').innerText(), /11:30/);
     assert.equal(await current.locator('.family-arrival').count(),0,'An earlier coach meeting supersedes the arrival guide');
     const nav = page.locator('.club-sidebar nav');
-    const overview = nav.getByRole('button',{name:/Club overview|俱乐部概览/i});
+    const overview = nav.getByRole('button',{name:/^Home$|^首页$/i});
     await overview.click();
     await page.locator('.home-events-empty').waitFor();
     assert.equal(await page.locator('.home-events .home-event').count(),0,'No homepage skaters means no personalized upcoming cards');

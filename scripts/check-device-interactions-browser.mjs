@@ -136,7 +136,7 @@ async function walk(browser,profile,locale,folder,report) {
     assert.equal(await editFocus(),false);
 
     const nav = page.locator('.club-sidebar nav');
-    await nav.getByRole('button',{name:/Club overview|俱乐部概览/}).tap();
+    await nav.getByRole('button',{name:/^Home$|^首页$/}).tap();
     await page.locator('.home-events .home-event').first().waitFor();
     assert.equal(await page.locator('.home-events .home-event').count(),ownIds.length,'Homepage shows the selected skaters’ entered events');
     await nav.getByRole('button',{name:/Competition centre|比赛中心/}).tap();
