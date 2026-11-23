@@ -40,14 +40,41 @@ export default function PortalApp({initialPath}:{initialPath:string}){
  return <div className="portal">
   <a className="portal-skip" href="#portal-main">Skip to content</a>
   <div className="portal-preview">Website preview <span>Registration and payments are not live.</span></div>
-  <div className="portal-topline"><span>Hamilton, Ontario · A community on ice</span><a href="/member">Member competition schedules</a></div>
-  <header className="portal-header"><a href="/portal" className="portal-brand" aria-label="Hamilton Skating Club home"><img src="/portal-assets/hsc-logo.png" alt="Hamilton Skating Club"/></a><div className="portal-header-actions"><a href="/member?portalReturn=%2Fportal">{member?'My account':'Login / Create account'}</a><a className="portal-cart-link" href="/portal/cart/">Cart</a><button className="portal-menu" onClick={()=>setMenu(!menu)} aria-expanded={menu} aria-controls="portal-nav">{menu?'Close':'Menu'}</button></div></header>
-  <nav id="portal-nav" className={'portal-nav '+(menu?'is-open':'')} aria-label="Club navigation">{portalNavigation.map(([path,label])=><a href={portalHref(path)} key={path} aria-current={initialPath===path?'page':undefined}>{label}</a>)}<a className="portal-nav-account" href="/member?portalReturn=%2Fportal">Login / Create account</a></nav>
+  <header className="portal-header">
+   <a href="/portal" className="portal-brand" aria-label="Hamilton Skating Club home"><img src="/portal-assets/hsc-logo.png" alt="Hamilton Skating Club"/></a>
+   <div className="portal-header-actions">
+    <a className="portal-member-link" href="/member">Member competition schedules</a>
+    <a className="portal-account-link" href="/member?portalReturn=%2Fportal">{member?'My account':'Login / Create account'}</a>
+    <a className="portal-cart-link" href="/portal/cart/">Cart</a>
+    <button className="portal-menu" onClick={()=>setMenu(!menu)} aria-expanded={menu} aria-controls="portal-nav">{menu?'Close':'Menu'}</button>
+   </div>
+  </header>
+  <nav id="portal-nav" className={'portal-nav '+(menu?'is-open':'')} aria-label="Club navigation">
+   {portalNavigation.map(([path,label])=><a href={portalHref(path)} key={path} aria-current={initialPath===path?'page':undefined}>{label}</a>)}
+   <a className="portal-nav-member" href="/member">Member competition schedules</a>
+   <a className="portal-nav-account" href="/member?portalReturn=%2Fportal">{member?'My account':'Login / Create account'}</a>
+  </nav>
   {notice&&<div className="portal-notice" role="status">{notice}<button onClick={()=>setNotice('')} aria-label="Dismiss message">Dismiss</button></div>}
-  <main id="portal-main">
+  <main id="portal-main" tabIndex={-1}>
   {home?<>
-   <section className="portal-hero"><div className="portal-hero-copy"><p className="portal-kicker">WELCOME TO HAMILTON SKATING CLUB</p><h1>Find your place<br/>on the ice.</h1><p>First steps. New skills. Lifelong friendships.<br/>A skating community for every stage of the journey.</p><div className="portal-actions"><a className="portal-button" href="/portal/our-programs/">Explore our programs</a><a className="portal-text-link" href="/portal/registration/">Registration information</a></div></div><div className="portal-hero-image"><img src="/portal-assets/screenshot-2026-05-28-at-7-57-53-pm-f3cca435bb86.png" alt="Coaches and young skaters together on the ice"/><div className="portal-photo-note">The next chapter starts here.</div></div></section>
-   <section className="portal-section"><div className="portal-section-heading"><div><p className="portal-kicker">ROOM TO GROW</p><h2>Every skater has a starting point.</h2></div><a className="portal-text-link" href="/portal/our-programs/">All programs</a></div><ProgrammeCards/></section>
+   <section className="portal-hero">
+    <div className="portal-hero-copy">
+     <p className="portal-kicker">WELCOME TO HAMILTON SKATING CLUB</p>
+     <h1><span>Find your place</span>{' '}<span>on the ice.</span></h1>
+     <p>First steps. New skills. Lifelong friendships.<br/>A skating community for every stage of the journey.</p>
+     <div className="portal-actions">
+      <a className="portal-button" href="/portal/our-programs/">Explore our programs</a>
+      <a className="portal-text-link" href="/portal/registration/">Registration information</a>
+     </div>
+    </div>
+    <figure className="portal-hero-image">
+     <div className="portal-hero-frame">
+      <img src="/portal-assets/screenshot-2026-05-28-at-7-57-53-pm-f3cca435bb86.png" alt="Coaches and young skaters together on the ice"/>
+     </div>
+     <figcaption className="portal-photo-note">The next chapter starts here.</figcaption>
+    </figure>
+   </section>
+   <section className="portal-section portal-programme-index"><div className="portal-section-heading"><div><p className="portal-kicker">ROOM TO GROW</p><h2>Every skater has a starting point.</h2></div><a className="portal-text-link" href="/portal/our-programs/">All programs</a></div><ProgrammeCards/></section>
    <section className="portal-shortcuts"><a href="/portal/schedule/"><span>PLAN YOUR TIME ON THE ICE</span><h3>Club schedule</h3><p>Course schedules and downloadable timetables.</p></a><a href="/portal/our-coaches/"><span>EXPERIENCE & ENCOURAGEMENT</span><h3>Meet our coaches</h3><p>Get to know the people guiding your progress.</p></a><a href="/portal/club-resources/"><span>YOUR CLUB, TOGETHER</span><h3>Club resources</h3><p>Policies, registration information and helpful links.</p></a></section>
    <section className="portal-section portal-updates"><p className="portal-kicker">AROUND THE CLUB</p><h2>Club updates & announcements</h2><p className="portal-muted">Public website content captured November 18, 2026.</p><details><summary>Building for the Future: Upcoming AGM and club notices</summary>{page&&<><Copy body={page.body}/><LinkedResources page={page}/></>}</details></section>
   </>:initialPath==='/admin/'?<PortalAdmin/>:initialPath==='/cart/'?<Cart onNotice={setNotice}/>:<>
@@ -63,7 +90,7 @@ export default function PortalApp({initialPath}:{initialPath:string}){
    </section>}
   </>}
   </main>
-  <footer className="portal-footer"><div><p className="portal-kicker">HAMILTON SKATING CLUB</p><h2>A place to learn.<br/>A place to belong.</h2><p>25 Hester Street<br/>Hamilton, Ontario · L9A 2N3</p><a href="mailto:info@hamiltonskating.ca">info@hamiltonskating.ca</a><a href="tel:+16137955358">(613) 795-5358</a></div><div><h3>On the ice</h3><a href="/portal/our-programs/">Our Programs</a><a href="/portal/our-coaches/">Our Coaches</a><a href="/portal/registration/">Registration</a><a href="/portal/schedule/">Schedule</a></div><div><h3>Your club</h3><a href="/portal/about-us/">About Us</a><a href="/portal/club-resources/">Club Resources</a><a href="/portal/contact-us/">Contact Us</a><a href="/portal/sitemap/">Sitemap</a>{editor&&<a href="/portal/admin/">Content administration</a>}</div><div className="portal-footer-bottom"><span>Hamilton Skating Club · Website review v1</span><a href="/portal/club-resources/privacy-policy/">Privacy policy</a><a href="/portal/ajax/cookies.php">Cookies</a><a href="https://www.facebook.com/HamiltonSkatingClub">Facebook</a><a href="https://www.instagram.com/hamiltonskating">Instagram</a></div></footer>
+  <footer className="portal-footer"><div><p className="portal-kicker">HAMILTON SKATING CLUB</p><h2>A place to learn.<br/>A place to belong.</h2><p>Hamilton, Ontario · A community on ice</p><p>25 Hester Street<br/>Hamilton, Ontario · L9A 2N3</p><a href="mailto:info@hamiltonskating.ca">info@hamiltonskating.ca</a><a href="tel:+16137955358">(613) 795-5358</a></div><div><h3>On the ice</h3><a href="/portal/our-programs/">Our Programs</a><a href="/portal/our-coaches/">Our Coaches</a><a href="/portal/registration/">Registration</a><a href="/portal/schedule/">Schedule</a></div><div><h3>Your club</h3><a href="/portal/about-us/">About Us</a><a href="/portal/club-resources/">Club Resources</a><a href="/portal/contact-us/">Contact Us</a><a href="/portal/sitemap/">Sitemap</a>{editor&&<a href="/portal/admin/">Content administration</a>}</div><div className="portal-footer-bottom"><span>Hamilton Skating Club · Website review v1</span><a href="/portal/club-resources/privacy-policy/">Privacy policy</a><a href="/portal/ajax/cookies.php">Cookies</a><a href="https://www.facebook.com/HamiltonSkatingClub">Facebook</a><a href="https://www.instagram.com/hamiltonskating">Instagram</a></div></footer>
   <dialog ref={dialog} className="portal-dialog" onCancel={()=>{setLogin(false);setSelection(null);}}><button className="portal-dialog-close" onClick={()=>{setLogin(false);setSelection(null);}}>Close</button>{login?<><p className="portal-kicker">YOUR CLUB ACCOUNT</p><h2>Ready to take the next step?</h2><p>You must log in or create an account to register for programmes or add items to your cart.</p><a className="portal-button" href={'/member?portalReturn='+encodeURIComponent('/portal'+(initialPath==='/'?'':initialPath))}>Login / Create account</a></>:selection&&<><h2>{selection.name}</h2>{notice&&<p role="alert">{notice}</p>}<p>{money(selection.priceCents)} · CAD</p><p className="portal-callout">Registration details and fees require confirmation. You can save a selection, but checkout is not available.</p>{selection.kind!=='product'?<label>Skater<select value={skater} onChange={e=>setSkater(e.target.value)}><option value="">Select an approved skater</option>{skaters.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select>{!skaters.length&&<span>No approved skater relationship is available. Please contact the club.</span>}</label>:<label>Quantity<input type="number" min="1" max="10" value={qty} onChange={e=>setQty(Number(e.target.value))}/></label>}<button className="portal-button" disabled={busy||(selection.kind!=='product'&&!skater)} onClick={()=>void addSelection()}>Save to cart</button></>}</dialog>
  </div>;
 }
