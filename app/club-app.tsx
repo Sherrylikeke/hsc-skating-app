@@ -61,6 +61,11 @@ export default function ClubApp(){
   const [selectedRecord,setSelectedRecord]=useState<HistoryRecord|null>(null);
   const [editing,setEditing]=useState<{skater:ClubSkater;event:LiveEvent;row:ScheduleRow;plan?:CoachPlan}|null>(null),[meeting,setMeeting]=useState(''),[note,setNote]=useState(''),[savingPlan,setSavingPlan]=useState(false),[planError,setPlanError]=useState('');
   const cache=useRef(new Map<string,HistoryRecord[]>()),[refreshing,setRefreshing]=useState(false);
+  const [historyRefresh,setHistoryRefresh]=useState(0);
+  function refreshHistory(){
+    cache.current.clear();
+    setHistoryRefresh(value=>value+1);
+  }
   const today=todayToronto();
   async function load(){
     try{
@@ -68,19 +73,20 @@ export default function ClubApp(){
       const next=await response.json() as ClubData;setData(next);setAccessStatus(null);setError('');setLoading(false);return next;
     }catch(e){setError((e as Error).message);setLoading(false);}
   }
-  useEffect(()=>{const refresh=()=>void load();window.addEventListener('hsc-official-updated',refresh);return()=>window.removeEventListener('hsc-official-updated',refresh);},[]);
+  useEffect(()=>{const refresh=()=>{void load();refreshHistory();};window.addEventListener('hsc-official-updated',refresh);return()=>window.removeEventListener('hsc-official-updated',refresh);},[]);
   async function sync(id?:string){
     if(busy||refreshing||!adminRole)return;setBusy(id?translate("正在读取这场比赛的官网资料…"):translate("正在同步官网赛事日历…"));setError('');setNotice('');
     try{
       const result=await checkOfficialSources(fetch,today,id,(current,total)=>setBusy(translate("正在读取最近比赛的名单与赛程 {0}/{1}…",[current,total])));
       const next=await load();if(!next)return;
+      refreshHistory();
       if(result.errors.length){setError(text('Some source checks need review. Previous valid records are retained; administrators can review the details at the bottom of this page.','部分来源检查待核对，继续保留上次有效资料；管理员可在页面底部查看详情。'));return;}
       setNotice(id?translate("已检查这场比赛的官网资料；需要核对的格式会单独提示。"):text('Calendar checked; detailed event checks completed: ','日历检查完成；已完成逐场检查：')+result.checkedEvents);
     }catch(e){await load();setError((e as Error).message+translate("；已保留上次有效资料。"));}finally{setBusy('');}
   }
   async function refreshSavedData(){
     if(busy||refreshing)return;setRefreshing(true);setNotice('');
-    try{const next=await load();if(next)setNotice(text('Latest saved records loaded. No new official source check was requested.','已读取最新存档资料，本次没有向官网发起新检查。'));}finally{setRefreshing(false);}
+    try{const next=await load();if(next){refreshHistory();setNotice(text('Latest saved records loaded. No new official source check was requested.','已读取最新存档资料，本次没有向官网发起新检查。'));}}finally{setRefreshing(false);}
   }
   useEffect(()=>{void load();},[]);
   const selectedSkater=data?.skaters.find(row=>row.id===skaterId);
@@ -89,7 +95,7 @@ export default function ClubApp(){
   const selectedRecords=selectedSkater?recordRows.filter(record=>record.skater_ids.includes(selectedSkater.id)):[];
   const selectedCategories=selectedRecords.length?historyRecordCategories(selectedRecords):historyCategories(selectedSkater?.categories||[]);
   const historyKey=selectedSkater?`skater=${selectedSkater.id}`:historicalEvent?`event=${historicalEvent.id}`:'';
-  useEffect(()=>{if(!historyKey){setRecordRows([]);return;}let active=true;setRecordError('');const saved=cache.current.get(historyKey);if(saved){setRecordRows(saved);setRecordLoading(false);return;}setRecordRows([]);setRecordLoading(true);fetch('/api/club?'+historyKey,{cache:'no-store'}).then(async response=>{if(!response.ok)throw new Error(translate("比赛记录读取失败"));return await response.json() as {records:HistoryRecord[]};}).then(result=>{cache.current.set(historyKey,result.records);if(active)setRecordRows(result.records);}).catch(e=>{if(active)setRecordError(e.message);}).finally(()=>{if(active)setRecordLoading(false);});return()=>{active=false;};},[historyKey]);
+  useEffect(()=>{if(!historyKey){setRecordRows([]);return;}let active=true;setRecordError('');const saved=cache.current.get(historyKey);if(saved){setRecordRows(saved);setRecordLoading(false);return;}setRecordRows([]);setRecordLoading(true);fetch('/api/club?'+historyKey,{cache:'no-store'}).then(async response=>{if(!response.ok)throw new Error(translate("比赛记录读取失败"));return await response.json() as {records:HistoryRecord[]};}).then(result=>{if(active){cache.current.set(historyKey,result.records);setRecordRows(result.records);}}).catch(e=>{if(active)setRecordError(e.message);}).finally(()=>{if(active)setRecordLoading(false);});return()=>{active=false;};},[historyKey,historyRefresh]);
   useEffect(()=>{if(!editing&&!selectedRecord)return;const close=(event:KeyboardEvent)=>{if(event.key==='Escape'){setEditing(null);setSelectedRecord(null);}};window.addEventListener('keydown',close);return()=>window.removeEventListener('keydown',close);},[editing,selectedRecord]);
   const allSchedule=useMemo(()=>data?scheduleRows(data.events.filter(event=>event.end>=today),data.skaters):[],[data,today]);
   const futureEvents=data?.events.filter(event=>event.end>=today).sort(compareEventDates)||[];

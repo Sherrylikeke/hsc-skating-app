@@ -3,7 +3,7 @@ import {AccessError,nowISO,scheduleSkaterIds} from './member-access.ts';
 import type {Member} from './member-access.ts';
 import type {LiveEvent} from './club-types.ts';
 
-export type OfficialUpdate={changeId:string;eventId:string;eventName:string;skaterName:string;source:string;checkedAt:string;entryChanged:boolean;scheduleChanged:boolean;removed:boolean;categories:string[];sessions:Array<{date:string;start:string;end:string;rink:string;category:string}>};
+export type OfficialUpdate={changeId:string;eventId:string;eventName:string;skaterName:string;source:string;checkedAt:string;entryChanged:boolean;scheduleChanged:boolean;removed:boolean;categories:string[];sessions:Array<{date:string;start:string;end:string;rink:string;category:string}>;result?:{rank:number|string|null;totalScore:number|string|null;withdrawn:boolean;revised:boolean}};
 export type OfficialNotice={id:string;skater_id:string;read_at:string|null;created_at:string;payload:OfficialUpdate};
 export function officialUpdate(event:LiveEvent,previous:LiveEvent|null,skaterId:string,changeId:string):OfficialUpdate{
   const entries=(source:LiveEvent|null)=>source?.participants.filter(p=>p.skaterIds.includes(skaterId)).map(({name,category})=>({name,category})).sort((a,b)=>a.category.localeCompare(b.category))||[];

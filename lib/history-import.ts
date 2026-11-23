@@ -2,13 +2,22 @@ import type {ClubSkater,HistoryEvent,HistoryRecord,LiveEvent} from './club-types
 import {parseResultPdf} from './competition-results.ts';
 import {categoryCompatible,discoverDocuments,groupOf,normalizeName,plain} from './official-parser.ts';
 import type {PdfItem} from './official-parser.ts';
+import {outboxStatement} from './outbox-statement.ts';
+import type {OfficialUpdate} from './official-updates.ts';
 
 const prefix='official-results:';
 const recordPrefix='official-result:';
+const retryMinutes=45;
+const onCompetitionDay=(event:LiveEvent,today:string)=>event.start<=today&&event.end>=today;
+const torontoDate=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Toronto',year:'numeric',month:'2-digit',day:'2-digit'});
 const digest=async(bytes:Uint8Array)=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes as BufferSource)))
   .map(byte=>byte.toString(16).padStart(2,'0')).join('');
 const officialHub=(url:URL)=>url.protocol==='https:'&&/^(?:www\.)?skateontario\.org$/i.test(url.hostname)
-  && /^\/results\/[a-z\d_-]+\/(?:index\.html?)?$/i.test(url.pathname);
+  && !url.username&&!url.password&&/^\/results\/(?!entries(?:\/|$))[a-z\d_-]+(?:\/(?:index\.html?)?)?$/i.test(url.pathname);
+const normalizeHub=(url:URL)=>{
+  if(!url.pathname.endsWith('/')&&!/\.html?$/i.test(url.pathname))url.pathname+='/';
+  return url;
+};
 const sameHost=(a:URL,b:URL)=>a.hostname.replace(/^www\./,'')===b.hostname.replace(/^www\./,'');
 const errorText=(error:unknown)=>error instanceof Error?error.message:String(error);
 type FileProgress={attemptedAt:string;hash?:string;error?:string};
@@ -19,6 +28,7 @@ type ReadPdf=(bytes:Uint8Array)=>Promise<PdfItem[][]>;
 export function resultCatalog(html:string,source:string){
   const hub=new URL(source);
   if(!officialHub(hub))return [];
+  normalizeHub(hub);
   const root=new URL('./',hub).pathname;
   const files=new Map<string,string>();
   for(const row of html.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)){
@@ -39,8 +49,9 @@ export function resultCatalog(html:string,source:string){
 
 export function resultHub(event:LiveEvent,html:string){
   const documents=[...discoverDocuments(html,event.url),...event.documents];
-  const found=documents.find(doc=>(doc.kind==='results'||doc.kind==='start-order')&&officialHub(new URL(doc.url)));
-  if(found)return found.url;
+  // Some organizers label a combined entry, start-order and results directory "Entry Lists".
+  const found=documents.find(doc=>doc.kind!=='schedule'&&officialHub(new URL(doc.url)));
+  if(found)return normalizeHub(new URL(found.url)).href;
   if(event.id==='SO-325449'&&event.start==='2026-11-20'&&event.end==='2026-11-22')
     return 'https://skateontario.org/results/27KES/';
   return undefined;
@@ -85,18 +96,22 @@ async function progress(database:D1Database,events:LiveEvent[]){
   return new Map(results.map(row=>[row.key.slice(prefix.length),JSON.parse(row.value) as Progress]));
 }
 
-export async function selectHistoryImport(database:D1Database,events:LiveEvent[],today:string,now:number){
+export async function selectHistoryImports(database:D1Database,events:LiveEvent[],today:string,now:number){
   const cutoff=new Date(today+'T12:00:00Z');
   cutoff.setUTCDate(cutoff.getUTCDate()-7);
-  const recent=events.filter(event=>event.end&&event.end<=today&&event.end>=cutoff.toISOString().slice(0,10));
-  if(!recent.length)return;
+  const recent=events.filter(event=>event.start<=today&&event.end>=cutoff.toISOString().slice(0,10));
+  if(!recent.length)return [];
   const states=await progress(database,recent);
-  return recent.filter(event=>{
+  const ready=recent.filter(event=>{
     const state=states.get(event.id);
     const complete=state&&state.total>0&&state.verified===state.total&&!state.error;
-    return !state||now-Date.parse(state.checkedAt)>=(complete?24*60:45)*60_000;
+    const interval=complete&&!onCompetitionDay(event,today)?24*60:retryMinutes;
+    return !state||now-Date.parse(state.checkedAt)>=interval*60_000;
   }).sort((a,b)=>(states.get(a.id)?.checkedAt||'').localeCompare(states.get(b.id)?.checkedAt||'')
-    ||b.end.localeCompare(a.end)||a.id.localeCompare(b.id))[0];
+    ||b.end.localeCompare(a.end)||a.id.localeCompare(b.id));
+  const inProgress=ready.filter(event=>onCompetitionDay(event,today)).slice(0,2);
+  const finished=ready.find(event=>!onCompetitionDay(event,today));
+  return finished?[...inProgress,finished]:inProgress;
 }
 
 export async function importHistory(database:D1Database,event:LiveEvent,roster:ClubSkater[],now:string,
@@ -105,6 +120,7 @@ export async function importHistory(database:D1Database,event:LiveEvent,roster:C
   const state:Progress={checkedAt:now,source:old?.source,total:old?.total||0,verified:old?.verified||0,files:{...old?.files}};
   const updates:HistoryRecord[]=[];
   const errors:string[]=[];
+  const active=onCompetitionDay(event,torontoDate.format(new Date(now)));
   try{
     const cached=resultHub(event,'')||old?.source;
     const hub=cached||resultHub(event,new TextDecoder().decode(await readSource(event.url)));
@@ -121,17 +137,29 @@ export async function importHistory(database:D1Database,event:LiveEvent,roster:C
         &&(groupOf(entry.category)===null||groupOf(category)===null||groupOf(entry.category)===groupOf(category)));
       state.total=files.length;
       const checked=(url:string)=>state.files[url]?.hash&&!state.files[url]?.error;
-      const selected=files.filter(file=>!checked(file.url)||Date.parse(now)-Date.parse(state.files[file.url].attemptedAt)>=24*60*60_000)
-        .sort((a,b)=>(state.files[a.url]?.attemptedAt||'').localeCompare(state.files[b.url]?.attemptedAt||'')
-          ||Number(priority(b.category))-Number(priority(a.category))).slice(0,12);
-      for(const file of selected){
+      const interval=(active?retryMinutes:24*60)*60_000;
+      const due=files.filter(file=>!checked(file.url)||Date.parse(now)-Date.parse(state.files[file.url].attemptedAt)>=interval);
+      const oldest=(a:typeof files[number],b:typeof files[number])=>(state.files[a.url]?.attemptedAt||'').localeCompare(state.files[b.url]?.attemptedAt||'');
+      const relevant=active?due.filter(file=>priority(file.category)).sort(oldest).slice(0,10):[];
+      const selected=new Set(relevant);
+      const batch=[...relevant,...due.filter(file=>!selected.has(file)).sort((a,b)=>oldest(a,b)
+        ||Number(priority(b.category))-Number(priority(a.category))).slice(0,12-relevant.length)];
+      for(const file of batch){
         const previous=state.files[file.url];
         try{
           const bytes=await readSource(file.url,8_000_000);
+          if(active&&!previous?.hash&&/^\s*<(?:!DOCTYPE HTML|html\b)/i.test(new TextDecoder().decode(bytes.slice(0,128)))){
+            state.files[file.url]={attemptedAt:now};
+            continue;
+          }
           const hash=await digest(bytes);
           if(hash!==previous?.hash)updates.push(...await resultRecords(event,roster,file.category,hub,await readPdf(bytes),file.url));
           state.files[file.url]={attemptedAt:now,hash};
-        }catch(error){state.files[file.url]={attemptedAt:now,hash:previous?.hash,error:errorText(error)};}
+        }catch(error){
+          const detail=errorText(error);
+          state.files[file.url]={attemptedAt:now,hash:previous?.hash,
+            error:active&&!previous?.hash&&/\bHTTP (?:404|410)\b/.test(detail)?undefined:detail};
+        }
       }
       state.verified=files.filter(file=>checked(file.url)).length;
       for(const file of files)if(state.files[file.url]?.error)
@@ -144,7 +172,19 @@ export async function importHistory(database:D1Database,event:LiveEvent,roster:C
   if(updates.length){
     const {results}=await database.prepare('SELECT payload FROM history_records WHERE event_id=?').bind(event.id).all<{payload:string}>();
     const archive=new Map(results.map(({payload})=>{const row=JSON.parse(payload) as HistoryRecord;return [row.record_id,row];}));
-    for(const row of updates)archive.set(row.record_id,row);
+    for(const row of updates){
+      const previous=archive.get(row.record_id);
+      const changed=!previous||row.rank!==previous.rank||row.total_score!==previous.total_score||row.status!==previous.status;
+      const result={rank:row.rank,totalScore:row.total_score,withdrawn:row.status==='withdrawn',revised:!!previous};
+      for(const skaterId of row.skater_ids){
+        if(!changed&&previous?.skater_ids.includes(skaterId))continue;
+        const changeId=crypto.randomUUID(),skaterName=roster.find(skater=>skater.id===skaterId)?.name||row.name;
+        const payload:OfficialUpdate={changeId,eventId:event.id,eventName:event.name,skaterName,source:row.source_url,
+          checkedAt:now,entryChanged:false,scheduleChanged:false,removed:false,categories:[row.category],sessions:[],result};
+        writes.push(outboxStatement(database,{id:'results|'+changeId,kind:'official-update',subjectId:changeId,skaterId,payload}));
+      }
+      archive.set(row.record_id,row);
+    }
     const records=[...archive.values()];
     const item:HistoryEvent={id:event.id,name:event.name,url:state.source!,start:event.start,end:event.end,dateBasis:'Skate Ontario',
       recordCount:records.length,teamCount:records.filter(row=>row.entity_type==='team').length,

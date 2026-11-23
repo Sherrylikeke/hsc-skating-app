@@ -12,7 +12,7 @@ import {todayToronto,ENTRY_PDF_VERSION,STARTING_DRAW_VERSION} from './club-types
 import type {LiveEvent} from './club-types';
 import {drainOutbox} from './member-messages';
 import {eventNeedsReview} from './club-response';
-import {historyImportStatus,importHistory,resultHub,selectHistoryImport} from './history-import';
+import {historyImportStatus,importHistory,resultHub,selectHistoryImports} from './history-import';
 const allowedHosts=new Set(['skateontario.org','www.skateontario.org','dstools.ca','www.dstools.ca','skatingresults.ca','www.skatingresults.ca']);
 async function source(url:string,maxBytes=3_000_000):Promise<Uint8Array>{
   let target=new URL(url);if(!allowedHosts.has(target.hostname)||target.protocol!=='https:')throw new Error('来源不在已接入的官方名单中');
@@ -61,18 +61,23 @@ async function syncCalendarBody(){
       try{const result=await syncEventBody(target.id);detailChecks.push({id:target.id,checkedAt:result.checkedAt,errors:result.errors});errors.push(...result.errors.map(error=>target.id+': '+error));}
       catch(error){const detail=message(error);detailChecks.push({id:target.id,errors:[detail]});errors.push(target.id+': '+detail);}
     }
-    let resultCheck;
+    const resultChecks:Awaited<ReturnType<typeof importHistory>>[]=[];
     try{
       const current=new Map([...existing,...incoming.map(event=>[event.id,event] as const)]);
-      const target=await selectHistoryImport(db(),[...current.values()],start,Date.now());
-      if(target){
-        resultCheck=await importHistory(db(),target,await profiles(),new Date().toISOString(),source,readPdfItems);
-        errors.push(...resultCheck.errors.map(error=>target.id+' 成绩：'+error));
+      const targets=await selectHistoryImports(db(),[...current.values()],start,Date.now());
+      const roster=targets.length?await profiles():[];
+      for(const target of targets){
+        try{
+          const result=await importHistory(db(),target,roster,new Date().toISOString(),source,readPdfItems);
+          resultChecks.push(result);
+          errors.push(...result.errors.map(error=>target.id+' 成绩：'+error));
+        }catch(error){errors.push(target.id+' 成绩：'+message(error));}
       }
     }catch(error){errors.push('成绩：'+message(error));}
     await putSyncStatus({lastSuccess:errors.length?undefined:new Date().toISOString(),error:errors.join('；')||null});
     // The server owns the complete bounded round; callers must not repeat it.
-    return {events:incoming.length,checkedAt:now,source:'https://skateontario.org/events/',linkChecks,detailChecks,resultCheck,checkedEvents:detailChecks.length,errors,nextEvents:[]};
+    return {events:incoming.length,checkedAt:now,source:'https://skateontario.org/events/',linkChecks,detailChecks,
+      resultCheck:resultChecks[0],resultChecks,checkedEvents:detailChecks.length,errors,nextEvents:[]};
   }catch(error){await putSyncStatus({error:message(error)});throw error;}
 }
 async function syncEventBody(id:string){
@@ -172,12 +177,13 @@ async function withSyncLock<T>(operation:()=>Promise<T>):Promise<T>{
 export const syncCalendar=()=>withSyncLock(syncCalendarBody);
 export const syncEvent=(id:string)=>withSyncLock(async()=>{
   const event=await readLiveEvent(id);
-  if(event&&event.end&&event.end<=todayToronto()&&resultHub(event,'')){
+  const today=todayToronto();
+  if(event&&event.end&&event.end<today&&resultHub(event,'')){
     const resultCheck=await importHistory(db(),event,await profiles(),new Date().toISOString(),source,readPdfItems);
     return {id,name:event.name,checkedAt:resultCheck.checkedAt,resultCheck,errors:resultCheck.errors};
   }
   const result=await syncEventBody(id);
-  const updated=event?.end&&event.end<=todayToronto()?await readLiveEvent(id):null;
+  const updated=event?.start&&event.start<=today?await readLiveEvent(id):null;
   if(!updated||!resultHub(updated,''))return result;
   const resultCheck=await importHistory(db(),updated,await profiles(),new Date().toISOString(),source,readPdfItems);
   return {...result,resultCheck,errors:[...result.errors,...resultCheck.errors]};

@@ -2,14 +2,12 @@ import {AccessError, accessibleSkaters, admittedIDs, assertSkater, idsField, now
 import type {Member} from './member-access.ts';
 import {reconcileReminders,reminderIsCurrent} from './reminders.ts';
 import {officialRecipientMap} from './official-updates.ts';
+import {outboxStatement} from './outbox-statement.ts';
+export {outboxStatement} from './outbox-statement.ts';
 
 type Requirement = {id: string; author_id: string; title: string; body: string; skater_ids: string; event_id: string | null; slot_key: string | null; due_at: string | null; state: string; revision: number; created_at: string; updated_at: string};
 type Outbox = {id: string; kind: string; subject_id: string; skater_id: string; author_id: string | null; payload: string; attempts: number};
 type Notification = {id: string; skater_id: string; kind: string; author_id: string | null; payload: string; read_at: string | null; created_at: string};
-export function outboxStatement(database: D1Database, input: {id: string; kind: string; subjectId: string; skaterId: string; authorId?: string; payload: unknown}, gate?: string) {
-  const values = [input.id, input.kind, input.subjectId, input.skaterId, input.authorId || null, JSON.stringify(input.payload), nowISO(), nowISO()];
-  return database.prepare(`INSERT INTO hsc_outbox (id,kind,subject_id,skater_id,author_id,payload,available_at,created_at) SELECT ?,?,?,?,?,?,?,? ${gate ? 'WHERE EXISTS (SELECT 1 FROM hsc_audit WHERE id=?)' : ''} ON CONFLICT(id) DO NOTHING`).bind(...values, ...(gate ? [gate] : []));
-}
 export async function drainOutbox(database: D1Database, limit = 30) {
   await reconcileReminders(database);
   const time = nowISO();
