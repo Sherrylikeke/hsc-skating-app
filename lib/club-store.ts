@@ -50,4 +50,7 @@ export async function recordsFor({skater,event}:{skater?:string;event?:string}):
   const {results}=await db().prepare(query).bind(...args).all<{payload:string}>();return results.map(row=>JSON.parse(row.payload));
 }
 export const historyMeta=metadata;
-export const historyEventList=metadata.events as HistoryEvent[];
+export async function historyEventList():Promise<HistoryEvent[]>{
+  const {results}=await db().prepare("SELECT payload FROM history_events ORDER BY json_extract(payload,'$.start') DESC,id").all<{payload:string}>();
+  return results.map(row=>JSON.parse(row.payload) as HistoryEvent);
+}

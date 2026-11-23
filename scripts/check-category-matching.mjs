@@ -47,6 +47,23 @@ const unknownGroup=scheduleRows([{...event,participants:[participant('regular',b
 assert.equal(unknownGroup.length,2);assert.ok(unknownGroup.every(row=>row.uncertain));
 checks.push('actual dual entries survive and missing official group assignments remain uncertain');
 
+const abbreviatedGroup=scheduleRows([{...event,
+  participants:[participant('regular',base+' - Grp 2')],
+  blocks:[block('g1',base+' Group 1'),block('g2',base+' Group 2')],
+}],skaters);
+assert.deepEqual(abbreviatedGroup.map(row=>[row.category,row.uncertain]),[[base+' Group 2',false]]);
+const wasagaDraws=scheduleRows([{...event,id:'SO-325458',
+  participants:[participant('regular','Pre-Novice Women - Championships'),participant('nq','Pre-Novice Women')],
+  blocks:[
+    {...block('champ','Pre-Novice Women Free Championship 1-18'),range:[1,18]},
+    block('series','Pre-Novice Women Free - Group 1'),
+  ],
+}],skaters);
+assert.deepEqual(wasagaDraws.map(row=>[row.skaterId,row.uncertain]).sort(),[['nq',true],['regular',true]]);
+assert.ok(wasagaDraws.find(row=>row.skaterId==='regular').candidates?.[0].category.includes('Championship'));
+assert.match(wasagaDraws.find(row=>row.skaterId==='nq').category,/Group 1$/);
+checks.push('official Grp assignments become confirmed and Wasaga competition draws do not cross-match');
+
 const artisticRows=scheduleRows([{...event,participants:[participant('regular',base+' Group 2'),participant('nq','STAR 5 Women (& Men Artistic Group 2)')],blocks:[block('regular',base+' Group 2'),block('artistic','STAR 5 Women Artistic Group 2')]}],skaters);
 assert.equal(artisticRows.length,2);
 assert.equal(artisticRows.find(row=>row.skaterId==='regular').category,base+' Group 2');

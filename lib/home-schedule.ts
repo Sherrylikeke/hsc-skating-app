@@ -39,7 +39,7 @@ export function upcomingGroupWindows(rows:ScheduleRow[]) {
   const windows = new Map<string, ScheduleRow>();
   const pending: ScheduleRow[] = [];
   for (const row of rows) {
-    const category = row.category.replace(/\s*\bGROUPS?\s*\d+(?:\s*(?:&|AND|,|[-–])\s*\d+)*/gi,'').trim();
+    const category = row.category.replace(/\s*\b(?:GROUPS?|GRPS?\.?)\s*\d+(?:\s*(?:&|AND|,|[-–])\s*\d+)*/gi,'').trim();
     const candidates = (row.candidates ?? (category !== row.category ? [row] : []))
       .filter(slot=>slot.start && slot.end && slot.start < slot.end);
     if (row.activity !== 'competition' || !candidates.length) {

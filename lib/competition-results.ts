@@ -32,7 +32,8 @@ export function parseResultPdf(pages:PdfItem[][],sourceUrl:string):ResultBoard[]
     const header=items.filter(i=>Math.abs(i.y-name.y)<2&&i.str.trim());
     const total=header.find(i=>/^(?:Points|Score|Total(?: Score)?)$/i.test(i.str.trim())&&i.x>name.x);
     if(!total)return;
-    const club=header.find(i=>/^Club$/i.test(i.str.trim())&&i.x>name.x)||header.find(i=>/^(?:Nation|NOC|Section)$/i.test(i.str.trim())&&i.x>name.x);
+    const section=header.find(i=>/^(?:Nation|NOC|Section)$/i.test(i.str.trim())&&i.x>name.x);
+    const club=header.find(i=>/^Club$/i.test(i.str.trim())&&i.x>name.x)||section;
     const tes=header.find(i=>/^(?:Element Score|TES|Technical.*Score)$/i.test(i.str.trim()));
     const pcs=header.find(i=>/^(?:Prog Comp Score|PCS|Program Component.*)$/i.test(i.str.trim()));
     const bonus=header.find(i=>/^Bonus$/i.test(i.str.trim())),deduction=header.find(i=>/^Deduction/i.test(i.str.trim()));
@@ -40,7 +41,7 @@ export function parseResultPdf(pages:PdfItem[][],sourceUrl:string):ResultBoard[]
     const label=categoryLine?joined(categoryLine.items):'Official results';
     const kind=tes&&pcs?'segment':'category';
     let board=boards.find(b=>b.label===label&&b.kind===kind);if(!board){board={id:sourceUrl+'|'+label,label,kind,sourceUrl,rows:[]};boards.push(board);}
-    const anchors=[name.x,club?.x,tes?.x,pcs?.x,bonus?.x,deduction?.x,total.x,...header.filter(i=>/^(?:SP|FP|FS|RD|FD|PD\d?)$/.test(i.str.trim())).map(i=>i.x)].filter((x):x is number=>x!==undefined).sort((a,b)=>a-b);
+    const anchors=[name.x,club?.x,section?.x,tes?.x,pcs?.x,bonus?.x,deduction?.x,total.x,...header.filter(i=>/^(?:SP|FP|FS|RD|FD|PD\d?)$/.test(i.str.trim())).map(i=>i.x)].filter((x):x is number=>x!==undefined).sort((a,b)=>a-b);
     const textCell=(row:PdfItem[],start:number,end:number)=>joined(row.filter(i=>i.x>=start-5&&i.x<end-5));
     const score=(row:PdfItem[],anchor?:PdfItem)=>anchor?numeric(row.find(i=>numeric(i.str)!==null&&Math.abs(i.x-anchor.x)<35)?.str):null;
     for(const line of pageLines.filter(l=>l.y<name.y-4&&l.y>45)){

@@ -11,7 +11,9 @@ export function categoryKey(value:string){
   let discipline='';if(/\bTEAM\s+ELEMENTS\b/.test(text))discipline='TEAM-ELEMENTS';else if(/\bELEMENTS\b/.test(text))discipline='ELEMENTS';else if(/\bPAIR(S)?\b/.test(text))discipline='PAIR';else if(/S[YW]N?CHRO|SYNCHRO/.test(text))discipline='SYNCHRO';else if(/\bSOLO\b/.test(text))discipline='SOLO';else if(/DANCE/.test(text))discipline='DANCE';else if(/\bWOMEN\b|\bGIRLS\b/.test(text))discipline='WOMEN';else if(/\bMEN\b|\bBOYS\b/.test(text))discipline='MEN';else if(/^STAR\s*[1-3]$/.test(level))discipline='FREESKATE';
   return level&&discipline?`${level}:${discipline}`:'';
 }
-export const groupOf=(value:string)=>{const m=value.match(/\bGROUP\s*([0-9]+)/i);return m?Number(m[1]):null;};
+export const groupOf=(value:string)=>{const m=value.match(/\b(?:GROUPS?|GRPS?\.?)\s*(\d+)\b/i);return m?Number(m[1]):null;};
+const numberedBand=/(?:\((\d+)\s*[-–]\s*(\d+)\)|(?<=\b(?:Practice|Short|Free|Championships?)\s)(\d+)\s*[-–]\s*(\d+)\s*$)/i;
+const championship=(value:string)=>/\bCHAMPIONSHIPS?\b/i.test(value);
 export function categoryKeys(value:string){const shared=value.match(/\bSTAR\s*([1-4])\s*\/\s*([1-4])\b/i);return shared?[...new Set([shared[1],shared[2]].map(level=>categoryKey(value.replace(shared[0],'STAR '+level))))]:[categoryKey(value)];}
 export function discoverDocuments(html:string,base:string):OfficialDocument[]{
   const found=new Map<string,OfficialDocument>();
@@ -105,8 +107,8 @@ export function parseScheduleDocument(pages:PdfItem[][],sourceUrl:string):{block
         if(/FLOOD|GOOD NIGHT|GOODNIGHT|DRIVE SAFE|THANK YOU/i.test(category))continue;
         if(!key){warnings.add('第 '+(page+1)+' 页有尚未支持的类别，暂不导入');continue;}
         const start=time24(match[1]),end=time24(match[2]);if(!start||!end||start>=end){warnings.add('第 '+(page+1)+' 页有无效或倒序时间，暂不导入');continue;}
-        const range=category.match(/\((\d+)\s*[-–]\s*(\d+)\)/);
-        const block:ScheduleBlock={id:date+'|'+rink+'|'+start+'|'+category,date,start,end,rink,category,categoryKey:key,group:groupOf(category),range:range?[Number(range[1]),Number(range[2])]:null,activity:/PRACTICE/i.test(category)?'practice':'competition',page:page+1,sourceUrl};
+        const range=category.match(numberedBand);
+        const block:ScheduleBlock={id:date+'|'+rink+'|'+start+'|'+category,date,start,end,rink,category,categoryKey:key,group:groupOf(category),range:range?[Number(range[1]??range[3]),Number(range[2]??range[4])]:null,activity:/PRACTICE/i.test(category)?'practice':'competition',page:page+1,sourceUrl};
         blocks.push(block);if(/shared warm[ -]?up/i.test(category))shared=block;
       }
     }
@@ -149,7 +151,12 @@ export function scheduleRows(events:Array<Pick<LiveEvent,'id'|'name'|'url'|'time
   const skaterMap=new Map(skaters.map(row=>[row.id,row]));const output=new Map<string,ScheduleRow>();
   for(const event of events)for(const entry of event.participants){
     const key=categoryKey(entry.category),group=groupOf(entry.category);if(!key)continue;
-    const matching=event.blocks.filter(block=>categoryCompatible(entry.category,block.category)&&(group===null||block.group===null||group===block.group||new RegExp('\\bGROUPS?\\s*\\d+\\s*(?:&|AND)\\s*'+group+'\\b','i').test(block.category)));
+    // Wasaga runs the championship and separate Sectional Series draw in parallel.
+    const separateDraw=event.id==='SO-325458'&&event.participants.some(other=>
+      championship(other.category)!==championship(entry.category)&&categoryCompatible(entry.category,other.category));
+    const matching=event.blocks.filter(block=>categoryCompatible(entry.category,block.category)&&
+      (!separateDraw||championship(entry.category)===(championship(block.category)||block.activity==='practice'&&block.range!==null))&&
+      (group===null||block.group===null||group===block.group||new RegExp('\\b(?:GROUPS?|GRPS?\\.?)\\s*\\d+\\s*(?:&|AND)\\s*'+group+'\\b','i').test(block.category)));
     for(const id of entry.skaterIds){const skater=skaterMap.get(id);if(!skater)continue;
       for(const block of matching){const startingOrder=block.activity==='competition'?orderFor(event.startingOrders||[],id,block.category):undefined;if(block.range&&startingOrder&&(startingOrder.startNumber<block.range[0]||startingOrder.startNumber>block.range[1]))continue;const entryDetails=categoryDetails(entry.category),blockDetails=categoryDetails(block.category);const uncertain=(block.group!==null&&group===null)||(block.range!==null&&!startingOrder)||!!(blockDetails.ages.length&&!entryDetails.ages.length)||!!(blockDetails.band&&!entryDetails.band)||!!(!startingOrder&&entryDetails.adultLevel&&matching.filter(candidate=>candidate.activity===block.activity).length>1);const rowId=`${event.id}|${id}|${block.id}`;
         const normalized=block.category.toUpperCase().replace(/\s+/g,' ').trim();
@@ -161,8 +168,8 @@ export function scheduleRows(events:Array<Pick<LiveEvent,'id'|'name'|'url'|'time
   }
   const consolidated=new Map<string,ScheduleRow>();
   for(const row of output.values()) {
-    if(!row.uncertain||row.startingOrder||! /\(\d+\s*[-–]\s*\d+\)/.test(row.category)){consolidated.set(row.id,row);continue;}
-    const category=row.category.replace(/\s*\(\d+\s*[-–]\s*\d+\)/g,'').replace(/\s+/g,' ').trim();
+    if(!row.uncertain||row.startingOrder||!numberedBand.test(row.category)){consolidated.set(row.id,row);continue;}
+    const category=row.category.replace(numberedBand,'').replace(/\s+/g,' ').trim();
     const slotKey=`PENDING:${category.toUpperCase()}:${row.date}:${row.activity}`;
     const id=`${row.eventId}|${row.skaterId}|${slotKey}`;
     const candidate={category:row.category,start:row.start,end:row.end,rink:row.rink,sourceUrl:row.sourceUrl,page:row.page,slotKey:row.slotKey};
