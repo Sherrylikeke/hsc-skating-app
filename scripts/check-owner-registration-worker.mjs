@@ -6,7 +6,7 @@ import path from 'node:path';
 import {createHash} from 'node:crypto';
 
 const origin='https://hsc-coach-roster.sherrylikeke.chatgpt.site';
-const root=path.resolve('dist/server');
+const root=path.resolve(process.env.HSC_WORKER_BUILD||'dist/server');
 const runtime=JSON.parse(fs.readFileSync(path.join(root,'wrangler.json'),'utf8'));
 const files=fs.readdirSync(root,{recursive:true}).filter(file=>/\.(m?js)$/.test(file)&&file!=='index.js');
 const modules=['index.js',...files].map(file=>({type:'ESModule',path:path.join(root,file)}));
@@ -358,7 +358,7 @@ try {
     await database.prepare('INSERT INTO history_records(id,event_id,payload) VALUES (?,?,?)').bind(record.record_id,record.event_key,JSON.stringify(record)).run();
   }
   const clubFor=async headers=>{const response=await mf.dispatchFetch(origin+'/api/club',{headers});assert.equal(response.status,200,await response.clone().text());return response.json();};
-  for(const role of [null,'parent','skater','coach']){
+  for(const role of [null,'parent','skater','coach','admin']){
     const recentId='recent-member-'+(role??'viewer'),email=recentId+'@example.test',token=recentId+'-fixture';
     await database.prepare('INSERT INTO hsc_members(id,email,name,role,requested_role,status,auth_version,created_at) VALUES (?,?,?,?,?,?,1,?)').bind(recentId,email,recentId,role,role??'parent',role?'active':'club-viewer',new Date().toISOString()).run();
     await database.prepare('INSERT INTO hsc_sessions(hash,member_id,auth_version,expires_at,created_at) VALUES (?,?,1,?,?)').bind(hash(token),recentId,new Date(Date.now()+3600000).toISOString(),new Date().toISOString()).run();
@@ -366,7 +366,7 @@ try {
     const headers={'oai-authenticated-user-id':recentId,'oai-authenticated-user-email':email,cookie:'__Host-hsc_session='+token};
     const own=await clubFor(headers);
     assert.deepEqual(own.recent.map(record=>record.record_id),Array.from({length:6},(_,index)=>'recent-mine-'+index));
-    assert.deepEqual(own.reviews,[]);
+    if(role==='admin')assert.ok(own.reviews.length>0);else assert.deepEqual(own.reviews,[]);
     assert.equal((await database.prepare('SELECT count(*) AS count FROM hsc_relations WHERE member_id=?').bind(recentId).first()).count,0);
     await database.prepare('DELETE FROM hsc_home_skaters WHERE member_id=?').bind(recentId).run();
     assert.deepEqual((await clubFor(headers)).recent,[]);
@@ -375,9 +375,9 @@ try {
     assert.equal(switched.recent.length,6);assert.ok(switched.recent.every(record=>record.skater_ids.includes(fixtureCarson.id)));
   }
   const adminRecent=await clubFor(platformHeaders);
-  assert.deepEqual(adminRecent.recent.map(record=>record.record_id),Array.from({length:6},(_,index)=>'recent-foreign-'+index));
+  assert.ok(adminRecent.recent.every(record=>record.skater_ids.some(id=>adminRecent.ownSkaterIds.includes(id))));
   assert.ok(adminRecent.reviews.length>0);
-  console.log('Recent records: all four ordinary account types receive their own latest six before LIMIT, empty preferences return none, changing pins changes results without private relations, administrator retains all records and reviews.');
+  console.log('Recent records: all account types receive their own latest six before LIMIT, empty preferences return none, changing pins changes results without private relations, administrator retains record review access.');
   const addParentClaim=async(claimId,payload)=>{
     const memberId='member-'+claimId;
     await database.prepare("INSERT INTO hsc_members(id,email,name,requested_role,status,created_at) VALUES (?,?,?,'parent','club-viewer',?)").bind(memberId,memberId+'@example.test',memberId,new Date().toISOString()).run();

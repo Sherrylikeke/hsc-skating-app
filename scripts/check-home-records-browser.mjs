@@ -31,17 +31,16 @@ for(const engine of [chromium,webkit]){
   await page.goto(origin+'/workspace?view=home',{waitUntil:'networkidle'});
   const recent=page.locator('section.club-panel').filter({has:page.getByRole('heading',{name:/Recently imported competition records|最近收录的比赛记录/})});
   await recent.getByText('My Imported Cup',{exact:true}).waitFor();
-  assert.equal(await recent.getByText('Other Imported Cup',{exact:true}).count(),role==='admin'?1:0);
+  assert.equal(await recent.getByText('Other Imported Cup',{exact:true}).count(),0);
   assert.equal(await page.getByRole('heading',{name:/^Record review$|^资料核对$/}).count(),role==='admin'?1:0);
   assert.equal((await page.locator('.club-review-list').allTextContents()).some(value=>value.includes('Admin Review Fixture')),role==='admin');
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
   const screenshot=[engine.name(),width,language,role].join('-')+'.png';
   await page.screenshot({path:path.join(output,screenshot),fullPage:true});
-  if(role!=='admin'){
-   ownSkaterIds=[];await page.reload({waitUntil:'networkidle'});
-   await page.getByText(/No competition records have been imported for My Skaters yet.|暂未收录 My Skaters 的比赛记录。/).waitFor();
-   assert.equal(await recent.locator('tbody tr').count(),0);
-  }else{
+  ownSkaterIds=[];await page.reload({waitUntil:'networkidle'});
+  await page.getByText(/No competition records have been imported for My Skaters yet.|暂未收录 My Skaters 的比赛记录。/).waitFor();
+  assert.equal(await recent.locator('tbody tr').count(),0);
+  if(role==='admin'){
    await page.goto(origin+'/?tab=admin',{waitUntil:'networkidle'});
    await page.getByText(/Registered users can already view shared official schedules.|注册用户已经可以查看共享官方赛程。/).waitFor();
   }
