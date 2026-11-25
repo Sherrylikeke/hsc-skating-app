@@ -1,6 +1,6 @@
 import type {LiveEvent,Participant,ScheduleBlock,OfficialDocument,ClubSkater,ScheduleRow} from './club-types';
 import {registrationDetails} from './event-registration.ts';
-import {orderFor} from './starting-order.ts';
+import {championshipDraw,orderFor,scheduledBlockCategory,scheduledProgram} from './starting-order.ts';
 export type PdfItem={str:string;x:number;y:number;height?:number};
 export function plain(value:string){return value.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'').replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,'').replace(/<[^>]*>/g,' ').replace(/&nbsp;|&#160;/g,' ').replace(/&amp;|&#0*38;/g,'&').replace(/&quot;|&#34;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(Number(n))).replace(/&#x([0-9a-f]+);/gi,(_,n)=>String.fromCodePoint(parseInt(n,16))).replace(/\s+/g,' ').trim();}
 export const normalizeName=(name:string)=>plain(name).normalize('NFKC').toLocaleLowerCase().replace(/[’‘]/g,"'").replace(/\s+/g,' ').trim();
@@ -13,7 +13,6 @@ export function categoryKey(value:string){
 }
 export const groupOf=(value:string)=>{const m=value.match(/\b(?:GROUPS?|GRPS?\.?)\s*(\d+)\b/i);return m?Number(m[1]):null;};
 const numberedBand=/(?:\((\d+)\s*[-–]\s*(\d+)\)|(?<=\b(?:Practice|Short|Free|Championships?)\s)(\d+)\s*[-–]\s*(\d+)\s*$)/i;
-const championship=(value:string)=>/\bCHAMPIONSHIPS?\b/i.test(value);
 export function categoryKeys(value:string){const shared=value.match(/\bSTAR\s*([1-4])\s*\/\s*([1-4])\b/i);return shared?[...new Set([shared[1],shared[2]].map(level=>categoryKey(value.replace(shared[0],'STAR '+level))))]:[categoryKey(value)];}
 export function discoverDocuments(html:string,base:string):OfficialDocument[]{
   const found=new Map<string,OfficialDocument>();
@@ -147,18 +146,38 @@ export function categoryCompatible(first:string,second:string){
     return categoryKeys(entryCategory).some(key=>categoryKeys(blockCategory).includes(key))&&entry.adultLevel===block.adultLevel&&entry.nonqualifying===block.nonqualifying&&(entry.program==='artistic')===(block.program==='artistic')&&(!entry.ages.length||!block.ages.length||entry.ages.some(age=>block.ages.includes(age)))&&(!entry.band||!block.band||entry.band===block.band)&&(!entry.program||!block.program||entry.program===block.program);
   }));
 }
+
+function practiceDrawCategory(eventId:string,practice:ScheduleBlock,matching:ScheduleBlock[]){
+  if(scheduledProgram(practice.category))return practice.category;
+  // A numbered practice row may omit the program. Require one program on the same date for this entry.
+  const programs=new Set(matching.filter(block=>block.activity==='competition'&&block.date===practice.date&&
+    categoryCompatible(block.category,practice.category)).map(block=>scheduledProgram(scheduledBlockCategory(eventId,block))));
+  const program=programs.size===1?[...programs][0]:'';
+  return program?practice.category+' '+program:'';
+}
+
 export function scheduleRows(events:Array<Pick<LiveEvent,'id'|'name'|'url'|'timezone'|'participants'|'blocks'|'startingOrders'>>,skaters:Array<Pick<ClubSkater,'id'|'name'|'coach'>>):ScheduleRow[]{
   const skaterMap=new Map(skaters.map(row=>[row.id,row]));const output=new Map<string,ScheduleRow>();
   for(const event of events)for(const entry of event.participants){
     const key=categoryKey(entry.category),group=groupOf(entry.category);if(!key)continue;
     // Wasaga runs the championship and separate Sectional Series draw in parallel.
     const separateDraw=event.id==='SO-325458'&&event.participants.some(other=>
-      championship(other.category)!==championship(entry.category)&&categoryCompatible(entry.category,other.category));
+      championshipDraw(other.category)!==championshipDraw(entry.category)&&categoryCompatible(entry.category,other.category));
     const matching=event.blocks.filter(block=>categoryCompatible(entry.category,block.category)&&
-      (!separateDraw||championship(entry.category)===(championship(block.category)||block.activity==='practice'&&block.range!==null))&&
+      (!separateDraw||championshipDraw(entry.category)===(championshipDraw(block.category)||block.activity==='practice'&&block.range!==null))&&
       (group===null||block.group===null||group===block.group||new RegExp('\\b(?:GROUPS?|GRPS?\\.?)\\s*\\d+\\s*(?:&|AND)\\s*'+group+'\\b','i').test(block.category)));
     for(const id of entry.skaterIds){const skater=skaterMap.get(id);if(!skater)continue;
-      for(const block of matching){const startingOrder=block.activity==='competition'?orderFor(event.startingOrders||[],id,block.category):undefined;if(block.range&&startingOrder&&(startingOrder.startNumber<block.range[0]||startingOrder.startNumber>block.range[1]))continue;const entryDetails=categoryDetails(entry.category),blockDetails=categoryDetails(block.category);const uncertain=(block.group!==null&&group===null)||(block.range!==null&&!startingOrder)||!!(blockDetails.ages.length&&!entryDetails.ages.length)||!!(blockDetails.band&&!entryDetails.band)||!!(!startingOrder&&entryDetails.adultLevel&&matching.filter(candidate=>candidate.activity===block.activity).length>1);const rowId=`${event.id}|${id}|${block.id}`;
+      for(const block of matching){
+        const competition=block.activity==='competition';
+        const drawCategory=competition?scheduledBlockCategory(event.id,block):block.range?practiceDrawCategory(event.id,block,matching):'';
+        const order=drawCategory?orderFor(event.startingOrders||[],id,drawCategory,separateDraw?entry.category:undefined):undefined;
+        if(block.range&&order&&(order.startNumber<block.range[0]||order.startNumber>block.range[1]))continue;
+        const startingOrder=competition?order:undefined;
+        const entryDetails=categoryDetails(entry.category),blockDetails=categoryDetails(block.category);
+        const uncertain=(block.group!==null&&group===null&&(!order||groupOf(order.category)!==block.group))||
+          (block.range!==null&&!order)||!!(blockDetails.ages.length&&!entryDetails.ages.length)||!!(blockDetails.band&&!entryDetails.band)||
+          !!(!order&&entryDetails.adultLevel&&matching.filter(candidate=>candidate.activity===block.activity).length>1);
+        const rowId=`${event.id}|${id}|${block.id}`;
         const normalized=block.category.toUpperCase().replace(/\s+/g,' ').trim();
         const occurrence=event.blocks.filter(other=>other.category.toUpperCase().replace(/\s+/g,' ').trim()===normalized).findIndex(other=>other.id===block.id);
         const slotKey=`${normalized}:${occurrence}`;

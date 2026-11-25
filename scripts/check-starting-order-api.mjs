@@ -81,5 +81,34 @@ const page=[...line(720,[[0,'Thursday, November 5, 2026']]),...line(700,[[20,'ST
 const withBreak={...memberEvent,blocks:parseScheduleDocument([page],source).blocks};
 assert.deepEqual(timing(19,withBreak),{warmup:'11:15',start:'11:35'});
 assert.deepEqual(timing(21,withBreak),{warmup:'11:55',start:'12:00'});
+// Wasaga publishes sex in categoryLabels and omits “Short” from its Pre-Novice Championship timetable rows.
+const juvenile={categoryId:fixture.category.categoryId,categoryDescription:'Juvenile',disciplineName:'Singles',categoryName:'U14 - Group 2',
+  categoryLabels:[{categoryLabelDefinition:{categoryLabelDefinitionName:'Women'}}]};
+assert.equal(startingCategory(juvenile),'Juvenile Women · U14 - Group 2');
+assert.equal(startingCategory({...juvenile,categoryDescription:'',skatingcategorydefinitions:{name:'Juvenile'}}),startingCategory(juvenile));
+const wasagaCategory='Pre-Novice Men Championship';
+const wasagaRoster=[{id:'wasaga-example',name:'Example #25',coach:'Coach'}];
+const wasagaEntries=Array.from({length:28},(_,index)=>({competitorName:'Example #'+(index+1),competitorStatus:'ACTIVE',sortOrder:index+1,
+  warmUpGroup:[5,10,16,22,28].findIndex(bound=>index<bound)+1}));
+const wasagaOrders=parseApiStartingOrder({CompetitorEntries:wasagaEntries},wasagaCategory,short,fixture.documentUrl,wasagaRoster);
+const wasagaBlock=(id,category,date,start,end,range,activity='competition')=>({...shortBlock,id,category,date,start,end,range,activity,breaks:undefined});
+const thursday='2026-12-03',friday='2026-12-04';
+const wasagaEvent={...memberEvent,id:'SO-325458',startingOrders:wasagaOrders,
+  participants:[{name:wasagaRoster[0].name,category:wasagaCategory,skaterIds:[wasagaRoster[0].id]}],blocks:[
+    wasagaBlock('practice-a','Pre-Novice Men Practice 9-18',thursday,'18:15','18:35',[9,18],'practice'),
+    wasagaBlock('practice-b','Pre-Novice Men Practice 19-28',thursday,'18:35','18:55',[19,28],'practice'),
+    wasagaBlock('short-a',wasagaCategory+' 1-17',thursday,'19:10','20:45',[1,17]),
+    wasagaBlock('short-b',wasagaCategory+' 18-29',thursday,'21:00','22:00',[18,29]),
+    wasagaBlock('free-practice','Pre-Novice Men Practice 19-28',friday,'15:35','15:55',[19,28],'practice'),
+    wasagaBlock('free','Pre-Novice Men Free 12-29',friday,'18:50','20:35',[12,29]),
+  ]};
+const wasagaRows=scheduleRows([wasagaEvent],wasagaRoster);
+assert.deepEqual(wasagaRows.map(row=>[row.activity,row.date,row.start,row.uncertain]),[
+  ['practice',thursday,'18:35',false],['competition',thursday,'21:00',false],['practice',friday,'',true],['competition',friday,'',true],
+]);
+assert.equal(wasagaRows[0].startingOrder,undefined);
+assert.equal(wasagaRows[1].startingOrder.startNumber,25);
+assert.deepEqual(coachTimingEstimate(wasagaRows[1],wasagaEvent),{warmup:'21:25',start:'21:40'});
+assert.equal(coachTimingEstimate(wasagaRows[2],wasagaEvent),null);
 console.log('Coach timing: complete official fields, rule/meet warm-ups, ranges, breaks and pending cases verified');
 console.log(JSON.stringify({passed:6,officialStartNumber:19,warmupGroup:4,shortWindow:'2026-11-05 11:15–12:15',rink:'MOLSON RINK',individualTimeNotInvented:true,freeDrawPending:true,awardsExcluded:true,partialFailurePreserved:true,sourceBounded:true}));

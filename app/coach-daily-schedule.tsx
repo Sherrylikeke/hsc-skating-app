@@ -44,10 +44,18 @@ export default function CoachDailySchedule({rows,events:clubEvents=[],conflicts,
             <tbody>{zone.rows.map(row=>{
               const opened=expanded===row.id,detailId=prefix+'-row-'+encodeURIComponent(row.id);
               const peers=conflicts.get(row.id) ?? [], showPeers=comparing===row.id && peers.length>0;
+              const event=clubEvents.find(item=>item.id===row.eventId);
+              const activity=row.activity==='practice'?text('Practice','练习'):text('Competition','比赛');
               const clock=(instant:number)=>new Date(instant).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:row.timezone});
               return <Fragment key={row.id}>
                 <tr className={opened?'coach-day-row is-expanded':'coach-day-row'}>
-                  <td className="coach-day-time">{hasCoachGroupTime(row)?<><strong>{row.start}</strong>{row.end&&<span className="coach-day-end">–{row.end}</span>}</>:<strong className="coach-day-tbc" title={text('Time to be confirmed','时间待确认')}>{text('TBC','待确认')}</strong>}{row.uncertain&&<small>{text('Candidate','候选安排')}</small>}{row.startingOrder?.individualTime&&<small className="coach-day-individual">{text('Individual','个人')} {row.startingOrder.individualTime}</small>}{peers.length>0&&<button type="button" className="coach-overlap-toggle" aria-expanded={showPeers} aria-controls={detailId+'-pairs'} onClick={()=>setComparing(showPeers?null:row.id)}>{text('Possible overlap','可能重叠')} ({peers.length})</button>}</td>
+                  <td className="coach-day-time">
+                    <small className="coach-day-activity">{activity}</small>
+                    {hasCoachGroupTime(row)?<><strong>{row.start}</strong>{row.end&&<span className="coach-day-end">–{row.end}</span>}</>:<strong className="coach-day-tbc" title={text('Time to be confirmed','时间待确认')}>{text('TBC','待确认')}</strong>}
+                    {row.uncertain&&<small>{text('Candidate','候选安排')}</small>}
+                    <SessionTiming row={row} event={event} compact/>
+                    {peers.length>0&&<button type="button" className="coach-overlap-toggle" aria-expanded={showPeers} aria-controls={detailId+'-pairs'} onClick={()=>setComparing(showPeers?null:row.id)}>{text('Possible overlap','可能重叠')} ({peers.length})</button>}
+                  </td>
                   <td className="coach-day-skater"><button type="button" onClick={()=>onSkater(row.skaterId)}>{row.skaterName}</button><span className="coach-day-category" title={(row.activity==='practice'?text('Practice · ','练习 · '):'')+row.category}>{row.activity==='practice'&&text('Practice · ','练习 · ')}{row.category}</span><span className="coach-day-order-wrap">{row.startingOrder&&<a className="coach-day-order" href={row.startingOrder.sourceUrl+(row.startingOrder.page?'#page='+row.startingOrder.page:'')} target="_blank" rel="noreferrer">{text('Start #','出场 #')}{row.startingOrder.startNumber}{row.startingOrder.warmupGroup!==null&&<> · {text('Warm-up ','热身组 ')}{row.startingOrder.warmupGroup}</>}</a>}</span><small className="coach-day-coach" title={row.coach}>{row.coach||text('Coach unassigned','教练待分配')}</small>{events.length>1&&<small className="coach-day-event" title={row.eventName}>{row.eventName}</small>}</td>
                   <td className="coach-day-rink">{row.rink||text('TBC','待确认')}</td>
                   <td className="coach-day-action"><button type="button" aria-expanded={opened} aria-controls={detailId} aria-label={text('Details for '+row.skaterName,row.skaterName+'的赛程详情')} onClick={()=>setExpanded(opened?null:row.id)}><ChevronDown size={17}/></button></td>
@@ -55,7 +63,7 @@ export default function CoachDailySchedule({rows,events:clubEvents=[],conflicts,
                 {peers.length>0&&<tr className="coach-overlap-row" hidden={!showPeers}><td colSpan={4} id={detailId+'-pairs'}>
                   {showPeers&&peers.map(({peer,start,end,coaches})=><section key={peer.id}>
                     <h4>{coaches.join(' / ')} · {text('Group overlap','组别重叠')} {clock(start)}–{clock(end)}</h4>
-                    <div className="coach-comparison"><ComparedSession row={row} event={clubEvents.find(event=>event.id===row.eventId)}/><ComparedSession row={peer} event={clubEvents.find(event=>event.id===peer.eventId)}/></div>
+                    <div className="coach-comparison"><ComparedSession row={row} event={event}/><ComparedSession row={peer} event={clubEvents.find(event=>event.id===peer.eventId)}/></div>
                   </section>)}
                 </td></tr>}
                 <tr className="coach-day-details" hidden={!opened}><td colSpan={4}><div id={detailId}>{opened&&renderDetails(row)}</div></td></tr>

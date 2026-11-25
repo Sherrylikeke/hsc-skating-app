@@ -1,6 +1,6 @@
 import type {ClubEvent, ScheduleRow, StartingOrder} from './club-types';
 import {categoryCompatible, categoryKey, groupOf, normalizeName} from './official-parser.ts';
-import {scheduledProgram} from './starting-order.ts';
+import {championshipDraw,scheduledBlockCategory,scheduledProgram} from './starting-order.ts';
 
 // Skate Canada Competitions §3.9 (2026–27). A published segment duration takes precedence.
 // https://info.skatecanada.ca/index.php/en-ca/rules-of-sport/54-competitions.html
@@ -43,19 +43,22 @@ export function coachTimingEstimate(row:ScheduleRow, event:Pick<ClubEvent,'id'|'
   if (!warmup) return null;
 
   // The coach may only see one club member in the table. The denominator is the whole official draw.
-  const sameCategory=(category:string)=>categoryCompatible(category,block.category) &&
-    (block.group===null || groupOf(category)===null || groupOf(category)===block.group);
+  const blockCategory=scheduledBlockCategory(event.id,block);
+  const sameCategory=(category:string)=>categoryCompatible(category,blockCategory) &&
+    (block.group===null || groupOf(category)===null || groupOf(category)===block.group) &&
+    (event.id!=='SO-325458'||groupOf(order.category)!==null||!groupOf(category));
   const program=order.program||scheduledProgram(order.category);
-  const draw=(event.startingOrders??[]).filter(o=>(o.program||scheduledProgram(o.category))===program && sameCategory(o.category));
+  const draw=(event.startingOrders??[]).filter(o=>(o.program||scheduledProgram(o.category))===program && sameCategory(o.category)&&
+    (event.id!=='SO-325458'||championshipDraw(o.category)===championshipDraw(order.category)));
   if (draw.some(o=>o.category!==order.category || o.sourceUrl!==order.sourceUrl)) return null;
-  const completePdf=draw.length>0&&draw.every(o=>o.drawComplete===true&&typeof o.withdrawnCount==='number'&&Number.isSafeInteger(o.withdrawnCount)&&o.withdrawnCount>=0&&o.withdrawnCount===draw[0].withdrawnCount);
-  const withdrawals=completePdf?draw[0].withdrawnCount!:0;
+  const completeDraw=draw.length>0&&draw.every(o=>o.drawComplete===true&&typeof o.withdrawnCount==='number'&&Number.isSafeInteger(o.withdrawnCount)&&o.withdrawnCount>=0&&o.withdrawnCount===draw[0].withdrawnCount);
+  const withdrawals=completeDraw?draw[0].withdrawnCount!:0;
   const otherBlocks=event.blocks.filter(b=>b.id!==block.id && b.activity==='competition');
   if (otherBlocks.some(b=>b.date===block.date && b.rink===block.rink && b.start<block.end && b.end>block.start)) return null;
   // Two sessions claiming the same part of this draw cannot both identify a skater's start.
   const range=block.range;
   if (otherBlocks.some(b=>sameCategory(b.category) && categoryCompatible(order.category,b.category) &&
-      scheduledProgram(b.category)===scheduledProgram(block.category) &&
+      scheduledProgram(scheduledBlockCategory(event.id,b))===scheduledProgram(blockCategory) &&
       (!range || !b.range || (b.range[0]<=range[1] && range[0]<=b.range[1])))) return null;
 
   if (!block.range) {
@@ -64,7 +67,11 @@ export function coachTimingEstimate(row:ScheduleRow, event:Pick<ClubEvent,'id'|'
     const names=new Set(entered.map(p=>normalizeName(p.name)));
     if (entered.length<draw.length || entered.length-draw.length>withdrawals || names.size!==entered.length || !draw.every(o=>names.delete(normalizeName(o.name)))) return null;
   }
-  const [first,last]=block.range??[1,completePdf?Math.max(...draw.map(o=>o.startNumber)):draw.length];
+  const lastPublished=Math.max(...draw.map(o=>o.startNumber));
+  const [first,scheduledLast]=block.range??[1,completeDraw?lastPublished:draw.length];
+  // Wasaga's final numbered block can extend beyond the end of the complete official draw.
+  const verifiedWasagaDraw=event.id==='SO-325458'&&completeDraw&&!!block.range;
+  const last=verifiedWasagaDraw?Math.min(scheduledLast,lastPublished):scheduledLast;
   const entries=draw.filter(o=>o.startNumber>=first && o.startNumber<=last).sort((a,b)=>a.startNumber-b.startNumber);
   if (!entries.length || entries.length>last-first+1 || last-first+1-entries.length>withdrawals) return null;
   const targetIndex=entries.findIndex(entry=>entry.id===order.id&&entry.startNumber===order.startNumber);
@@ -73,12 +80,15 @@ export function coachTimingEstimate(row:ScheduleRow, event:Pick<ClubEvent,'id'|'
   const groups:number[]=[];
   for (const [index,entry] of entries.entries()) {
     const group=entry.warmupGroup;
-    if ((!completePdf&&entry.startNumber!==first+index) || (index>0&&entry.startNumber<=entries[index-1].startNumber) || !Number.isSafeInteger(group) || !group || group<1) return null;
+    if ((!completeDraw&&entry.startNumber!==first+index) || (index>0&&entry.startNumber<=entries[index-1].startNumber) || !Number.isSafeInteger(group) || !group || group<1) return null;
     if (group===groups.at(-1)) continue;
     if (groups.length && group!==groups[groups.length-1]+1) return null;
     groups.push(group);
   }
-  if (draw.some(o=>(o.startNumber<first || o.startNumber>last) && o.warmupGroup!==null && groups.includes(o.warmupGroup))) return null;
+  const outside=draw.filter(o=>(o.startNumber<first || o.startNumber>last) && o.warmupGroup!==null && groups.includes(o.warmupGroup));
+  if(outside.length&&(!verifiedWasagaDraw||outside.some(o=>o.warmupGroup===order.warmupGroup)))return null;
+  // A previously started warm-up group can continue after a scheduled ice resurfacing.
+  const continued=outside.some(o=>o.startNumber<first&&o.warmupGroup===groups[0])?1:0;
   const start=minute(block.start), end=minute(block.end);
   const pauses:Array<{start:number;end:number}>=[];
   for (const interval of [...(block.breaks??[])].sort((a,b)=>a.start.localeCompare(b.start))) {
@@ -89,7 +99,7 @@ export function coachTimingEstimate(row:ScheduleRow, event:Pick<ClubEvent,'id'|'
     else pauses.push({start:from,end:to});
   }
   const pauseMinutes=pauses.reduce((sum,p)=>sum+p.end-p.start,0);
-  const perSkater=(end-start-pauseMinutes-groups.length*warmup)/entries.length;
+  const perSkater=(end-start-pauseMinutes-(groups.length-continued)*warmup)/entries.length;
   if (!Number.isFinite(perSkater) || perSkater<=0) return null;
 
   // Calculate on skating time, then put the published pauses back at their wall-clock times.
@@ -100,7 +110,7 @@ export function coachTimingEstimate(row:ScheduleRow, event:Pick<ClubEvent,'id'|'
     return String(Math.floor(rounded/60)).padStart(2,'0')+':'+String(rounded%60).padStart(2,'0');
   }
   const firstInGroup=entries.findIndex(o=>o.warmupGroup===order.warmupGroup);
-  const groupStart=firstInGroup*perSkater+groups.indexOf(order.warmupGroup)*warmup;
+  const groupStart=firstInGroup*perSkater+(groups.indexOf(order.warmupGroup)-continued)*warmup;
   const position=targetIndex-firstInGroup;
   return {warmup:localClock(groupStart),start:localClock(groupStart+warmup+position*perSkater)};
 }

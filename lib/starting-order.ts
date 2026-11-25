@@ -1,4 +1,4 @@
-import type {StartingOrder} from './club-types';
+import type {ScheduleBlock,StartingOrder} from './club-types';
 import type {PdfItem} from './official-parser';
 import {categoryKey,categoryCompatible,groupOf,normalizeName,plain} from './official-parser.ts';
 type Roster=Array<{id:string;name:string;identityPending?:boolean}>;
@@ -11,6 +11,16 @@ export function scheduledProgram(category:string){
   if(!['MEN','WOMEN','FREESKATE'].includes(discipline))return '';
   if(/^STAR\s*[79]$/.test(level))return 'short';
   return /^(?:STAR\s*(?:[34568]|10)|GOLD|PREJUVENILE|JUVENILE)$/.test(level)?'free':'';
+}
+export const championshipDraw=(category:string)=>/\bCHAMPIONSHIPS?\b/i.test(category);
+
+export function scheduledBlockCategory(eventId:string,block:ScheduleBlock){
+  if(eventId==='SO-325458'&&block.activity==='competition'&&block.range&&championshipDraw(block.category)&&
+    /\bPRE[ -]?NOVICE\s+(?:MEN|WOMEN)\b/i.test(block.category)&&!programOf(block.category)){
+    // The Nov. 23 Wasaga PDF omits “Short” from these blocks. The official short draw starts on this date.
+    return block.category+' Short';
+  }
+  return block.category;
 }
 function ids(name:string,roster:Roster){return name.split(/\s*\/\s*/).flatMap(part=>{const matches=roster.filter(s=>!s.identityPending&&normalizeName(s.name)===normalizeName(part));return matches.length===1?[matches[0].id]:[];});}
 function row(name:string,category:string,startNumber:number,warmupGroup:number|null,individualTime:string|null,sourceUrl:string,page:number,roster:Roster):StartingOrder{return {id:`${sourceUrl}|${category}|${name}`,name,category,program:scheduledProgram(category),startNumber,warmupGroup,individualTime,sourceUrl,page,skaterIds:ids(name,roster)};}
@@ -72,4 +82,10 @@ export function parseStartingOrderHtml(html:string,url:string,roster:Roster):Sta
     const time=cells[timeIndex]||'';output.push(row(cells[nameIndex],current,Number(cells[orderIndex]),warm,/^\d{1,2}:\d{2}(?::\d{2})?(?:\s*[AP]M)?$/i.test(time)?time:null,url,0,roster));
   }return output;
 }
-export function orderFor(orders:StartingOrder[],id:string,category:string){const key=categoryKey(category),program=scheduledProgram(category),group=groupOf(category);const matches=orders.filter(o=>o.skaterIds.includes(id)&&categoryKey(o.category)===key&&categoryCompatible(o.category,category)&&(o.program||scheduledProgram(o.category))===program&&(groupOf(o.category)===group||groupOf(o.category)===null||group===null));return matches.length===1?matches[0]:undefined;}
+export function orderFor(orders:StartingOrder[],id:string,category:string,drawCategory?:string){
+  const key=categoryKey(category),program=scheduledProgram(category),group=groupOf(category);
+  const matches=orders.filter(order=>order.skaterIds.includes(id)&&categoryKey(order.category)===key&&categoryCompatible(order.category,category)&&
+    (order.program||scheduledProgram(order.category))===program&&(groupOf(order.category)===group||groupOf(order.category)===null||group===null)&&
+    (!drawCategory||championshipDraw(order.category)===championshipDraw(drawCategory)));
+  return matches.length===1?matches[0]:undefined;
+}
