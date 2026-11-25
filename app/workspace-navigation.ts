@@ -9,7 +9,7 @@ type View=typeof views[number];
 type Destination=View|'member'|'profile'|'competition';
 const defaults={
   query:'', coachedOnly:false, level:'', eventMode:'upcoming' as 'upcoming'|'history', eventQuery:'',
-  coachFiltersOpen:false, coachFilter:'', coachEventFilter:'', dateFilter:'', onlyAssigned:false,
+  coachFiltersOpen:false, coachFilter:'', coachEventFilter:'', coachActivity:'' as ''|'competition'|'practice', dateFilter:'', onlyAssigned:false,
   personal:'mine' as HomeScope, participantMode:'club' as 'club'|'all'|'blocks',
   rink:'',fromNow:true
 };
@@ -40,7 +40,7 @@ export function useRevalidateRestoredPage(){
 }
 function readEntry(memberId:string|undefined):Entry {
   const saved=history.state?.hscWorkspace as Entry|undefined;
-  if(memberId && saved?.memberId===memberId)return saved;
+  if(memberId && saved?.memberId===memberId)return {...saved,filters:{...defaults,...saved.filters}};
   let from:Destination|null=null;
   if(!saved && document.referrer && history.length>1){
     const referrer=new URL(document.referrer);

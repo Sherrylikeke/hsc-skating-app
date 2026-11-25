@@ -52,7 +52,7 @@ export default function ClubApp(){
   useLanguage();
   const [data,setData]=useState<ClubData|null>(null),[loading,setLoading]=useState(true),[accessStatus,setAccessStatus]=useState<401|403|null>(null),[error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState('');
   const {view,skaterId,eventId,filters,updateFilters,navigate,visit,back,backLabel}=useWorkspaceNavigation(data?.member.id);
-  const {query,coachedOnly,level,eventMode,eventQuery,coachFiltersOpen,coachFilter,coachEventFilter,dateFilter,onlyAssigned,personal,participantMode}=filters;
+  const {query,coachedOnly,level,eventMode,eventQuery,coachFiltersOpen,coachFilter,coachEventFilter,coachActivity,dateFilter,onlyAssigned,personal,participantMode}=filters;
   const [hideOthers,setHideOthers]=useState(false),[extraCoaches,setExtraCoaches]=useState<string[]>([]);
   useEffect(()=>{setHideOthers(false);setExtraCoaches([]);},[data?.member.id]);
   const coaching=!!data&&isScheduleCoach(data.member),myCoach=data?.scheduleCoachName??'';
@@ -100,7 +100,7 @@ export default function ClubApp(){
   const allSchedule=useMemo(()=>data?scheduleRows(data.events.filter(event=>event.end>=today),data.skaters):[],[data,today]);
   const futureEvents=data?.events.filter(event=>event.end>=today).sort(compareEventDates)||[];
   const coaches=useMemo(()=>data?[...new Set(data.skaters.flatMap(row=>splitCoaches(row.coach)))].sort():[],[data]);
-  const baseSchedule=orderCoachSchedule(filterCoachSchedule(allSchedule,{event:coachEventFilter,coach:coachFilter,date:dateFilter,assignedOnly:onlyAssigned}));
+  const baseSchedule=orderCoachSchedule(filterCoachSchedule(allSchedule,{event:coachEventFilter,coach:coachFilter,date:dateFilter,assignedOnly:onlyAssigned,activity:coachActivity}));
   const filteredSchedule=coaching&&myCoach?coachScheduleRows(baseSchedule,myCoach,hideOthers,extraCoaches):baseSchedule;
   const overlapCoach=view==='coach'?coachFilter:'';
   const conflicts=useMemo(()=>coachOverlaps(allSchedule,overlapCoach),[allSchedule,overlapCoach]);
@@ -203,13 +203,18 @@ export default function ClubApp(){
           {view==='coach'&&<>
             <details className="club-schedule-help"><summary>{text('About group times and coach notes','组别时间与教练安排说明')}</summary><p>{translate("每行对应一位选手的一项官方组别安排。集合时间与备注是教练安排，官网修订会保留。")}</p></details>
             <div className="club-toolbar club-coach-toolbar">
-              <label className="club-filter-field club-event-field"><span>{text('Competition','比赛')}</span><CompactSelect className="club-coach-event-filter" aria-label={text('Coach schedule competition filter','教练总表比赛筛选')} value={coachEventFilter} onChange={event=>{updateFilters({coachEventFilter:event.target.value,dateFilter:''});}}><option value="">{text('All competitions','全部比赛')}</option>{futureEvents.map(event=><option key={event.id} value={event.id}>{dateLabel(event.start)} · {event.name}</option>)}</CompactSelect></label>
+              <label className="club-filter-field club-event-field"><span>{text('Event','赛事')}</span><CompactSelect className="club-coach-event-filter" aria-label={text('Coach schedule competition filter','教练总表比赛筛选')} value={coachEventFilter} onChange={event=>{updateFilters({coachEventFilter:event.target.value,dateFilter:''});}}><option value="">{text('All competitions','全部比赛')}</option>{futureEvents.map(event=><option key={event.id} value={event.id}>{dateLabel(event.start)} · {event.name}</option>)}</CompactSelect></label>
+              <div className="club-segmented club-coach-activity" role="group" aria-label={text('Session type','赛程类型')}>
+                {([['',text('All','全部')],['competition',text('Competition','比赛')],['practice',text('Practice','练习')]] as const).map(([value,label])=>
+                  <button key={value} type="button" aria-pressed={coachActivity===value} className={coachActivity===value?'active':''}
+                    onClick={()=>updateFilters({coachActivity:value})}>{label}</button>)}
+              </div>
               <button type="button" className="club-filter-toggle" aria-expanded={coachFiltersOpen} aria-controls="coach-filter-fields" onClick={()=>updateFilters({coachFiltersOpen:!coachFiltersOpen})}><SlidersHorizontal size={17}/>{text('Filters & export','筛选与导出')}{(coachFilter||dateFilter||onlyAssigned)&&<span className="club-filter-count">{Number(!!coachFilter)+Number(!!dateFilter)+Number(onlyAssigned)}</span>}<ChevronDown size={16}/></button>
               <div id="coach-filter-fields" className={'club-filter-fields'+(coachFiltersOpen?' is-open':'')}>
                 <label className="club-filter-field"><span>{text('Coach','教练')}</span><CompactSelect aria-label={translate("负责教练筛选")} value={coachFilter} onChange={e=>updateFilters({coachFilter:e.target.value})}><option value="">{translate("所有教练")}</option>{coaches.map(coach=><option key={coach}>{coach}</option>)}</CompactSelect></label>
                 <label className="club-filter-field"><span>{text('Date','日期')}</span><input aria-label={translate("赛程日期筛选")} type="date" value={dateFilter} onInput={e=>updateFilters({dateFilter:e.currentTarget.value})} onChange={e=>updateFilters({dateFilter:e.target.value})}/></label>
                 <label className="club-checkbox"><input type="checkbox" checked={onlyAssigned} onChange={e=>updateFilters({onlyAssigned:e.target.checked})}/>{translate("仅已分配教练")}</label>
-                <div className="club-filter-actions"><button type="button" onClick={()=>{updateFilters({coachEventFilter:'',coachFilter:'',dateFilter:'',onlyAssigned:false});}}>{translate("重置筛选")}</button><button type="button" onClick={exportSchedule} disabled={!filteredSchedule.length}><Download size={15}/>{translate("导出总表 CSV")}</button></div>
+                <div className="club-filter-actions"><button type="button" onClick={()=>{updateFilters({coachEventFilter:'',coachFilter:'',coachActivity:'',dateFilter:'',onlyAssigned:false});}}>{translate("重置筛选")}</button><button type="button" onClick={exportSchedule} disabled={!filteredSchedule.length}><Download size={15}/>{translate("导出总表 CSV")}</button></div>
               </div>
             </div>
             {(coachFilter||dateFilter||onlyAssigned)&&<div className="club-notice"><span>{text('Active filters: ','当前筛选：')}{[coachFilter,dateFilter,onlyAssigned?translate('仅已分配教练'):''].filter(Boolean).join(' · ')}</span><button type="button" className="club-text-button" onClick={()=>updateFilters({coachFilter:'',dateFilter:'',onlyAssigned:false})}>{text('Show all skaters at this event','显示本场所有选手')}</button></div>}

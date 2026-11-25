@@ -36,9 +36,11 @@ export function coachOverlaps(rows:ScheduleRow[], onlyCoach='') {
   return pairs;
 }
 
-export type CoachScheduleFilters={event:string;coach:string;date:string;assignedOnly:boolean};
-export function filterCoachSchedule<Row extends {eventId:string;coach:string;date:string}>(rows:Row[],filters:CoachScheduleFilters):Row[]{
-  return rows.filter(row=>(!filters.event||row.eventId===filters.event)&&(!filters.assignedOnly||row.coach.trim())&&(!filters.coach||splitCoaches(row.coach).includes(canonicalCoachName(filters.coach)))&&(!filters.date||row.date===filters.date));
+export type CoachScheduleFilters={event:string;coach:string;date:string;assignedOnly:boolean;activity?:''|'competition'|'practice'};
+export function filterCoachSchedule<Row extends Pick<ScheduleRow,'eventId'|'coach'|'date'|'activity'>>(rows:Row[],filters:CoachScheduleFilters):Row[]{
+  return rows.filter(row=>(!filters.event||row.eventId===filters.event)&&(!filters.assignedOnly||row.coach.trim())&&
+    (!filters.coach||splitCoaches(row.coach).includes(canonicalCoachName(filters.coach)))&&(!filters.date||row.date===filters.date)&&
+    (!filters.activity||row.activity===filters.activity));
 }
 
 export const hasCoachGroupTime=(row:ScheduleRow)=>!row.uncertain&&/^([01]\d|2[0-3]):[0-5]\d$/.test(row.start);

@@ -6,10 +6,10 @@ import {canonicalCoachName,canonicalCoachList} from '../lib/coach-names.ts';
 import {coachSuggestions} from '../lib/coach-name-search.ts';
 
 const rows=[
-  {id:'first',eventId:'event-a',coach:'Jen Jackson/Bryce Davidson',date:'2026-11-05'},
-  {id:'second',eventId:'event-a',coach:'Jen Jackson',date:'2026-11-06'},
-  {id:'third',eventId:'event-b',coach:'Bryce Davidson',date:'2026-11-05'},
-  {id:'fourth',eventId:'event-b',coach:'',date:'2026-11-06'},
+  {id:'first',eventId:'event-a',coach:'Jen Jackson/Bryce Davidson',date:'2026-11-05',activity:'competition'},
+  {id:'second',eventId:'event-a',coach:'Jen Jackson',date:'2026-11-06',activity:'practice'},
+  {id:'third',eventId:'event-b',coach:'Bryce Davidson',date:'2026-11-05',activity:'practice'},
+  {id:'fourth',eventId:'event-b',coach:'',date:'2026-11-06',activity:'competition'},
 ];
 const before=structuredClone(rows),all={event:'',coach:'',date:'',assignedOnly:false};
 assert.deepEqual(filterCoachSchedule(rows,all),rows);
@@ -18,6 +18,10 @@ assert.deepEqual(filterCoachSchedule(rows,{...all,event:'event-b',assignedOnly:t
 assert.deepEqual(filterCoachSchedule(rows,{...all,event:'event-a',coach:'Bryce Davidson',date:'2026-11-05',assignedOnly:true}).map(row=>row.id),['first']);
 assert.equal(filterCoachSchedule(rows,{...all,event:'event-a',coach:'Bryce Davidson',date:'2026-11-06'}).length,0);
 assert.equal(filterCoachSchedule(rows,{...all,event:'missing'}).length,0);
+assert.deepEqual(filterCoachSchedule(rows,{...all,activity:'competition'}).map(row=>row.id),['first','fourth']);
+assert.deepEqual(filterCoachSchedule(rows,{...all,activity:'practice'}).map(row=>row.id),['second','third']);
+assert.deepEqual(filterCoachSchedule(rows,{...all,event:'event-b',coach:'Bryce Davison',date:'2026-11-05',assignedOnly:true,activity:'practice'}).map(row=>row.id),['third']);
+assert.deepEqual(filterCoachSchedule(rows,{...all,event:'event-a',date:'2026-11-05',activity:'practice'}),[]);
 assert.equal(filterCoachSchedule([],all).length,0);assert.deepEqual(rows,before);
 const app=fs.readFileSync('app/club-app.tsx','utf8');
 assert.ok(app.includes('教练总表比赛筛选'));assert.ok(app.includes('event:coachEventFilter'));

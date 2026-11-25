@@ -31,7 +31,9 @@ const events = Array.from({length:12},(_,i)=>{
     documents:[],needsReview:false,
     participants:[{id:'entry-'+i,name:skater.name,category:'Pre-Novice Women',skaterIds:[skater.id],club:'Fixture Club',section:'ON',matchStatus:'Fixture',sourceUrl:source}],
     blocks:[{id:'short-'+i,category:'Pre-Novice Women Short Program',categoryKey:'PRENOVICE:WOMEN',group:null,range:null,
-      activity:'competition',date:day,start:'13:00',end:'14:00',rink:'North Arena',page:1,sourceUrl:source}],
+      activity:'competition',date:day,start:'13:00',end:'14:00',rink:'North Arena',page:1,sourceUrl:source},
+      ...(i===2?[{id:'practice-2',category:'Pre-Novice Women Short Practice',categoryKey:'PRENOVICE:WOMEN',group:null,range:null,
+        activity:'practice',date:day,start:'09:00',end:'09:20',rink:'Practice pad',page:1,sourceUrl:source}]:[])],
     startingOrders:[]
   };
 });
@@ -151,7 +153,14 @@ async function walk(browser,profile,locale,folder,report) {
     await nav.getByRole('button',{name:/Coach master schedule|教练总赛程/}).tap();
     const row = page.locator('.coach-day-row').first();
     await row.waitFor();
-    await inspectText(page,'h1,.coach-day-skater>button,.coach-day-category,.coach-day-coach,.coach-day-event','coach',issues);
+    await inspectText(page,'h1,.coach-day-skater>button,.coach-day-category,.coach-day-coach,.coach-day-event,.coach-day-time,.club-coach-activity button','coach',issues);
+    const group=page.getByRole('group',{name:/Session type|赛程类型/});
+    const practice=group.getByRole('button',{name:/^Practice$|^练习$/});
+    const competition=group.getByRole('button',{name:/^Competition$|^比赛$/});
+    assert.equal(await group.getByRole('button',{name:/^All$|^全部$/}).getAttribute('aria-pressed'),'true');
+    await practice.tap();
+    assert.equal(await practice.getAttribute('aria-pressed'),'true');
+    assert.deepEqual(await page.locator('.coach-day-activity').allTextContents(),[locale==='en'?'Practice':'练习']);
     const details=row.locator('.coach-day-action button');
     const size=await details.boundingBox();
     if (!size || Math.min(size.height,size.width)<44) issues.push('Coach details touch target smaller than 44px');
@@ -164,6 +173,9 @@ async function walk(browser,profile,locale,folder,report) {
     const eventFilter=page.getByRole('combobox',{name:/Coach schedule competition filter|教练总表比赛筛选/});
     await eventFilter.tap();
     await list.getByRole('option',{name:new RegExp(events[0].name)}).tap();
+    assert.equal(await page.locator('.coach-day-row').count(),0);
+    await competition.tap();
+    assert.equal(await competition.getAttribute('aria-pressed'),'true');
     assert.equal(await page.locator('.coach-day-row').count(),1);
     const toggle=page.locator('.club-filter-toggle');
     const fields=page.locator('#coach-filter-fields');
@@ -173,10 +185,16 @@ async function walk(browser,profile,locale,folder,report) {
     const actions=fields.locator('.club-filter-actions button');
     assert.equal(await actions.last().isDisabled(),true);
     await actions.first().tap();
-    assert.equal(await page.locator('.coach-day-row').count(),events.length);
+    assert.equal(await page.locator('.coach-day-row').count(),events.length+1);
+    await practice.tap();
     const downloaded=page.waitForEvent('download');
     await actions.last().tap();
-    assert.match((await downloaded).suggestedFilename(),/\.csv$/i);
+    const csv=await downloaded;
+    assert.match(csv.suggestedFilename(),/\.csv$/i);
+    const exported=await fs.readFile(await csv.path(),'utf8');
+    assert.match(exported,/Practice pad/);
+    assert.doesNotMatch(exported,/North Arena/);
+    await actions.first().tap();
     if (await toggle.isVisible()) await toggle.tap();
     await page.locator('.coach-day-row').getByRole('button',{name:skaters[0].name,exact:true}).tap();
     await page.getByRole('heading',{level:1,name:skaters[0].name}).waitFor();
