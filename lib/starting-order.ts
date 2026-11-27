@@ -10,7 +10,7 @@ export function scheduledProgram(category:string){
   const [level,discipline]=categoryKey(category).split(':');
   if(!['MEN','WOMEN','FREESKATE'].includes(discipline))return '';
   if(/^STAR\s*[79]$/.test(level))return 'short';
-  return /^(?:STAR\s*(?:[34568]|10)|GOLD|PREJUVENILE|JUVENILE)$/.test(level)?'free':'';
+  return /^(?:STAR\s*(?:[1-6]|8|10)|GOLD|PREJUVENILE|JUVENILE)$/.test(level)?'free':'';
 }
 export const championshipDraw=(category:string)=>/\bCHAMPIONSHIPS?\b/i.test(category);
 

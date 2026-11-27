@@ -5,6 +5,8 @@ import {parseScheduleDocument,scheduleRows} from '../lib/official-parser.ts';
 import {parseEntryPdf} from '../lib/entry-pdf.ts';
 import {importEntries} from '../lib/entry-import.ts';
 import {selectDetailEvents} from '../lib/sync-selection.ts';
+import {parseStartingOrderHtml} from '../lib/starting-order.ts';
+import {coachTimingEstimate} from '../lib/coach-timing.ts';
 const source='https://skateontario.org/wp-content/uploads/2026/08/Schedule-1.pdf';
 const pages=await readOfficialPdfItems(new Uint8Array(fs.readFileSync('tests/fixtures/niagara-2026-nov17-schedule.pdf')));
 const schedule=parseScheduleDocument(pages,source);assert.equal(schedule.blocks.length,74);assert.deepEqual(schedule.warnings,[]);
@@ -14,6 +16,19 @@ const entries=parseEntryPdf(await readOfficialPdfItems(new Uint8Array(pdf)),'htt
 const event={id:'SO-325865',name:'Niagara',url:'https://skateontario.org',timezone:'America/Toronto',participants:entries,blocks:schedule.blocks};
 const rows=scheduleRows([event],[skater]);assert.equal(rows.length,1);assert.equal(rows[0].uncertain,false);assert.equal(rows[0].date,'2026-12-05');assert.equal(rows[0].start,'08:00');assert.equal(rows[0].end,'08:30');assert.equal(rows[0].rink,'Duliban Rink');
 assert.equal(scheduleRows([{...event,participants:[{...entries[0],category:'STAR 1 STAR 1 (Group 2)',skaterIds:['leia']}]}],[skater])[0].start,'11:45');
+for (const [level,group,expectedStart] of [[2,1,'08:00'],[1,5,'12:35']]) {
+  const category='STAR '+level+' STAR '+level+' (Group '+group+')';
+  const sourceUrl='https://skateontario.org/results/26NIAGSTAR/497STAR'+level+'STAR'+level+'Group'+group+'FP2SO.pdf';
+  const drawHeading='<h2>'+category+' Free Program</h2>';
+  const drawTable='<table><tr><th>Starting Order</th><th>Competitor</th><th>Warm-Up Group</th></tr><tr><td>2</td><td>'+skater.name+'</td><td>1</td></tr></table>';
+  const startingOrders=parseStartingOrderHtml(drawHeading+drawTable,sourceUrl,[skater]);
+  const drawnEvent={...event,participants:[{...entries[0],category,skaterIds:[skater.id]}],startingOrders};
+  const [scheduled]=scheduleRows([drawnEvent],[skater]);
+  assert.equal(scheduled.start,expectedStart);
+  assert.equal(scheduled.startingOrder?.startNumber,2);
+  assert.equal(scheduled.startingOrder.warmupGroup,1);
+  assert.equal(coachTimingEstimate(scheduled,drawnEvent),null);
+}
 assert.ok(schedule.blocks.some(b=>b.category==='STAR 4 Boys O13'&&b.start==='09:15'));
 for(const year of ['2027','']){const broken=pages.map(page=>page.map(item=>({...item,str:item.str.replace(/2026/g,year)})));assert.equal(parseScheduleDocument(broken,source).blocks.length,0,'Missing or conflicting weekday/year must stay pending');}
 const index='https://skateontario.org/results/26NIAGSTAR/';
